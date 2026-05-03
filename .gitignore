@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.env
+.DS_Store
+
+# Judgment intermediates are noisy; the aggregated review.md captures
+# the signal. Per-model run artifacts live under
+# builds/<model>/rounds/<task>-<date>/ and ARE committed (small, ~80KB each)
+# so readers can inspect (and diff over time) what each model produced.
+results/judgments/*
+!results/judgments/.gitkeep
+
+# blog drafts and working notes are author-local; not part of the public
+# repo. Published, public-facing writeups live in /blog/ at the repo root.
+bench/blog/
+bench/blog-internal-not-for-git/

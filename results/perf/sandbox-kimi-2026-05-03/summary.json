@@ -1,0 +1,81 @@
+{
+  "task": "sandbox",
+  "model": "kimi",
+  "model_slug": "opencode-go/kimi-k2.6",
+  "date": "2026-05-03",
+  "n_requested": 5,
+  "n_ok": 5,
+  "wall_model_seconds": {
+    "median": 83.1,
+    "stdev": 107.772,
+    "min": 43.8,
+    "max": 309.7,
+    "raw": [
+      153.5,
+      66.8,
+      43.8,
+      309.7,
+      83.1
+    ]
+  },
+  "envelope_seconds": {
+    "median": 84.7,
+    "stdev": 107.746,
+    "raw": [
+      155.0,
+      68.4,
+      45.5,
+      311.3,
+      84.7
+    ]
+  },
+  "cost_usd": {
+    "median": 0.011,
+    "stdev": 0.009,
+    "sum": 0.074611,
+    "raw": [
+      0.012741,
+      0.009376,
+      0.010523,
+      0.031054,
+      0.010917
+    ]
+  },
+  "tokens_total": {
+    "median": 109400,
+    "raw": [
+      111241,
+      91856,
+      75242,
+      193208,
+      109400
+    ]
+  },
+  "sandbox_py_loc": {
+    "median": 128,
+    "raw": [
+      134,
+      116,
+      107,
+      146,
+      128
+    ]
+  },
+  "tests": {
+    "passed_per_run": [
+      9,
+      9,
+      9,
+      9,
+      9
+    ],
+    "failed_per_run": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "all_pass": true
+  }
+}

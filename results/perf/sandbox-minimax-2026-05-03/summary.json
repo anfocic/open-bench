@@ -1,0 +1,81 @@
+{
+  "task": "sandbox",
+  "model": "minimax",
+  "model_slug": "opencode-go/minimax-m2.7",
+  "date": "2026-05-03",
+  "n_requested": 5,
+  "n_ok": 5,
+  "wall_model_seconds": {
+    "median": 160.7,
+    "stdev": 65.017,
+    "min": 113.0,
+    "max": 280.8,
+    "raw": [
+      280.8,
+      187.8,
+      136.2,
+      113.0,
+      160.7
+    ]
+  },
+  "envelope_seconds": {
+    "median": 162.3,
+    "stdev": 65.002,
+    "raw": [
+      282.4,
+      189.4,
+      137.9,
+      114.6,
+      162.3
+    ]
+  },
+  "cost_usd": {
+    "median": 0.024,
+    "stdev": 0.014,
+    "sum": 0.146416,
+    "raw": [
+      0.050611,
+      0.035059,
+      0.023907,
+      0.014986,
+      0.021853
+    ]
+  },
+  "tokens_total": {
+    "median": 241680,
+    "raw": [
+      531108,
+      366898,
+      241680,
+      181233,
+      206729
+    ]
+  },
+  "sandbox_py_loc": {
+    "median": 116,
+    "raw": [
+      116,
+      112,
+      124,
+      100,
+      140
+    ]
+  },
+  "tests": {
+    "passed_per_run": [
+      8,
+      9,
+      9,
+      9,
+      9
+    ],
+    "failed_per_run": [
+      1,
+      0,
+      0,
+      0,
+      0
+    ],
+    "all_pass": false
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "implementers": ["kimi", "deepseek", "minimax"],
+  "expert_judges": [],
+  "harness": "opencode",
+  "slugs": {
+    "kimi":     "opencode-go/kimi-k2.6",
+    "deepseek": "opencode-go/deepseek-v4-pro",
+    "minimax":  "opencode-go/minimax-m2.7"
+  }
+}
