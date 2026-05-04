@@ -70,7 +70,15 @@ Edit `bench/config.json`:
 }
 ```
 
-Labels become `builds/<label>/` dirs. Add a new task with `bench/scripts/new-task.sh <name>`; the framework is task-agnostic.
+Labels become `builds/<label>/` dirs. Add a new task with `bench/scripts/new-task.sh <name>`.
+
+### Forking caveats (read before swapping the task)
+
+Round 1's task is single-file Python (`sandbox.py`) and the harness reflects that today:
+
+- The output filename `sandbox.py` is hardcoded across `capture-run.sh`, `start-run.sh`, `perf-bench.py`, and `start_judgments.py` (~11 refs). For a same-shaped task (one Python file, different name), a sed-replace across those four files is enough.
+- Multi-file projects, non-Python stacks, or anything that doesn't run via `python3 -m pytest` need deeper edits — `capture-run.sh`'s test invocation and `perf-bench.py`'s LOC counter both assume single-file Python.
+- Parametrising the entrypoint via `bench/tasks/<task>/task.json` is on the roadmap for round 2; the framework will be honestly task-agnostic then. For now: forkable with a sed, not yet drop-in.
 
 ## Layout
 
