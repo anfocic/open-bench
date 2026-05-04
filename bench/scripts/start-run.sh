@@ -66,7 +66,7 @@ if [[ ! -f "${task_dir}/PROMPT.md" || ! -f "${task_dir}/SPEC.md" ]]; then
     exit 1
 fi
 
-date_stamp="$(date +%Y-%m-%d)"
+date_stamp="${RUN_STAMP:-$(date +%Y-%m-%d)}"
 slug="${task}-${model}-${date_stamp}"
 branch="eval/${slug}"
 worktree_dir="${repo_root}/../sandbox-eval-${slug}"
