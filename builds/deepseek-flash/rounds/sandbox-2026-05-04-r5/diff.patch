@@ -1,0 +1,143 @@
+diff --git a/sandbox.py b/sandbox.py
+new file mode 100644
+index 0000000..7842715
+--- /dev/null
++++ b/sandbox.py
+@@ -0,0 +1,137 @@
++import argparse
++import os
++import shutil
++import subprocess
++import sys
++
++
++TRUNCATION_LIMIT = 50_000
++TRUNCATION_MARKER = b"... [truncated]"
++
++
++def _find_runtime() -> str:
++    if shutil.which("podman"):
++        return "podman"
++    if shutil.which("docker"):
++        return "docker"
++    raise RuntimeError("Neither podman nor docker found on PATH")
++
++
++def sandbox_run(
++    command: str,
++    workspace: str | None = None,
++    image: str = "debian:stable-slim",
++    timeout: int = 60,
++    network: str = "none",
++    memory: str = "2g",
++    pids: int = 512,
++    cpus: float = 2.0,
++) -> str:
++    runtime = _find_runtime()
++
++    argv = [
++        runtime,
++        "run",
++        "--rm",
++        "--pull=missing",
++        f"--network={network}",
++        f"--memory={memory}",
++        f"--pids-limit={pids}",
++        f"--cpus={cpus}",
++        "--cap-drop=ALL",
++        "--security-opt=no-new-privileges",
++    ]
++
++    if workspace is not None:
++        argv.extend(["-v", f"{workspace}:/workspace:rw", "-w", "/workspace"])
++
++    argv.extend([image, "sh", "-c", command])
++
++    try:
++        proc = subprocess.run(
++            argv,
++            capture_output=True,
++            timeout=timeout,
++            shell=False,
++        )
++        exit_code = proc.returncode
++        stdout = proc.stdout
++        stderr = proc.stderr
++    except subprocess.TimeoutExpired as exc:
++        exit_code = 124
++        stdout = exc.stdout or b""
++        stderr = exc.stderr or b""
++    except Exception:
++        raise
++
++    combined = stdout + stderr
++    if len(combined) > TRUNCATION_LIMIT:
++        excess = len(combined) - TRUNCATION_LIMIT
++        if len(stderr) >= excess:
++            stderr = stderr[: len(stderr) - excess]
++        else:
++            stdout = stdout[: len(stdout) - (excess - len(stderr))]
++            stderr = b""
++        if TRUNCATION_MARKER not in stderr and TRUNCATION_MARKER not in stdout:
++            if stderr:
++                stderr += TRUNCATION_MARKER
++            else:
++                stdout += TRUNCATION_MARKER
++
++    stdout_str = stdout.decode("utf-8", errors="replace")
++    stderr_str = stderr.decode("utf-8", errors="replace")
++
++    return f"exit={exit_code}\n--- stdout ---\n{stdout_str}\n--- stderr ---\n{stderr_str}"
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser(
++        description="Run a command in an ephemeral container."
++    )
++    parser.add_argument("--image", default="debian:stable-slim")
++    parser.add_argument("--timeout", type=int, default=60)
++    parser.add_argument("--network", choices=("none", "bridge"), default="none")
++    parser.add_argument("--memory", default="2g")
++    parser.add_argument("--pids", type=int, default=512)
++    parser.add_argument("--cpus", type=float, default=2.0)
++    parser.add_argument("--workspace", default=None)
++    parser.add_argument(
++        "command",
++        nargs=argparse.REMAINDER,
++        help="Command to run (everything after --)",
++    )
++
++    args = parser.parse_args()
++    if not args.command:
++        parser.error("No command specified (use -- to separate flags from command)")
++
++    if args.command[0] == "--":
++        args.command = args.command[1:]
++
++    command_str = " ".join(args.command)
++
++    if args.workspace is None:
++        args.workspace = os.getcwd()
++
++    output = sandbox_run(
++        command=command_str,
++        workspace=args.workspace,
++        image=args.image,
++        timeout=args.timeout,
++        network=args.network,
++        memory=args.memory,
++        pids=args.pids,
++        cpus=args.cpus,
++    )
++
++    sys.stdout.write(output)
++    exit_code_line = output.split("\n")[0]
++    try:
++        ec = int(exit_code_line.split("=")[1])
++    except (IndexError, ValueError):
++        ec = 1
++    sys.exit(ec)
++
++
++if __name__ == "__main__":
++    main()

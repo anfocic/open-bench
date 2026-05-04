@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>open-bench — round 2 (deepseek v4 flash)</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #8b949e;
+    --border: #30363d;
+    --green: #3fb950;
+    --red: #f85149;
+    --gold: #d29922;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  html, body { background: var(--bg); margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--fg);
+    padding: 56px 64px;
+    width: max-content;
+  }
+  h1 {
+    margin: 0 0 6px;
+    font-size: 30px;
+    letter-spacing: -0.4px;
+  }
+  h1 .slash { color: var(--muted); font-weight: 400; }
+  .sub {
+    color: var(--muted);
+    font-size: 15px;
+    margin-bottom: 28px;
+    max-width: 820px;
+    line-height: 1.5;
+  }
+  table {
+    border-collapse: collapse;
+    font-size: 16px;
+  }
+  th, td {
+    padding: 14px 22px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+  }
+  thead th {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    border-bottom: 2px solid var(--border);
+  }
+  th:first-child, td:first-child {
+    text-align: left;
+  }
+  td.model {
+    font-weight: 600;
+    font-size: 17px;
+  }
+  td.num { font-family: var(--mono); }
+  td.win { color: var(--green); font-weight: 600; }
+  td.fail { color: var(--red); font-weight: 600; }
+  td.gold { color: var(--gold); font-weight: 600; }
+  .footer {
+    margin-top: 24px;
+    color: var(--muted);
+    font-size: 13px;
+    font-family: var(--mono);
+  }
+  .footer .repo { color: var(--fg); }
+</style>
+</head>
+<body>
+  <h1>open-bench <span class="slash">/ round 2 — deepseek v4 flash added</span></h1>
+  <div class="sub">
+    Same spec, peer-blind judging. Flash numbers are medians across n=5 (passed all 9 tests in 4 of 5 runs); other models are single-shot from round 1.
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>model</th>
+        <th>hidden tests (n=9)</th>
+        <th>spec /10</th>
+        <th>quality /20</th>
+        <th>cost / run</th>
+        <th>wall-clock</th>
+        <th>tokens</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="model">deepseek-v4-pro</td>
+        <td class="num win">9 / 9</td>
+        <td class="num win">10</td>
+        <td class="num gold">18</td>
+        <td class="num">$0.06</td>
+        <td class="num">3m54s</td>
+        <td class="num">137k</td>
+      </tr>
+      <tr>
+        <td class="model">deepseek-v4-flash</td>
+        <td class="num win">9 / 9 (4/5 runs)</td>
+        <td class="num">9</td>
+        <td class="num">17</td>
+        <td class="num gold">$0.005</td>
+        <td class="num gold">1m37s</td>
+        <td class="num gold">146k</td>
+      </tr>
+      <tr>
+        <td class="model">kimi-k2.6</td>
+        <td class="num win">9 / 9</td>
+        <td class="num win">10</td>
+        <td class="num">15</td>
+        <td class="num">$0.01</td>
+        <td class="num">1m03s</td>
+        <td class="num">100k</td>
+      </tr>
+      <tr>
+        <td class="model">minimax-m2.7</td>
+        <td class="num win">9 / 9</td>
+        <td class="num">8</td>
+        <td class="num">14</td>
+        <td class="num">$0.05</td>
+        <td class="num">5m48s</td>
+        <td class="num">590k</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    flash medians n=5, others single-shot &middot; peer-blind judging &middot; harness: opencode &middot;
+    <span class="repo">github.com/anfocic/open-bench</span>
+  </div>
+</body>
+</html>
