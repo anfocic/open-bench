@@ -15,7 +15,9 @@ aggregator can demap.
 
 Judges:
 - claude, codex: judge all implementations
-- each model judge: judges every implementation EXCEPT its own (peer review)
+- each model judge: judges every implementation INCLUDING its own. Self-
+  judgments are surfaced separately in the aggregator as a self-bias
+  check and are excluded from the peer-median scoreboard.
 """
 
 from __future__ import annotations
@@ -338,11 +340,11 @@ def main() -> int:
     pairings: dict[str, dict[str, str]] = {}
 
     for judge in judges:
-        # Peer model judges skip themselves; expert judges score everyone.
-        if cfg.is_expert(judge):
-            targets = list(impl_models)
-        else:
-            targets = [m for m in impl_models if m != judge]
+        # Every judge — peer or expert — scores every implementation
+        # including its own. Self-judgments feed the self-bias check in
+        # the aggregator and are excluded from the peer-median scoreboard
+        # there, so the headline numbers stay un-self-inflated.
+        targets = list(impl_models)
 
         # randomize_labels already shuffles the label assignment; one
         # random pairing of (target -> label) is sufficient.
