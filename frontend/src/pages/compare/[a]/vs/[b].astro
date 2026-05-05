@@ -7,6 +7,7 @@ import { getCollection } from 'astro:content';
 import { fmtCost, fmtNum, fmtDate } from '../../../../lib/format';
 import { compareModels, allPairs, computeStandings, sparkline } from '../../../../lib/aggregate';
 import { templateSeo } from '../../../../lib/seo';
+import Term from '../../../../components/Term.astro';
 
 export const prerender = true;
 
@@ -66,25 +67,25 @@ const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.dat
     <article class={`card ${eloLeader === a ? 'card-lead' : ''}`}>
       <header><a href={`/model/${a}`} transition:name={`model-${a}`}>{a}</a> <span class="rank">#{aRank}</span></header>
       <dl>
-        <div><dt>ELO</dt><dd>{Math.round(cmp.a.elo)}</dd></div>
+        <div><dt><Term k="elo">ELO</Term></dt><dd>{Math.round(cmp.a.elo)}</dd></div>
         <div><dt>rounds</dt><dd>{cmp.a.rounds}</dd></div>
         <div><dt>wins</dt><dd>{cmp.a.wins}</dd></div>
-        <div><dt>podium</dt><dd>{cmp.a.podium}</dd></div>
-        <div><dt>avg</dt><dd>{fmtNum(cmp.a.avgScore, 1)}/30</dd></div>
-        <div><dt>$/round</dt><dd>{fmtCost(cmp.a.avgCost)}</dd></div>
-        <div><dt>trend</dt><dd class="spark">{sparkline(cmp.a.history)}</dd></div>
+        <div><dt><Term k="podium">podium</Term></dt><dd>{cmp.a.podium}</dd></div>
+        <div><dt><Term k="avg">avg</Term></dt><dd>{fmtNum(cmp.a.avgScore, 1)}/30</dd></div>
+        <div><dt><Term k="costPerRound">$/round</Term></dt><dd>{fmtCost(cmp.a.avgCost)}</dd></div>
+        <div><dt><Term k="trend">trend</Term></dt><dd class="spark">{sparkline(cmp.a.history)}</dd></div>
       </dl>
     </article>
     <article class={`card ${eloLeader === b ? 'card-lead' : ''}`}>
       <header><a href={`/model/${b}`} transition:name={`model-${b}`}>{b}</a> <span class="rank">#{bRank}</span></header>
       <dl>
-        <div><dt>ELO</dt><dd>{Math.round(cmp.b.elo)}</dd></div>
+        <div><dt><Term k="elo">ELO</Term></dt><dd>{Math.round(cmp.b.elo)}</dd></div>
         <div><dt>rounds</dt><dd>{cmp.b.rounds}</dd></div>
         <div><dt>wins</dt><dd>{cmp.b.wins}</dd></div>
-        <div><dt>podium</dt><dd>{cmp.b.podium}</dd></div>
-        <div><dt>avg</dt><dd>{fmtNum(cmp.b.avgScore, 1)}/30</dd></div>
-        <div><dt>$/round</dt><dd>{fmtCost(cmp.b.avgCost)}</dd></div>
-        <div><dt>trend</dt><dd class="spark">{sparkline(cmp.b.history)}</dd></div>
+        <div><dt><Term k="podium">podium</Term></dt><dd>{cmp.b.podium}</dd></div>
+        <div><dt><Term k="avg">avg</Term></dt><dd>{fmtNum(cmp.b.avgScore, 1)}/30</dd></div>
+        <div><dt><Term k="costPerRound">$/round</Term></dt><dd>{fmtCost(cmp.b.avgCost)}</dd></div>
+        <div><dt><Term k="trend">trend</Term></dt><dd class="spark">{sparkline(cmp.b.history)}</dd></div>
       </dl>
     </article>
   </section>
@@ -107,9 +108,9 @@ const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.dat
             <th>round</th>
             <th class="num">{a}</th>
             <th class="num">{b}</th>
-            <th>winner</th>
-            <th class="num">Δ score</th>
-            <th class="num">Δ cost</th>
+            <th><Term k="winner">winner</Term></th>
+            <th class="num"><Term k="deltaScore">Δ score</Term></th>
+            <th class="num"><Term k="deltaCost">Δ cost</Term></th>
           </tr>
         </thead>
         <tbody>
