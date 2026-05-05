@@ -3,7 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import { resolve } from 'node:path';
 import { repoRoot } from '../lib/paths';
-import { readJsonOptional } from '../lib/io';
+import { readJsonOptional, readOptional, listDirs } from '../lib/io';
 import '../styles/deck.css';
 
 interface Config {
@@ -11,9 +11,37 @@ interface Config {
   expert_judges?: string[];
   slugs: Record<string, string>;
 }
+interface TaskMeta {
+  entrypoint?: string;
+  language?: string;
+  test_runner?: string;
+}
+
 const cfg = readJsonOptional<Config>(resolve(repoRoot, 'bench/config.json')) ?? {
   implementers: [], expert_judges: [], slugs: {},
 };
+
+const tasks = listDirs(resolve(repoRoot, 'bench/tasks'));
+const currentTask = tasks[0] ?? 'sandbox';
+const taskMeta = readJsonOptional<TaskMeta>(
+  resolve(repoRoot, 'bench/tasks', currentTask, 'task.json'),
+) ?? {};
+const specRaw = readOptional(resolve(repoRoot, 'bench/tasks', currentTask, 'SPEC.md')) ?? '';
+// Lift the first paragraph after the H1 as the pitch (skip blank lines + the H1 itself).
+const specPitch = (() => {
+  const lines = specRaw.split('\n');
+  const out: string[] = [];
+  let started = false;
+  for (const ln of lines) {
+    if (!started) {
+      if (!ln.trim() || ln.startsWith('#')) continue;
+      started = true;
+    }
+    if (!ln.trim()) break;
+    out.push(ln.trim());
+  }
+  return out.join(' ');
+})();
 
 const sections = [
   {
@@ -33,10 +61,23 @@ const sections = [
     ],
   },
   {
+    id: 'task',
+    title: 'task',
+    body: `<p><strong>${currentTask}</strong> &mdash; ${specPitch}</p>`,
+    defs: [
+      ['entrypoint', taskMeta.entrypoint ?? '—'],
+      ['language', taskMeta.language ?? '—'],
+      ['test runner', taskMeta.test_runner ?? '—'],
+    ],
+    links: [
+      { href: `/task/${currentTask}`, label: `${currentTask} — full spec, prompt, rubric →`, note: '' },
+    ],
+  },
+  {
     id: 'lineup',
     title: 'lineup',
     body: `<p>Current contenders, pulled live from <code>bench/config.json</code>. Every implementer is also a peer judge.</p>`,
-    rows: cfg.implementers.map(name => ({ name, slug: cfg.slugs[name] ?? '—' })),
+    defs: cfg.implementers.map(name => [name, cfg.slugs[name] ?? '—']),
   },
   {
     id: 'why',
@@ -99,12 +140,12 @@ const sections = [
             </ol>
           )}
 
-          {s.rows && (
+          {s.defs && (
             <dl class="deck-defs">
-              {s.rows.map(r => (
+              {s.defs.map(([k, v]) => (
                 <div>
-                  <dt>{r.name}</dt>
-                  <dd>{r.slug}</dd>
+                  <dt>{k}</dt>
+                  <dd>{v}</dd>
                 </div>
               ))}
             </dl>
