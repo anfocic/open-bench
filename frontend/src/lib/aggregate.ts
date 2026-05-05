@@ -150,10 +150,6 @@ export interface CompareSummary {
   eloDiff: number;
 }
 
-export function pairKey(a: string, b: string): [string, string] {
-  return a <= b ? [a, b] : [b, a];
-}
-
 export function allPairs(impls: string[]): Array<[string, string]> {
   const sorted = [...impls].sort();
   const out: Array<[string, string]> = [];
@@ -163,10 +159,10 @@ export function allPairs(impls: string[]): Array<[string, string]> {
   return out;
 }
 
-export function compareModels(a: string, b: string, rounds: Round[]): CompareSummary | null {
-  const standings = computeStandings(rounds);
-  const sa = standings.find(s => s.impl === a);
-  const sb = standings.find(s => s.impl === b);
+export function compareModels(a: string, b: string, rounds: Round[], standings?: ModelStanding[]): CompareSummary | null {
+  const s = standings ?? computeStandings(rounds);
+  const sa = s.find(x => x.impl === a);
+  const sb = s.find(x => x.impl === b);
   if (!sa || !sb) return null;
 
   const sorted = [...rounds].sort((x, y) => x.date.localeCompare(y.date));
