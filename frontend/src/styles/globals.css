@@ -769,4 +769,5 @@ tr.cheapest-row td.model::before { content: '$ '; color: var(--green); font-weig
     z-index: 1;
   }
   .table-wrap thead th:first-child { z-index: 3; }
+  tbody tr:hover td:first-child { background: var(--bg-alt); }
 }

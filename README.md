@@ -40,7 +40,7 @@ Updated when each round's review lands. Per-run artifacts (transcripts, diffs, m
 
 ## Read more
 
-- [**ABOUT.md**](ABOUT.md) — how the harness works, how to run it locally, how to fork it for your own n-way comparison, layout, limitations.
+- [**ABOUT.md**](ABOUT.md) — how the harness works, how to run it locally, how to fork it for your own n-way comparison, task configuration, layout, limitations.
 - [`bench/plans/improvements.md`](bench/plans/improvements.md) — known gaps and planned work.
 
 ## License

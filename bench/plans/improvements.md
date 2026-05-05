@@ -1,14 +1,10 @@
-# Harness improvements — planned, not yet implemented
+# Harness improvements
 
-Two backlog items that came out of the round-1 retro. Implementation deferred; this doc captures the design so future-us doesn't re-derive it.
+## 1. Task parametrization — DONE
 
-Priority order:
-1. **Task parametrization** — blocker for round 2+ if the spec ever needs a different entrypoint. Do this before round 2 ships.
-2. **Implementer parallelization** — speed-only. Skip until pain shows up.
+Implemented. All scripts now read `bench/tasks/<task>/task.json` via `bench/scripts/_task.py`. Defaults reproduce round-1 behaviour when `task.json` is absent. Shell scripts replaced by Python equivalents; thin `.sh` shims delegate for backwards-compatible CLI. See ABOUT.md for the `task.json` schema.
 
----
-
-## 1. Task parametrization
+## 2. Implementer parallelization — deferred
 
 ### Problem
 

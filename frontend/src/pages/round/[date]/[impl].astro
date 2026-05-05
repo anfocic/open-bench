@@ -48,6 +48,7 @@ const transcriptHtml = artifacts.transcript ? renderMarkdown(artifacts.transcrip
 
 const sandboxLineCount = artifacts.sandboxPy?.split('\n').length ?? 0;
 const transcriptByteSize = artifacts.transcript ? new TextEncoder().encode(artifacts.transcript).length : 0;
+const firstTab = sandboxHtml ? 'code' : diffHtml ? 'diff' : testHtml ? 'tests' : transcriptHtml ? 'transcript' : 'code';
 ---
 
 <BaseLayout
@@ -60,16 +61,16 @@ const transcriptByteSize = artifacts.transcript ? new TextEncoder().encode(artif
     <a href={`/round/${date}`} class="back-link-arrow">&larr; back to round {fmtDate(date)}</a>
   </div>
 
-  <div class="model-tabs" role="tablist" aria-label="Models in round">
+  <nav class="model-tabs" aria-label="Models in round">
     {allImpls.map(name => (
       <a
         href={`/round/${date}/${name}`}
         class:list={['model-tab', { active: name === impl }]}
-        aria-current={name === impl ? 'page' : 'false'}
+        aria-current={name === impl ? 'page' : undefined}
         data-impl={name}
       >{name}</a>
     ))}
-  </div>
+  </nav>
 
   <script>
     document.querySelectorAll<HTMLAnchorElement>('.model-tab').forEach(a => {
@@ -96,10 +97,10 @@ const transcriptByteSize = artifacts.transcript ? new TextEncoder().encode(artif
   </div>
 
   <div class="tabs" role="tablist" aria-label="Run sections">
-    {sandboxHtml && <button class="tab" role="tab" id="tab-code" data-tab="code" aria-selected="true" aria-controls="panel-code">code</button>}
-    {diffHtml && <button class="tab" role="tab" id="tab-diff" data-tab="diff" aria-selected="false" aria-controls="panel-diff">diff</button>}
-    {testHtml && <button class="tab" role="tab" id="tab-tests" data-tab="tests" aria-selected="false" aria-controls="panel-tests">tests</button>}
-    {transcriptHtml && <button class="tab" role="tab" id="tab-transcript" data-tab="transcript" aria-selected="false" aria-controls="panel-transcript">transcript</button>}
+    {sandboxHtml && <button class="tab" role="tab" id="tab-code" data-tab="code" aria-selected={firstTab === 'code' ? 'true' : 'false'} aria-controls="panel-code">code</button>}
+    {diffHtml && <button class="tab" role="tab" id="tab-diff" data-tab="diff" aria-selected={firstTab === 'diff' ? 'true' : 'false'} aria-controls="panel-diff">diff</button>}
+    {testHtml && <button class="tab" role="tab" id="tab-tests" data-tab="tests" aria-selected={firstTab === 'tests' ? 'true' : 'false'} aria-controls="panel-tests">tests</button>}
+    {transcriptHtml && <button class="tab" role="tab" id="tab-transcript" data-tab="transcript" aria-selected={firstTab === 'transcript' ? 'true' : 'false'} aria-controls="panel-transcript">transcript</button>}
   </div>
 
   <div class="tab-panels">
