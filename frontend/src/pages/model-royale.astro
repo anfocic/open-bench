@@ -1,8 +1,60 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
-import Masthead from '../components/Masthead.astro';
+import { resolve } from 'node:path';
+import { repoRoot } from '../lib/paths';
+import { readJsonOptional } from '../lib/io';
+import '../styles/deck.css';
+
+interface Config {
+  implementers: string[];
+  expert_judges?: string[];
+  slugs: Record<string, string>;
+}
+const cfg = readJsonOptional<Config>(resolve(repoRoot, 'bench/config.json')) ?? {
+  implementers: [], expert_judges: [], slugs: {},
+};
+
+const sections = [
+  {
+    id: 'what',
+    title: 'what',
+    body: `<p><strong>Model Royale</strong> is a weekly elimination-style coding tournament. Every major LLM I can get a key for shows up to the same blank repo, the same <code>SPEC.md</code>, and the same hidden test suite. One task per round. One ranked review. One model gets cut; a challenger gets called up. Repeat.</p><p>It runs on the <a href="/about">open-bench</a> harness. open-bench is the framework — Model Royale is the format running on top of it.</p>`,
+  },
+  {
+    id: 'rules',
+    title: 'rules',
+    steps: [
+      'Same task, same spec, same wall-clock budget. Identical environment per model.',
+      'Hidden pytest battery runs first. Fail it and you cannot win the round, no matter the judges.',
+      'Every model judges every other implementation under blinded labels. Self-bias is measured, then excluded.',
+      'Cost and wall-clock break ties. Cheapest-and-correct wins; slow-and-correct loses.',
+      'The lowest-ranked model is eliminated from the lineup. A challenger is called up next round.',
+    ],
+  },
+  {
+    id: 'lineup',
+    title: 'lineup',
+    body: `<p>Current contenders, pulled live from <code>bench/config.json</code>. Every implementer is also a peer judge.</p>`,
+    rows: cfg.implementers.map(name => ({ name, slug: cfg.slugs[name] ?? '—' })),
+  },
+  {
+    id: 'why',
+    title: 'why this format',
+    body: `<p>Vendor leaderboards report pass@1 on synthetic problems and update on a marketing calendar. They tell you nothing about how a model behaves inside an agent loop where wall-clock, cost, and the readability of the diff matter as much as the answer.</p><p>Royale is opinionated about that gap. Hidden tests gate the qualitative scoring so we never reward broken-but-pretty code. Peer judging removes my taste from the qualitative axis. Cost is a first-class column, not a footnote. The week-on-week elimination keeps the lineup honest — there is no "leaderboard inertia" because the lineup itself rotates.</p>`,
+  },
+  {
+    id: 'more',
+    title: 'more',
+    links: [
+      { href: '/', label: 'latest round →', note: 'current scoreboard, judge rankings, hidden-test results' },
+      { href: '/about', label: 'about open-bench', note: 'the harness underneath' },
+      { href: 'https://github.com/anfocic/open-bench/blob/main/ABOUT.md', label: 'ABOUT.md', note: 'methodology, scoring math, task config' },
+      { href: 'https://github.com/anfocic/open-bench/tree/main/results/reviews', label: 'results/reviews', note: 'every aggregated round' },
+      { href: 'https://github.com/anfocic/open-bench/tree/main/builds', label: 'builds/', note: 'per-model artifacts and transcripts' },
+    ],
+  },
+];
 ---
 
 <BaseLayout
@@ -11,58 +63,75 @@ import Masthead from '../components/Masthead.astro';
 >
   <Header subtitle="model royale" />
 
-  <Masthead
-    title="model royale"
-    subtitle="A weekly coding tournament between every major LLM. One task. Same blank repo. Last model standing."
-  />
+  <nav class="deck-toc" aria-label="Sections">
+    {sections.map(s => (
+      <a href={`#${s.id}`} data-toc={s.id}>{s.title}</a>
+    ))}
+    <span class="deck-progress" aria-hidden="true">
+      <span class="deck-progress-num" data-progress-num>1</span>
+      <span class="muted"> / {sections.length}</span>
+    </span>
+  </nav>
 
-  <article class="prose about-prose">
-    <p>
-      <strong>Model Royale</strong> is the flagship format running on top of open-bench
-      &mdash; a weekly elimination-style competition where every major coding LLM faces
-      the same task in the same blank repo. Hidden tests gate first; the models then
-      score each other; the cheapest win ties. Each week one task, one set of artifacts,
-      one ranked review. The loser of the round is eliminated from the lineup; a
-      challenger gets called up. Repeat indefinitely.
-    </p>
+  <main class="deck">
+    {sections.map((s, i) => (
+      <section
+        id={s.id}
+        class="deck-section"
+        data-section={s.id}
+        data-index={i}
+        data-active={i === 0 ? 'true' : undefined}
+        aria-hidden={i === 0 ? 'false' : 'true'}
+      >
+        <div class="deck-inner">
+          <h2><span class="deck-h-num">[{String(i + 1).padStart(2, '0')}]</span> {s.title}</h2>
 
-    <p>
-      open-bench itself is the harness underneath: the framework that drops a spec
-      into a worktree, drives each model through opencode, captures transcripts and
-      diffs, runs the hidden test battery, fans the implementations out to every
-      judge, and aggregates the results into a single review. Model Royale is one
-      thing you can run on top of that &mdash; the weekly broadcast format with a
-      narrative arc, eliminations, and a public scoreboard. You could run a flat
-      n-way comparison instead, or a single-model regression, or a private bake-off
-      between two of your candidates. The harness doesn't care.
-    </p>
+          {s.body && <div class="deck-body" set:html={s.body} />}
 
-    <p>
-      The format exists because picking a coding model from leaderboards is a bad
-      time. They benchmark one-shot prompts, report pass@1 on synthetic problems,
-      and update on a vendor's calendar. None of that survives contact with a real
-      agent loop where wall-clock, cost, and code quality matter as much as whether
-      it solves the problem. Model Royale is built around what you actually need to
-      know: did it pass the hidden tests, how much did it cost, how fast was it,
-      and what did its peers think of the code. Same task, same harness, same
-      week. Apples-to-apples or it doesn't ship.
-    </p>
+          {s.steps && (
+            <ol class="deck-steps">
+              {s.steps.map((step, j) => (
+                <li>
+                  <span class="deck-step-num">{j + 1}</span>
+                  <span class="step-body">{step}</span>
+                </li>
+              ))}
+            </ol>
+          )}
 
-    <p>
-      The current round is on the <a href="/">home page</a>. Past rounds, transcripts,
-      diffs, and full per-judge rubrics are committed under
-      <a href="https://github.com/anfocic/open-bench/tree/main/builds">builds/</a> and
-      <a href="https://github.com/anfocic/open-bench/tree/main/results">results/</a>.
-      For the harness internals, the scoring math, and forking the framework for
-      your own format, see <a href="/about">about</a> and
-      <a href="https://github.com/anfocic/open-bench/blob/main/ABOUT.md">ABOUT.md</a>.
-    </p>
-  </article>
+          {s.rows && (
+            <dl class="deck-defs">
+              {s.rows.map(r => (
+                <div>
+                  <dt>{r.name}</dt>
+                  <dd>{r.slug}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
 
-  <Footer />
+          {s.links && (
+            <ul class="deck-links">
+              {s.links.map(l => (
+                <li>
+                  <a href={l.href}>{l.label}</a>
+                  {l.note && <span class="muted"> &mdash; {l.note}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+    ))}
+  </main>
+
+  <div class="deck-hint muted" aria-hidden="true">
+    <span>scroll · arrows · swipe</span>
+  </div>
 </BaseLayout>
 
-<style>
-  .about-prose { max-width: 68ch; margin-top: 8px; }
-  .about-prose p { margin: 14px 0; }
-</style>
+<script>
+  import { setupDeck } from '../scripts/deck';
+  setupDeck();
+  document.addEventListener('astro:after-swap', setupDeck);
+</script>
