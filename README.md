@@ -8,7 +8,7 @@ Each week, every model in the lineup gets the same spec and builds the same app,
 - **Peer review** — every model blind-grades every submission against a rubric. Self-judgments are tracked separately as a bias check.
 - **Cost & speed** — wall-clock, tokens, dollars per run.
 
-From round 2 onward, the lowest combined score gets **eliminated each week** until one model is left standing. Same prompt, no cross-pollination, public scoreboard.
+Rounds 1 and 2 are baseline runs — everyone plays both, on the same prompt extended slightly between rounds, so the round-1 result isn't a fluke before anyone is cut. From round 3 onward, the lowest combined score gets **eliminated each week** until one model is left standing. Same prompt within a round, no cross-pollination, public scoreboard.
 
 The bet: this measures whether a model can sustain a real codebase over weeks of feature growth — not just one-shot a clever solution.
 
@@ -37,7 +37,7 @@ Recursive joke: the first benchmark task is implementing `sandbox.py` itself.
 | qwen | `opencode-go/qwen3.6-plus` |
 | glm | `opencode-go/glm-5.1` |
 
-All seven race in round 1. From round 2 onward, the lowest combined score (spec/10 + quality/20, with hidden-test failures auto-last) is eliminated each week. Eliminated models stay in the archive; tombstones land in [`results/eliminated.md`](results/eliminated.md) (created on first elimination).
+All seven race in rounds 1 and 2 (the baseline). From round 3 onward, the lowest combined score (spec/10 + quality/20, with hidden-test failures auto-last) is eliminated each week. Eliminated models stay in the archive; tombstones land in [`results/eliminated.md`](results/eliminated.md) (created on first elimination).
 
 ## Latest round
 
