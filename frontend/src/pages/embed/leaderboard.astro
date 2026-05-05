@@ -1,0 +1,56 @@
+---
+import EmbedLayout from '../../layouts/EmbedLayout.astro';
+import { getCollection } from 'astro:content';
+import { fmtNum } from '../../lib/format';
+import { computeStandings, sparkline } from '../../lib/aggregate';
+
+export const prerender = true;
+
+const entries = await getCollection('rounds');
+const rounds = entries.map(e => e.data);
+const standings = computeStandings(rounds);
+---
+
+<EmbedLayout
+  title="open-bench leaderboard (embed)"
+  description="Cumulative ELO standings across every open-bench round."
+  canonicalPath="/leaderboard"
+>
+  <h1>open-bench <span class="muted">/ leaderboard</span></h1>
+  {standings.length === 0 ? (
+    <p class="muted">No rounds yet.</p>
+  ) : (
+    <table class="embed-table">
+      <thead>
+        <tr>
+          <th class="num">#</th>
+          <th>model</th>
+          <th class="num">elo</th>
+          <th class="num">w</th>
+          <th class="num">avg</th>
+          <th>trend</th>
+        </tr>
+      </thead>
+      <tbody>
+        {standings.map((s, i) => (
+          <tr>
+            <td class="num">{i + 1}</td>
+            <td>{s.impl}</td>
+            <td class="num"><strong>{Math.round(s.elo)}</strong></td>
+            <td class="num">{s.wins}</td>
+            <td class="num">{fmtNum(s.avgScore, 1)}</td>
+            <td class="spark">{sparkline(s.history)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</EmbedLayout>
+
+<style>
+  .embed-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .embed-table th, .embed-table td { padding: 4px 8px; border-bottom: 1px solid var(--rule); }
+  .embed-table th { font-weight: 500; color: var(--muted); text-align: left; }
+  .embed-table .num { text-align: right; }
+  .embed-table .spark { font-family: var(--mono); letter-spacing: -1px; color: var(--accent); }
+</style>

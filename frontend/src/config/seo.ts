@@ -109,6 +109,12 @@ export const seoPages = {
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'collectionPage'],
   },
+  embedIndex: {
+    title: 'Embed widgets · open-bench',
+    description: 'Drop-in iframes for blog posts and dashboards: latest round scoreboard and cumulative leaderboard. Static, dependency-free.',
+    ogImage: '/og-default.png',
+    jsonLd: ['organization'],
+  },
 } as const satisfies Record<string, StaticPageSeo>;
 
 export type StaticPageKey = keyof typeof seoPages;
