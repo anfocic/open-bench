@@ -4,21 +4,53 @@ Backlog of frontend gaps. Live document — edit freely.
 
 Status: `[ ]` todo, `[~]` in progress, `[x]` done, `[-]` skipped.
 
+## Next session
+
+**Outstanding PRs (need review + merge before any new work)**
+- [ ] PR #19 — embed widgets (`/embed/leaderboard`, `/embed/round/[date]`, `/embed/round/latest`, `/embed` catalog). Stacked on #20.
+- [ ] PR #20 — bug sweep on compare + embed code (perf, dedup, dead-code cleanup). Stacked on #21.
+- [ ] PR #21 — view transitions + header/footer cleanup + glossary tooltips + four quick wins (per-round JSON, skip-link, theme-color, round/impl tab transition). Bundles a lot; consider splitting if you want narrower review.
+
+**Code to ship next** (do these in order)
+- [ ] **Logo decision** — pick a direction (sparkline-in-brackets `[▂▅█]` is my pick: zero new asset pipeline, themes natively, ties to scoreboard vocabulary). Unblocks `apple-touch-icon.png` and the OG default mark.
+- [ ] **`/scoring` page** — long-form rubric walkthrough. Tooltips already cover the one-liners; this is the "I want the full story" landing. Closes the P1 glossary item.
+- [ ] **Reproduce-it walkthrough** — `/reproduce` page or top-of-`/about` section. "Open methods" is the pitch but the site never invites verification. P1.
+- [ ] **Empty-state polish** — guard trend columns and sparklines behind `rounds >= 3`; show a "round 2 ships {date}" placeholder on `/changelog`. P2.
+- [ ] **`apple-touch-icon.png`** — once the logo lands. Finishes the P2 touch-icons item.
+
+**Decisions blocking** (no code can move without these)
+- [ ] **Logo direction** — sparkline-in-brackets / terminal prompt / monogram / something else.
+- [ ] **Round 2 date** — half the new pages (`/changelog`, ELO trend, sparklines, per-round compare) only get interesting at round 2+.
+- [ ] **Domain status** — confirm `openbenchmark.dev` is registered + pointed at CF Pages. Canonicals everywhere assume yes.
+- [ ] **Twitter handle** — confirm `@folezof` is the right one. Wired into every OG card.
+- [ ] **Embed license wording** — "MIT, attribution appreciated" on `/embed` — happy with that copy?
+
+**fole spot-checks** (validate the merged work in a real browser)
+- [ ] `/compare` matrix → click 2-3 pairs, sanity-check the numbers and per-round deltas.
+- [ ] `/embed` (after #19 merges) → drop a snippet into a scratch HTML file, verify dark + light hosts, try `?theme=light|dark`.
+- [ ] Glossary tooltips (after #21 merges) → hover headers on `/leaderboard` and round scoreboard, check copy reads right.
+- [ ] View transitions (after #21 merges) → `/leaderboard` → `/model/glm` should morph the model name into the masthead.
+- [ ] Skip-to-content (after #21 merges) → tab on any page, "skip to content" should pop in at top-left.
+
 ## P1 — high leverage, ship soon
 
-_(empty — all P1 items shipped; see Done section)_
+- [ ] **Glossary / scoring legend** — column-header tooltips done on PR #21 (central `glossary.ts` + `<Term>` component, applied to leaderboard, scoreboard, compare, model history). Still pending: dedicated `/scoring` page that walks through the rubric end-to-end.
+- [ ] **Reproduce-it walkthrough** — `/reproduce` page or prominent section on `/about` with the minimal "clone, run X, get the same scores" recipe. The whole pitch is open methods; the site never invites verification.
 
 ## P2 — polish, ship next
 
-<!-- Charts: shipped, see Done. -->
-
-<!-- Methodology changelog: shipped, see Done. -->
-<!-- Dataset export: shipped, see Done. -->
+- [ ] **Per-round JSON endpoint** — `/round/[date].json` mirroring the `/dataset.json` shape but scoped to a single round. Shipped on PR #21; lands when that merges.
+- [ ] **Empty-state polish for low-round-count pages** — at 1 round, `/changelog` is one entry, sparklines are single bars, ELO swings are degenerate. Either guard trend columns behind a `rounds >= 3` check or show a "round 2 ships {date}" placeholder so pages don't read as undercooked.
+- [ ] **iOS / Android touch icons + theme-color** — `theme-color` meta + `site.webmanifest` shipped on PR #21. Still pending: `apple-touch-icon.png` (needs a PNG, blocked on logo decision).
 
 ## P3 — nice to have
 
-- [ ] **Inline code diff viewer** — replace "GH link" with rendered diff per impl.
-- [ ] **Embed widget** — iframe-able latest scoreboard for blog posts.
+- [ ] **Inline code diff viewer** — replace "GH link" with rendered diff per impl. (Already shipped via shiki on `/round/[date]/[impl]`; mark done once verified.)
+- [ ] **Embed widget** — iframe-able latest scoreboard for blog posts. Shipped on PR #19.
+- [ ] **Multi-way compare (3+ models)** — current `/compare` is pairwise only. Revisit when the lineup hits ~10+ models.
+- [ ] **Search / filter for models** — same trigger as multi-way compare.
+- [ ] **`/round/[date]` → `/compare/x/vs/y` deep links** — clickable scoreboard rows that pre-fill a comparison. Useful once `rounds >= 2`.
+- [ ] **Newsletter signup** — only if RSS analytics show < 50 readers after 5 rounds.
 
 ## Skipped (no fit)
 
