@@ -10,7 +10,7 @@ import { navLinks } from '../data/nav';
     <div class="footer-col">
       <div class="footer-heading">project</div>
       {navLinks.map(link => (
-        <a href={link.href} target={link.external ? '_blank' : undefined} rel={link.external ? 'noopener' : undefined}>{link.label === 'task' ? 'task spec' : link.label}</a>
+        <a href={link.href}>{link.label}</a>
       ))}
     </div>
     <div class="footer-col">
