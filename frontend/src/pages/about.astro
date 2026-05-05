@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import '../styles/deck.css';
+import { pageSeo } from '../lib/seo';
 
 const sections = [
   {
@@ -47,12 +48,11 @@ const sections = [
     ],
   },
 ];
+
+const seo = pageSeo('about', '/about');
 ---
 
-<BaseLayout
-  title="open-bench — about"
-  description="Why open-bench exists: a coding-LLM benchmark harness built around real agent loops, hidden tests, peer review, and committed artifacts."
->
+<BaseLayout seo={seo}>
   <Header subtitle="about" />
 
   <nav class="deck-toc" aria-label="Sections">

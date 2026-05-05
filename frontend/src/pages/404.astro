@@ -6,13 +6,24 @@ import Masthead from '../components/Masthead.astro';
 import { getCollection } from 'astro:content';
 import { fmtDate } from '../lib/format';
 import { findChampion } from '../lib/scoreboard';
+import type { SeoProps } from '../lib/seo';
 
 const entries = await getCollection('rounds');
 const rounds = entries.sort((a, b) => b.id.localeCompare(a.id)).map(e => e.data);
 const latestRound = rounds[0];
+
+const seo: SeoProps = {
+  title: '404 · open-bench',
+  description: 'Page not found.',
+  ogImage: '/og-default.png',
+  ogType: 'website',
+  canonicalPath: '/404',
+  jsonLd: [],
+  noindex: true,
+};
 ---
 
-<BaseLayout title="open-bench — 404" description="Page not found.">
+<BaseLayout seo={seo}>
   <Header subtitle="404" />
   <Masthead title="404" subtitle={latestRound ? `no such round, page, or path. try <a href="/round/${latestRound.date}">round ${latestRound.date}</a> or <a href="/">home</a>.` : 'no such round, page, or path.'} />
   {rounds.length > 0 && (
