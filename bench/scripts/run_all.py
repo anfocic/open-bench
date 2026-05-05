@@ -4,17 +4,24 @@
 End-to-end driver: runs every implementer in bench/config.json with --auto,
 then auto-drives all judges, then aggregates. Single command per task.
 
-Each implementer runs sequentially (implementer parallelization is deferred;
-see bench/plans/improvements.md). Failures in one model do not abort the
-rest; a summary is printed at the end.
+Implementers run in parallel by default (concurrency=3, override via
+--concurrency or IMPL_CONCURRENCY). git worktree creation is serialized
+through a shared lock — only the slow opencode + capture phases overlap.
+
+Failures in one model do not abort the rest; a summary is printed at the
+end.
 """
 
 from __future__ import annotations
 
 import argparse
+import concurrent.futures as cf
+import os
 import pathlib
 import subprocess
 import sys
+import threading
+import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _config  # noqa: E402
@@ -22,12 +29,33 @@ import _config  # noqa: E402
 from start_run import start_run
 
 SCRIPTS_DIR = pathlib.Path(__file__).resolve().parent
+REPO_ROOT = _config.REPO_ROOT
+
+
+def _drive_one_implementer(task: str,
+                            model: str,
+                            lock: threading.Lock,
+                            log_path: pathlib.Path) -> tuple[str, int, float]:
+    started = time.monotonic()
+    rc = start_run(task, model, auto=True, worktree_lock=lock, log_path=log_path)
+    return model, rc, time.monotonic() - started
 
 
 def main() -> int:
     p = argparse.ArgumentParser(description="End-to-end: implementers → judges → aggregate.")
     p.add_argument("task", help="task name under bench/tasks/")
+    p.add_argument("--concurrency", type=int, default=None,
+                   help="parallel implementers (default: $IMPL_CONCURRENCY or 3)")
     args = p.parse_args()
+
+    if args.concurrency is not None:
+        concurrency = args.concurrency
+    else:
+        env = os.environ.get("IMPL_CONCURRENCY")
+        concurrency = int(env) if env else 3
+    if concurrency < 1:
+        print(f"error: --concurrency must be >= 1, got {concurrency}", file=sys.stderr)
+        return 2
 
     cfg = _config.load()
     implementers = list(cfg.implementers)
@@ -38,16 +66,52 @@ def main() -> int:
     ok_models: list[str] = []
     fail_models: list[str] = []
 
-    print(f"==> implementer phase: {len(implementers)} model(s)")
-    for model in implementers:
-        print()
-        print(f"--- {model} ---")
-        rc = start_run(args.task, model, auto=True)
-        if rc == 0:
-            ok_models.append(model)
-        else:
-            print(f"WARN: {model} failed, continuing", file=sys.stderr)
-            fail_models.append(model)
+    print(f"==> implementer phase: {len(implementers)} model(s), concurrency={concurrency}")
+
+    if concurrency <= 1:
+        for model in implementers:
+            print()
+            print(f"--- {model} ---")
+            rc = start_run(args.task, model, auto=True)
+            if rc == 0:
+                ok_models.append(model)
+            else:
+                print(f"WARN: {model} failed, continuing", file=sys.stderr)
+                fail_models.append(model)
+    else:
+        lock = threading.Lock()
+        log_paths: dict[str, pathlib.Path] = {}
+        for model in implementers:
+            lp = REPO_ROOT / "builds" / model / "last-impl.log"
+            lp.parent.mkdir(parents=True, exist_ok=True)
+            log_paths[model] = lp
+
+        print(f"  logs: builds/<model>/last-impl.log")
+        with cf.ThreadPoolExecutor(max_workers=concurrency) as pool:
+            futures = {
+                pool.submit(_drive_one_implementer, args.task, m, lock, log_paths[m]): m
+                for m in implementers
+            }
+            for fut in cf.as_completed(futures):
+                model, rc, elapsed = fut.result()
+                log_rel = log_paths[model].relative_to(REPO_ROOT)
+                mark = "✓" if rc == 0 else "✗"
+                extra = "" if rc == 0 else f" exit {rc}"
+                print(f"  {mark} {model} ({elapsed:.0f}s){extra} — {log_rel}")
+                if rc == 0:
+                    ok_models.append(model)
+                else:
+                    fail_models.append(model)
+
+        for model in fail_models:
+            log = log_paths[model]
+            print(f"\n--- tail {log.relative_to(REPO_ROOT)} ---", file=sys.stderr)
+            try:
+                lines = log.read_text(errors="replace").splitlines()
+                for ln in lines[-40:]:
+                    print(ln, file=sys.stderr)
+            except OSError as e:
+                print(f"  (could not read log: {e})", file=sys.stderr)
 
     print()
     print("==> judgment phase")

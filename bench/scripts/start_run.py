@@ -13,12 +13,14 @@ README warning before using.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime as dt
 import os
 import pathlib
 import shutil
 import subprocess
 import sys
+import threading
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _config  # noqa: E402
@@ -64,7 +66,9 @@ def determine_base_branch(repo_root: pathlib.Path) -> str:
     )
 
 
-def start_run(task: str, model: str, auto: bool = False) -> int:
+def start_run(task: str, model: str, auto: bool = False,
+              worktree_lock: threading.Lock | None = None,
+              log_path: pathlib.Path | None = None) -> int:
     task_cfg = _task.load(task)
     entrypoint = task_cfg["entrypoint"]
 
@@ -87,33 +91,35 @@ def start_run(task: str, model: str, auto: bool = False) -> int:
     branch = f"eval/{slug}"
     worktree_dir = (REPO_ROOT / ".." / f"eval-{slug}").resolve()
 
-    existing = _run_git("worktree", "list", "--porcelain", cwd=REPO_ROOT, check=False)
-    if f"worktree {worktree_dir}" in existing:
-        print(f"error: worktree already exists at {worktree_dir}", file=sys.stderr)
-        print(f"       remove with: git worktree remove {worktree_dir}", file=sys.stderr)
-        return 1
+    lock_ctx = worktree_lock if worktree_lock is not None else contextlib.nullcontext()
+    with lock_ctx:
+        existing = _run_git("worktree", "list", "--porcelain", cwd=REPO_ROOT, check=False)
+        if f"worktree {worktree_dir}" in existing:
+            print(f"error: worktree already exists at {worktree_dir}", file=sys.stderr)
+            print(f"       remove with: git worktree remove {worktree_dir}", file=sys.stderr)
+            return 1
 
-    try:
-        _run_git("rev-parse", "--verify", branch, cwd=REPO_ROOT)
-        print(f"error: branch {branch} already exists", file=sys.stderr)
-        print(f"       delete with: git branch -D {branch}", file=sys.stderr)
-        return 1
-    except RuntimeError:
-        pass
+        try:
+            _run_git("rev-parse", "--verify", branch, cwd=REPO_ROOT)
+            print(f"error: branch {branch} already exists", file=sys.stderr)
+            print(f"       delete with: git branch -D {branch}", file=sys.stderr)
+            return 1
+        except RuntimeError:
+            pass
 
-    base_branch = determine_base_branch(REPO_ROOT)
-    base = _run_git("rev-parse", base_branch, cwd=REPO_ROOT).strip()
+        base_branch = determine_base_branch(REPO_ROOT)
+        base = _run_git("rev-parse", base_branch, cwd=REPO_ROOT).strip()
 
-    _run_git("worktree", "add", "-b", branch, str(worktree_dir), base, cwd=REPO_ROOT)
+        _run_git("worktree", "add", "-b", branch, str(worktree_dir), base, cwd=REPO_ROOT)
 
-    shutil.copy2(task_dir / "PROMPT.md", worktree_dir / "PROMPT.md")
-    shutil.copy2(task_dir / "SPEC.md", worktree_dir / "SPEC.md")
+        shutil.copy2(task_dir / "PROMPT.md", worktree_dir / "PROMPT.md")
+        shutil.copy2(task_dir / "SPEC.md", worktree_dir / "SPEC.md")
 
-    run_dir = REPO_ROOT / "builds" / model / "rounds" / f"{task}-{date_stamp}"
-    run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / ".started_at").write_text(
-        dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    )
+        run_dir = REPO_ROOT / "builds" / model / "rounds" / f"{task}-{date_stamp}"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / ".started_at").write_text(
+            dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        )
 
     print()
     print("✓ worktree ready")
@@ -149,6 +155,7 @@ def start_run(task: str, model: str, auto: bool = False) -> int:
         model=slug_str,
         message=message,
         title=slug,
+        log_path=log_path,
     )
 
     if rc != 0:

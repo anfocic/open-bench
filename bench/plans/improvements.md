@@ -86,9 +86,11 @@ Defaults (when `task.json` is absent) reproduce the round-1 hardcoded values, so
 
 ---
 
-## 2. Implementer parallelization
+## 2. Implementer parallelization — DONE
 
-### Problem
+Implemented. `bench/scripts/run_all.py` fans implementers out via `ThreadPoolExecutor` (default concurrency 3, override `--concurrency` or `IMPL_CONCURRENCY`). A shared `threading.Lock` serializes the `git worktree add` critical section in `start_run.py`; opencode session and capture run unlocked. Per-model output redirects to `builds/<model>/last-impl.log`. `capture_run.py` switched off process-global `os.chdir` for thread safety. Sequential mode (concurrency=1) preserved byte-identical.
+
+### Problem (historical)
 
 `bench/scripts/run-all.sh` runs each implementer sequentially:
 
