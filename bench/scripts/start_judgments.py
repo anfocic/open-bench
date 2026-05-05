@@ -133,13 +133,54 @@ def write_packet(
     )
 
 
+# Prototype for the same parallelization pattern (ThreadPoolExecutor +
+# per-target log file + as_completed summary) that the implementer phase
+# in run-all.sh will eventually adopt. Keep it as a local helper for now —
+# one call site, premature to hoist into a shared module.
+def _drive_one_judge(judge: str,
+                     out_root: pathlib.Path,
+                     cfg,
+                     message: str,
+                     log_path: pathlib.Path | None) -> tuple[str, int, float]:
+    """Drive a single judge through `opencode run`.
+
+    Returns (judge, rc, elapsed_seconds). Caller is responsible for
+    skipping judges whose slug isn't in config — this helper assumes
+    the slug exists.
+    """
+    import time as _time
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+    import _opencode_run
+
+    judge_dir = out_root / judge
+    slug = cfg.slug_for(judge)
+    title = f"{out_root.name}-{judge}"
+
+    started = _time.monotonic()
+    rc = _opencode_run.run(
+        directory=judge_dir,
+        model=slug,
+        message=message,
+        title=title,
+        log_path=log_path,
+    )
+    return judge, rc, _time.monotonic() - started
+
+
 def auto_drive_judges(out_root: pathlib.Path,
                       judges: list[str],
-                      cfg) -> int:
+                      cfg,
+                      concurrency: int = 1) -> int:
     """For each judge with a slug in config, drive `opencode run` against
     its packet directory. Judges without a slug (e.g. configured to run
     through a non-opencode harness) are skipped here and listed for
     manual driving by the caller.
+
+    With concurrency=1, runs sequentially with inherited stdout (legacy
+    behavior — byte-identical to before parallelization existed). With
+    concurrency>1, fans out via ThreadPoolExecutor and redirects each
+    judge's stdout/stderr to <judge_dir>/judge.log so streams don't
+    interleave.
 
     Returns 0 if every attempted judge exited cleanly, else the first
     non-zero return code so the caller can surface failure."""
@@ -160,31 +201,72 @@ def auto_drive_judges(out_root: pathlib.Path,
         "<label>_scores.json under output/."
     )
 
-    overall_rc = 0
+    drivable: list[str] = []
     for judge in judges:
         if judge not in cfg.slugs:
             print(f"  --auto: skipping '{judge}' (no slug in config — "
                   f"drive manually)", file=sys.stderr)
             continue
+        drivable.append(judge)
 
-        judge_dir = out_root / judge
-        slug = cfg.slug_for(judge)
-        title = f"{out_root.name}-{judge}"
+    if not drivable:
+        return 0
 
-        print(f"\n▶ --auto: driving {judge} ({slug}) against "
-              f"{judge_dir.relative_to(REPO_ROOT)}")
+    if concurrency <= 1:
+        overall_rc = 0
+        for judge in drivable:
+            judge_dir = out_root / judge
+            slug = cfg.slug_for(judge)
+            print(f"\n▶ --auto: driving {judge} ({slug}) against "
+                  f"{judge_dir.relative_to(REPO_ROOT)}")
+            _, rc, _elapsed = _drive_one_judge(
+                judge, out_root, cfg, message, log_path=None
+            )
+            if rc != 0:
+                print(f"✗ {judge} exited {rc}", file=sys.stderr)
+                overall_rc = overall_rc or rc
+        return overall_rc
 
-        rc = _opencode_run.run(
-            directory=judge_dir,
-            model=slug,
-            message=message,
-            title=title,
-        )
-        if rc != 0:
-            print(f"✗ {judge} exited {rc}", file=sys.stderr)
-            overall_rc = overall_rc or rc
+    import concurrent.futures as _cf
 
-    return overall_rc
+    print(f"\n▶ --auto: dispatching {len(drivable)} judge(s) "
+          f"(concurrency={concurrency})")
+
+    results: list[tuple[str, int, float]] = []
+    log_paths: dict[str, pathlib.Path] = {
+        j: out_root / j / "judge.log" for j in drivable
+    }
+    with _cf.ThreadPoolExecutor(max_workers=concurrency) as pool:
+        futures = {
+            pool.submit(
+                _drive_one_judge, j, out_root, cfg, message, log_paths[j]
+            ): j
+            for j in drivable
+        }
+        for fut in _cf.as_completed(futures):
+            judge, rc, elapsed = fut.result()
+            log_rel = log_paths[judge].relative_to(REPO_ROOT)
+            mark = "✓" if rc == 0 else "✗"
+            extra = "" if rc == 0 else f" exit {rc}"
+            print(f"  {mark} {judge} ({elapsed:.0f}s){extra} — {log_rel}")
+            results.append((judge, rc, elapsed))
+
+    failed = [(j, rc) for j, rc, _ in results if rc != 0]
+    passed = len(results) - len(failed)
+    print(f"\n  {passed} pass, {len(failed)} fail")
+
+    for judge, rc in failed:
+        log = log_paths[judge]
+        print(f"\n--- tail {log.relative_to(REPO_ROOT)} (exit {rc}) ---",
+              file=sys.stderr)
+        try:
+            lines = log.read_text(errors="replace").splitlines()
+            for ln in lines[-40:]:
+                print(ln, file=sys.stderr)
+        except OSError as e:
+            print(f"  (could not read log: {e})", file=sys.stderr)
+
+    return failed[0][1] if failed else 0
 
 
 def main() -> int:
@@ -194,7 +276,20 @@ def main() -> int:
                    help="RNG seed for label assignment (default: time-based)")
     p.add_argument("--auto", action="store_true",
                    help="drive each judge with a slug through opencode run")
+    p.add_argument("--concurrency", type=int, default=None,
+                   help="parallel judges under --auto "
+                        "(default: $JUDGE_CONCURRENCY or 3)")
     args = p.parse_args()
+
+    if args.concurrency is not None:
+        concurrency = args.concurrency
+    else:
+        env = os.environ.get("JUDGE_CONCURRENCY")
+        concurrency = int(env) if env else 3
+    if concurrency < 1:
+        print(f"error: --concurrency must be >= 1, got {concurrency}",
+              file=sys.stderr)
+        return 2
 
     task_dir = REPO_ROOT / "bench" / "tasks" / args.task
     if not task_dir.is_dir():
@@ -277,7 +372,7 @@ def main() -> int:
     print(f"✓ judgment phase set up at {out_root.relative_to(REPO_ROOT)}")
 
     if args.auto:
-        rc = auto_drive_judges(out_root, judges, cfg)
+        rc = auto_drive_judges(out_root, judges, cfg, concurrency=concurrency)
         manual = [j for j in judges if j not in cfg.slugs]
         if manual:
             print()
