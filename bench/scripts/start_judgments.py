@@ -49,7 +49,11 @@ def find_runs(task: str) -> list[dict]:
     if not builds_root.is_dir():
         return []
 
-    date_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+    # Accept either bare date (`YYYY-MM-DD`) or date with sample
+    # suffix (`YYYY-MM-DD-rN`). Lexical sort lands `-r3` after `-r2`
+    # after the bare date, so the latest sample of the latest round
+    # wins per model.
+    date_re = re.compile(r"^\d{4}-\d{2}-\d{2}(?:-r\d+)?$")
     prefix = f"{task}-"
 
     for model_entry in sorted(builds_root.iterdir()):
