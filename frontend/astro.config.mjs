@@ -58,6 +58,9 @@ export default defineConfig({
         } else if (u.includes('/notes/')) {
           item.changefreq = 'monthly';
           item.priority = 0.7;
+        } else if (u.endsWith('/dataset')) {
+          item.changefreq = 'weekly';
+          item.priority = 0.8;
         } else if (u.endsWith('/about')) {
           item.changefreq = 'yearly';
           item.priority = 0.3;

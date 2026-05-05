@@ -1,0 +1,109 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import Masthead from '../../components/Masthead.astro';
+import { getCollection } from 'astro:content';
+import { roundsToDataset } from '../../lib/dataset';
+import { pageSeo } from '../../lib/seo';
+
+const entries = await getCollection('rounds');
+const rounds = entries.sort((a, b) => a.id.localeCompare(b.id)).map(e => e.data);
+const dataset = roundsToDataset(rounds);
+
+const seo = pageSeo('dataset', '/dataset');
+
+const schema: { col: string; type: string; desc: string }[] = [
+  { col: 'round', type: 'string (YYYY-MM-DD)', desc: 'Round date.' },
+  { col: 'impl', type: 'string', desc: 'Implementer slug (the model lineup name).' },
+  { col: 'model_slug', type: 'string|null', desc: 'Provider/model identifier from meta.json (e.g. opencode/kimi-k2.6).' },
+  { col: 'spec_peer', type: 'number|null', desc: 'Median spec score from peer judges, /15.' },
+  { col: 'quality_peer', type: 'number|null', desc: 'Median quality score from peer judges, /15.' },
+  { col: 'composite', type: 'number|null', desc: 'spec_peer + quality_peer; /30. Null when either component missing.' },
+  { col: 'passed_hard_fail', type: 'boolean', desc: 'True if the impl passed the hard-fail gate (hidden tests + build).' },
+  { col: 'tests', type: 'string', desc: 'Hidden test pass count, e.g. "9/9".' },
+  { col: 'verdict', type: 'string', desc: 'Mode-of-judges recommendation: ship | ship-with-cleanup | rewrite | reject.' },
+  { col: 'samples', type: 'integer', desc: 'Number of independent runs aggregated for this (round, impl).' },
+  { col: 'total_cost_usd', type: 'number', desc: 'Sum of inference cost across samples, USD.' },
+  { col: 'total_tokens', type: 'integer', desc: 'Sum of input+output+cache_read tokens across samples.' },
+  { col: 'median_wall_seconds', type: 'number|null', desc: 'Median wall-clock seconds across samples.' },
+  { col: 'median_loc', type: 'number|null', desc: 'Median lines of code in submitted implementation.' },
+];
+---
+
+<BaseLayout seo={seo}>
+  <Header subtitle="dataset" />
+  <Masthead title="dataset" subtitle={`${dataset.meta.rounds} round${dataset.meta.rounds === 1 ? '' : 's'} · ${dataset.meta.rows} rows · MIT license. Rebuilt every deploy. Cite freely.`} />
+
+  <section>
+    <div class="dl-grid">
+      <a class="dl-card" href="/dataset.json" download>
+        <div class="dl-format">JSON</div>
+        <div class="dl-name">dataset.json</div>
+        <div class="dl-desc">Full structured shape. Includes per-round arrays (scoreboard, samples, judges, self-bias) plus a flat <code>flat[]</code> mirror.</div>
+      </a>
+      <a class="dl-card" href="/dataset.csv" download>
+        <div class="dl-format">CSV</div>
+        <div class="dl-name">dataset.csv</div>
+        <div class="dl-desc">One row per (round, impl). Drops into pandas / Excel / R without ceremony. Schema below.</div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>schema (csv)</h2>
+    <table class="schema-table">
+      <thead>
+        <tr><th>column</th><th>type</th><th>description</th></tr>
+      </thead>
+      <tbody>
+        {schema.map(s => (
+          <tr>
+            <td><code>{s.col}</code></td>
+            <td class="muted">{s.type}</td>
+            <td>{s.desc}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>license</h2>
+    <p>The dataset is released under the <strong>MIT license</strong>, matching the <a href="https://github.com/anfocic/open-bench/blob/main/LICENSE" target="_blank" rel="noopener">repository</a>. Use it for anything; attribution appreciated, not required.</p>
+
+    <h2>citation</h2>
+    <pre><code>{`@misc{openbench,
+  author       = {fole},
+  title        = {open-bench: weekly LLM coding battle royale},
+  year         = {2026},
+  howpublished = {\\url{https://openbenchmark.dev/dataset}},
+  note         = {schema_version=${dataset.meta.schema_version}}
+}`}</code></pre>
+
+    <h2>schema versioning</h2>
+    <p>The JSON file carries a <code>meta.schema_version</code>. Breaking changes bump it. Old shapes stay reachable in git history under <code>frontend/src/lib/dataset.ts</code>.</p>
+
+    <h2>raw artifacts</h2>
+    <p>This dataset is the aggregated table. Per-run inputs/outputs (transcripts, diffs, hidden test outputs, judge prompts) live in the repo at <a href="https://github.com/anfocic/open-bench/tree/main/builds" target="_blank" rel="noopener">builds/</a> and <a href="https://github.com/anfocic/open-bench/tree/main/results" target="_blank" rel="noopener">results/</a>.</p>
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0 32px; }
+  .dl-card {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 18px 20px; border-left: 3px solid var(--accent);
+    background: var(--bg-alt); color: var(--fg); text-decoration: none;
+  }
+  .dl-card:hover { background: var(--code-bg); }
+  .dl-format { font-family: var(--mono); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+  .dl-name { font-family: var(--mono); font-size: 1.2rem; color: var(--fg-bright); font-weight: 700; }
+  .dl-desc { color: var(--muted); font-size: var(--font-sm); }
+  .schema-table { width: 100%; border-collapse: collapse; }
+  .schema-table th, .schema-table td { padding: 8px 10px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+  .schema-table th { color: var(--muted); font-weight: 400; font-family: var(--mono); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.08em; }
+  .schema-table code { background: var(--code-bg); padding: 0.1em 0.4em; font-family: var(--mono); }
+</style>

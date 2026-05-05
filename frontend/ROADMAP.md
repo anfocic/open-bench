@@ -13,7 +13,7 @@ _(empty — all P1 items shipped; see Done section)_
 <!-- Charts: shipped, see Done. -->
 
 - [ ] **Methodology changelog** — `/changelog` listing SPEC and rubric changes per round. Trust signal: "what's comparable round-to-round".
-- [ ] **Public dataset export** — `/dataset.csv` and `/dataset.json` endpoints. Backs the "open data" claim. Researchers want to cite + reanalyze.
+<!-- Dataset export: shipped, see Done. -->
 
 ## P3 — nice to have
 
@@ -40,5 +40,6 @@ _(empty — all P1 items shipped; see Done section)_
 - [x] **OG dims/alt + twitter handle** — `@folezof`, width/height/alt all wired.
 - [x] **Cross-round leaderboard / ELO** — `/leaderboard`, ELO base 1000 K=32, sparkline, sorted by ELO desc.
 - [x] **Per-model career page** — `/model/[impl]` with full round history, rank/ELO masthead.
+- [x] **Public dataset export** — `/dataset.json` (full structured) + `/dataset.csv` (one row per round×impl) + `/dataset` docs page with schema, license, citation. Backs the "open data" claim.
 - [x] **Charts** — pure-SVG `<Bars>` (scoreboard) + `<Scatter>` (cost-vs-quality, log x). Round-data wrappers `<RoundBars date>` / `<RoundScatter date>` plug into round tabs and are MDX-available in writeups. Zero JS.
 - [x] **Round retrospective / writeup system** — MDX content collection at `frontend/src/content/notes/`, `/notes/[slug]` permalinks, `<RoundScoreboard>` + `<Stat>` MDX components, per-note OG cards, RSS merged with rounds, BlogPosting JSON-LD, round page callout.

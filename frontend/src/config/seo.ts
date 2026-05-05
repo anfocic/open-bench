@@ -85,6 +85,12 @@ export const seoPages = {
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'collectionPage', 'leaderboardCumulative'],
   },
+  dataset: {
+    title: 'Dataset · open-bench',
+    description: 'Download open-bench rounds as JSON or CSV. Schema, license, citation.',
+    ogImage: '/og-default.png',
+    jsonLd: ['organization', 'datasetSite'],
+  },
   notesIndex: {
     title: 'Writeups · open-bench',
     description: 'Round retrospectives, model behaviour notes, and post-mortems from open-bench.',
