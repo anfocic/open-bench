@@ -49,6 +49,84 @@ function parseTotalCost(md) {
   return total;
 }
 
+function parseFrontmatter(src) {
+  const m = src.match(/^---\n([\s\S]*?)\n---/);
+  if (!m) return null;
+  const out = {};
+  for (const line of m[1].split('\n')) {
+    const kv = line.match(/^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/);
+    if (!kv) continue;
+    let v = kv[2].trim();
+    if (v === 'true') out[kv[1]] = true;
+    else if (v === 'false') out[kv[1]] = false;
+    else if (v === 'null' || v === '~' || v === '') out[kv[1]] = null;
+    else if (/^-?\d+(\.\d+)?$/.test(v)) out[kv[1]] = Number(v);
+    else out[kv[1]] = v.replace(/^['"]|['"]$/g, '');
+  }
+  return out;
+}
+
+function loadNotes() {
+  const dir = resolve(FRONTEND, 'src/content/notes');
+  let files;
+  try { files = readdirSync(dir); } catch { return []; }
+  return files
+    .filter(f => f.endsWith('.mdx'))
+    .map(f => {
+      const slug = f.replace(/\.mdx$/, '');
+      const md = readFileSync(resolve(dir, f), 'utf-8');
+      const fm = parseFrontmatter(md);
+      if (!fm || !fm.title) return null;
+      return { slug, ...fm };
+    })
+    .filter(Boolean);
+}
+
+function noteCard(note) {
+  return {
+    type: 'div',
+    props: {
+      style: {
+        width: 1200, height: 630, display: 'flex', flexDirection: 'column',
+        background: BG, color: FG, padding: '64px 80px', fontFamily: 'Inter',
+        justifyContent: 'space-between',
+      },
+      children: [
+        {
+          type: 'div',
+          props: {
+            style: { display: 'flex', flexDirection: 'column', gap: 8 },
+            children: [
+              { type: 'div', props: { style: { fontSize: 26, color: BLUE, letterSpacing: 1, textTransform: 'uppercase' }, children: 'open-bench / writeup' } },
+              { type: 'div', props: { style: { fontSize: 60, fontWeight: 700, lineHeight: 1.15, letterSpacing: -1.5, marginTop: 8 }, children: note.title } },
+            ],
+          },
+        },
+        {
+          type: 'div',
+          props: {
+            style: { fontSize: 28, color: MUTED, lineHeight: 1.4, maxWidth: 980 },
+            children: note.summary,
+          },
+        },
+        {
+          type: 'div',
+          props: {
+            style: { display: 'flex', gap: 24, fontSize: 24, color: MUTED, alignItems: 'baseline' },
+            children: [
+              { type: 'div', props: { style: { color: GOLD }, children: note.author ?? 'fole' } },
+              { type: 'div', props: { children: '·' } },
+              { type: 'div', props: { children: note.publishedAt ?? '' } },
+              note.round && { type: 'div', props: { children: '·' } },
+              note.round && { type: 'div', props: { children: `round ${note.round}` } },
+            ].filter(Boolean),
+          },
+        },
+      ],
+    },
+  };
+}
+
 function loadRounds() {
   const dir = resolve(REPO, 'results/reviews');
   const files = readdirSync(dir).filter(f => /^sandbox-\d{4}-\d{2}-\d{2}\.md$/.test(f));
@@ -126,25 +204,33 @@ export async function generateOg() {
   mkdirSync(OG_DIR, { recursive: true });
   const fontReg = readFileSync(resolve(FRONTEND, 'og-assets/inter-regular.woff'));
   const fontBold = readFileSync(resolve(FRONTEND, 'og-assets/inter-bold.woff'));
-  const rounds = loadRounds();
-  if (rounds.length === 0) {
-    console.warn('[og] no rounds found, skipping');
-    return 0;
-  }
-  for (const round of rounds) {
-    const svg = await satori(card(round), {
-      width: 1200, height: 630,
-      fonts: [
-        { name: 'Inter', data: fontReg, weight: 400, style: 'normal' },
-        { name: 'Inter', data: fontBold, weight: 700, style: 'normal' },
-      ],
-    });
+  const fonts = [
+    { name: 'Inter', data: fontReg, weight: 400, style: 'normal' },
+    { name: 'Inter', data: fontBold, weight: 700, style: 'normal' },
+  ];
+
+  const renderOne = async (tree, outPath) => {
+    const svg = await satori(tree, { width: 1200, height: 630, fonts });
     const png = new Resvg(svg).render().asPng();
-    const out = resolve(OG_DIR, `round-${round.date}.png`);
-    writeFileSync(out, png);
-    console.log(`[og] wrote ${out}`);
+    writeFileSync(outPath, png);
+    console.log(`[og] wrote ${outPath}`);
+  };
+
+  let count = 0;
+  const rounds = loadRounds();
+  for (const round of rounds) {
+    await renderOne(card(round), resolve(OG_DIR, `round-${round.date}.png`));
+    count += 1;
   }
-  return rounds.length;
+
+  const notes = loadNotes().filter(n => !n.draft && !n.ogImageOverride);
+  for (const note of notes) {
+    await renderOne(noteCard(note), resolve(OG_DIR, `note-${note.slug}.png`));
+    count += 1;
+  }
+
+  if (count === 0) console.warn('[og] no rounds or notes found, skipping');
+  return count;
 }
 
 const isCli = import.meta.url === `file://${process.argv[1]}`;

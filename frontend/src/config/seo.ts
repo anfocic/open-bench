@@ -33,7 +33,9 @@ export type JsonLdKey =
   | 'breadcrumb'
   | 'collectionPage'
   | 'roundList'
-  | 'leaderboardCumulative';
+  | 'leaderboardCumulative'
+  | 'blog'
+  | 'blogPosting';
 
 export interface StaticPageSeo {
   readonly title: string;
@@ -83,6 +85,12 @@ export const seoPages = {
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'collectionPage', 'leaderboardCumulative'],
   },
+  notesIndex: {
+    title: 'Writeups · open-bench',
+    description: 'Round retrospectives, model behaviour notes, and post-mortems from open-bench.',
+    ogImage: '/og-default.png',
+    jsonLd: ['organization', 'collectionPage', 'blog'],
+  },
 } as const satisfies Record<string, StaticPageSeo>;
 
 export type StaticPageKey = keyof typeof seoPages;
@@ -111,6 +119,14 @@ export const seoTemplates = {
     ogAltTpl: 'open-bench — {impl} model career',
     ogType: 'article',
     jsonLd: ['organization', 'breadcrumb'],
+  },
+  note: {
+    titleTpl: '{title}{brandSuffix}',
+    descTpl: '{summary}',
+    ogTpl: '/og/note-{slug}.png',
+    ogAltTpl: 'open-bench writeup — {title}',
+    ogType: 'article',
+    jsonLd: ['organization', 'blogPosting', 'breadcrumb'],
   },
   task: {
     titleTpl: '{task} task{brandSuffix}',

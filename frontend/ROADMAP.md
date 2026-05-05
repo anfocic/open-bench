@@ -6,9 +6,7 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done, `[-]` skipped.
 
 ## P1 — high leverage, ship soon
 
-- [~] **Cross-round leaderboard / ELO** — `/leaderboard` with cumulative W/podium/avg/ELO. Brand promise is "battle royale", but every round is currently an island.
-- [~] **Per-model career page** — `/model/[impl]`. Career view: every round played, score history, cost trend. Natural deep-link target.
-- [ ] **Round retrospective / writeup** — markdown blog per round under `frontend/src/pages/round/[date]/notes.astro` (or a `posts/` collection). Tables don't go viral; narrative does.
+_(empty — all P1 items shipped; see Done section)_
 
 ## P2 — polish, ship next
 
@@ -39,3 +37,6 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done, `[-]` skipped.
 - [x] **/round/ archive index** — listing page with CollectionPage + ItemList JSON-LD.
 - [x] **Article JSON-LD + rel=prev/next** — round permalinks now also typed as `Article`.
 - [x] **OG dims/alt + twitter handle** — `@folezof`, width/height/alt all wired.
+- [x] **Cross-round leaderboard / ELO** — `/leaderboard`, ELO base 1000 K=32, sparkline, sorted by ELO desc.
+- [x] **Per-model career page** — `/model/[impl]` with full round history, rank/ELO masthead.
+- [x] **Round retrospective / writeup system** — MDX content collection at `frontend/src/content/notes/`, `/notes/[slug]` permalinks, `<RoundScoreboard>` + `<Stat>` MDX components, per-note OG cards, RSS merged with rounds, BlogPosting JSON-LD, round page callout.

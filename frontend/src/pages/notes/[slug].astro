@@ -1,0 +1,83 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import Masthead from '../../components/Masthead.astro';
+import { getCollection, render } from 'astro:content';
+import { fmtDate } from '../../lib/format';
+import { templateSeo } from '../../lib/seo';
+import '../../styles/prose.css';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const all = await getCollection('notes', n => !(import.meta.env.PROD && n.data.draft));
+  const sorted = [...all].sort((a, b) => a.data.publishedAt.localeCompare(b.data.publishedAt));
+  return sorted.map((entry, i) => ({
+    params: { slug: entry.id },
+    props: {
+      entry,
+      prevSlug: i > 0 ? sorted[i - 1].id : null,
+      nextSlug: i < sorted.length - 1 ? sorted[i + 1].id : null,
+    },
+  }));
+}
+
+const { entry, prevSlug, nextSlug } = Astro.props;
+const note = entry.data;
+const slug = entry.id;
+const { Content } = await render(entry);
+const canonicalPath = `/notes/${slug}`;
+
+const seo = templateSeo(
+  'note',
+  canonicalPath,
+  {
+    title: note.title,
+    summary: note.summary,
+    slug,
+  },
+  {
+    note: { title: note.title, summary: note.summary, publishedAt: note.publishedAt, author: note.author, slug },
+    trail: [
+      { name: 'open-bench', path: '/' },
+      { name: 'writeups', path: '/notes' },
+      { name: note.title, path: canonicalPath },
+    ],
+  },
+  note.publishedAt,
+  {
+    prevPath: prevSlug ? `/notes/${prevSlug}` : undefined,
+    nextPath: nextSlug ? `/notes/${nextSlug}` : undefined,
+  },
+);
+
+const subtitle = `by <strong>${note.author}</strong> · ${fmtDate(note.publishedAt)}${note.round ? ` · round <a href="/round/${note.round}">${note.round}</a>` : ''}${note.draft ? ' · <span style="color:var(--red)">DRAFT</span>' : ''}`;
+---
+
+<BaseLayout seo={seo}>
+  <Header subtitle="writeup" />
+  <Masthead title={note.title} subtitle={subtitle}>
+    <p class="masthead-lede" style="margin-top: 12px; color: var(--muted);">{note.summary}</p>
+  </Masthead>
+
+  <article class="prose">
+    <Content />
+  </article>
+
+  <section class="prose">
+    <hr>
+    <nav class="note-nav">
+      {prevSlug && <a href={`/notes/${prevSlug}`}>← previous</a>}
+      <a href="/notes">all writeups</a>
+      {nextSlug && <a href={`/notes/${nextSlug}`}>next →</a>}
+    </nav>
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .note-nav { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-family: var(--mono); font-size: var(--font-sm); }
+  .note-nav a { color: var(--accent); }
+</style>

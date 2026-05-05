@@ -158,6 +158,39 @@ function collectionPage(d: { canonicalPath: string }): Json {
   };
 }
 
+function blog(d: { notes: { slug: string; title: string; publishedAt: string }[]; canonicalPath: string }): Json {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    name: 'open-bench writeups',
+    url: url(d.canonicalPath),
+    description: 'Round retrospectives, model behaviour notes, and post-mortems from open-bench.',
+    publisher: { '@type': 'Organization', name: seoSite.name, url: seoSite.url },
+    blogPost: d.notes.map((n) => ({
+      '@type': 'BlogPosting',
+      headline: n.title,
+      url: url(`/notes/${n.slug}`),
+      datePublished: n.publishedAt,
+    })),
+  };
+}
+
+function blogPosting(d: { note: { title: string; summary: string; publishedAt: string; author: string; slug: string }; canonicalPath: string; ogImage?: string }): Json {
+  const image = d.ogImage ? url(d.ogImage.startsWith('http') ? d.ogImage.slice(seoSite.url.length) : d.ogImage) : url(`/og/note-${d.note.slug}.png`);
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: d.note.title,
+    description: d.note.summary,
+    datePublished: d.note.publishedAt,
+    dateModified: d.note.publishedAt,
+    author: { '@type': 'Person', name: d.note.author },
+    publisher: { '@type': 'Organization', name: seoSite.name, url: seoSite.url, logo: url('/favicon.svg') },
+    image,
+    mainEntityOfPage: url(d.canonicalPath),
+  };
+}
+
 function leaderboardCumulative(d: { standings: { impl: string; elo: number }[]; canonicalPath: string }): Json {
   return {
     '@context': 'https://schema.org',
@@ -218,6 +251,8 @@ const builders: Record<JsonLdKey, (data: Json) => Json> = {
   collectionPage: (d) => collectionPage(d as never),
   roundList: (d) => roundList(d as never),
   leaderboardCumulative: (d) => leaderboardCumulative(d as never),
+  blog: (d) => blog(d as never),
+  blogPosting: (d) => blogPosting(d as never),
 };
 
 export function buildJsonLd(keys: readonly JsonLdKey[], data: Record<string, unknown> = {}): Json[] {

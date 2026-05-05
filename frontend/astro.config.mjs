@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import mdx from '@astrojs/mdx';
 import { fileURLToPath } from 'node:url';
 import { generateOg } from './scripts/gen-og.mjs';
 
@@ -25,6 +26,7 @@ export default defineConfig({
   trailingSlash: 'never',
   integrations: [
     ogIntegration,
+    mdx(),
     sitemap({
       serialize(item) {
         const u = item.url;
@@ -50,6 +52,12 @@ export default defineConfig({
         } else if (u.includes('/model/')) {
           item.changefreq = 'weekly';
           item.priority = 0.6;
+        } else if (u.endsWith('/notes')) {
+          item.changefreq = 'weekly';
+          item.priority = 0.8;
+        } else if (u.includes('/notes/')) {
+          item.changefreq = 'monthly';
+          item.priority = 0.7;
         } else if (u.endsWith('/about')) {
           item.changefreq = 'yearly';
           item.priority = 0.3;

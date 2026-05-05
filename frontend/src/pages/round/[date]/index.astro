@@ -33,6 +33,11 @@ export async function getStaticPaths() {
 const { roundId, prevDate, nextDate } = Astro.props;
 const entry = await getEntry('rounds', roundId);
 if (!entry) return Astro.redirect('/404');
+
+const noteEntries = await getCollection('notes', n =>
+  n.data.round === roundId && !(import.meta.env.PROD && n.data.draft)
+);
+const notesForRound = [...noteEntries].sort((a, b) => b.data.publishedAt.localeCompare(a.data.publishedAt));
 const round = entry.data;
 const champ = findChampion(round.scoreboard);
 const champEntry = round.scoreboard.find(e => e.impl === champ.impl);
@@ -82,6 +87,19 @@ const seo = templateSeo(
 
   <Masthead title={`round ${fmtDate(round.date)}`} subtitle={champ.score > 0 ? `<strong style="color:var(--accent)">${champ.impl}</strong> takes the round with <strong> ${fmtNum(champ.score, 1)}/30</strong> &mdash; spec ${fmtNum(champEntry?.specPeer ?? 0, 1)}, quality ${fmtNum(champEntry?.qualityPeer ?? 0, 1)}. ${modelCount} models, ${fmtCost(roundCost)} spent on outputs. Hidden tests: <span class="${allPassed ? 'win' : 'fail'}">${allPassed ? 'all passed' : 'some failures'}</span>.` : undefined} />
 
+  {notesForRound.length > 0 && (
+    <section class="writeup-callout">
+      {notesForRound.map(n => (
+        <a href={`/notes/${n.id}`} class="writeup-card">
+          <span class="writeup-tag">writeup</span>
+          <span class="writeup-title">{n.data.title}</span>
+          <span class="writeup-summary">{n.data.summary}</span>
+          <span class="writeup-arrow">→</span>
+        </a>
+      ))}
+    </section>
+  )}
+
   <div class="tabs" role="tablist" aria-label="Round sections">
     <button class="tab" role="tab" id="tab-scoreboard" data-tab="scoreboard" aria-selected="true" aria-controls="panel-scoreboard">scoreboard</button>
     <button class="tab" role="tab" id="tab-runs" data-tab="runs" aria-selected="false" aria-controls="panel-runs">runs</button>
@@ -122,3 +140,24 @@ const seo = templateSeo(
   </script>
   <Footer />
 </BaseLayout>
+
+<style>
+  .writeup-callout { display: flex; flex-direction: column; gap: 8px; margin: 16px 0 24px; }
+  .writeup-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: 'tag title arrow' 'tag summary arrow';
+    gap: 4px 16px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--bg-alt);
+    color: var(--fg);
+    text-decoration: none;
+    align-items: center;
+  }
+  .writeup-card:hover { background: var(--code-bg); }
+  .writeup-tag { grid-area: tag; font-family: var(--mono); font-size: var(--font-xs); text-transform: uppercase; color: var(--accent); letter-spacing: 0.08em; }
+  .writeup-title { grid-area: title; font-weight: 700; color: var(--fg-bright); }
+  .writeup-summary { grid-area: summary; color: var(--muted); font-size: var(--font-sm); }
+  .writeup-arrow { grid-area: arrow; color: var(--accent); font-size: 1.4rem; }
+</style>
