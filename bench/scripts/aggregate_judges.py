@@ -145,6 +145,20 @@ def load_run_meta(run_dir_rel: str) -> dict:
         return {}
 
 
+def get_impl_loc(meta: dict) -> int | str:
+    """Return impl_loc from meta.json, falling back to sandbox_py_loc."""
+    if "impl_loc" in meta:
+        return meta["impl_loc"]
+    if "sandbox_py_loc" in meta:
+        return meta["sandbox_py_loc"]
+    return "—"
+
+
+def get_entrypoint(meta: dict) -> str:
+    """Return entrypoint from meta.json, falling back to 'sandbox.py'."""
+    return meta.get("entrypoint", "sandbox.py")
+
+
 def split_judge_scores(judges: list[str],
                        scores_by_judge: dict[str, dict[str, dict | None]],
                        model: str) -> dict:
@@ -513,7 +527,7 @@ def render_cost_efficiency(impl_models: list[str], runs_index: dict,
     for model in impl_models:
         meta = load_run_meta(runs_index.get(model, ""))
         slug = meta.get("model_slug", "—")
-        loc = meta.get("sandbox_py_loc", "—")
+        loc = get_impl_loc(meta)
         wc_seconds = meta.get("model_wall_clock_seconds")
         wc_str = "—"
         if isinstance(wc_seconds, (int, float)):
@@ -601,9 +615,9 @@ def render_review(task: str,
 
     lines.append("## Recommendation")
     lines.append("")
-    lines.append("(human reviewer fills — which implementation to use as the basis "
-                 "for `sandbox.py` on main, or whether to rewrite from the best "
-                 "parts of each)")
+    lines.append("(human reviewer fills — which implementation to use for the next round, "
+                  "or whether to rewrite from the best "
+                  "parts of each)")
     lines.append("")
 
     lines.append("## Spec changes suggested")

@@ -35,24 +35,21 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _config  # noqa: E402
+import _task  # noqa: E402
 
 REPO_ROOT = _config.REPO_ROOT
 
 
-def find_runs(task: str) -> list[dict]:
+def find_runs(task: str, entrypoint: str) -> list[dict]:
     """Find latest implementation run per model for `task`.
 
-    Layout: builds/<model>/rounds/<task>-<YYYY-MM-DD>/sandbox.py.
+    Layout: builds/<model>/rounds/<task>-<YYYY-MM-DD>/<entrypoint>.
     """
     by_model: dict[str, dict] = {}
     builds_root = REPO_ROOT / "builds"
     if not builds_root.is_dir():
         return []
 
-    # Accept either bare date (`YYYY-MM-DD`) or date with sample
-    # suffix (`YYYY-MM-DD-rN`). Lexical sort lands `-r3` after `-r2`
-    # after the bare date, so the latest sample of the latest round
-    # wins per model.
     date_re = re.compile(r"^\d{4}-\d{2}-\d{2}(?:-r\d+)?$")
     prefix = f"{task}-"
 
@@ -75,10 +72,10 @@ def find_runs(task: str) -> list[dict]:
 
         for run_entry in dated:
             run_date = run_entry.name[len(prefix):]
-            impl = run_entry / "sandbox.py"
+            impl = run_entry / entrypoint
             if not impl.exists():
                 print(f"  warn: {run_entry.relative_to(REPO_ROOT)} has no "
-                      f"sandbox.py — skipping", file=sys.stderr)
+                      f"{entrypoint} — skipping", file=sys.stderr)
                 continue
 
             existing = by_model.get(run_model)
@@ -107,6 +104,7 @@ def write_packet(
     judge_dir: pathlib.Path,
     impls: list[dict],
     mapping: dict[str, str],
+    entrypoint: str,
 ) -> None:
     """Write one judge's packet at judge_dir."""
     packet = judge_dir / "packet"
@@ -121,11 +119,12 @@ def write_packet(
             shutil.copy2(src, packet / fname)
 
     label_to_model = {label: model for model, label in mapping.items()}
+    suffix = pathlib.Path(entrypoint).suffix
     for impl in impls:
         if impl["model"] not in mapping:
             continue
         label = mapping[impl["model"]]
-        shutil.copy2(impl["impl_path"], impl_dir / f"{label}.py")
+        shutil.copy2(impl["impl_path"], impl_dir / f"{label}{suffix}")
 
     # Per-judge cover note: which labels exist, no model→label leak.
     labels = sorted(label_to_model.keys())
@@ -307,8 +306,10 @@ def main() -> int:
             return 1
 
     cfg = _config.load()
+    task_cfg = _task.load(args.task)
+    entrypoint = task_cfg["entrypoint"]
 
-    impls = find_runs(args.task)
+    impls = find_runs(args.task, entrypoint)
     if not impls:
         print(f"error: no completed runs for task '{args.task}' under "
               f"<model>/{args.task}-*/ at repo root", file=sys.stderr)
@@ -357,7 +358,7 @@ def main() -> int:
         pairings[judge] = mapping
 
         judge_dir = out_root / judge
-        write_packet(task_dir, judge_dir, impls, mapping)
+        write_packet(task_dir, judge_dir, impls, mapping, entrypoint)
         print(f"  packet ready: {judge_dir.relative_to(REPO_ROOT)}  "
               f"({len(targets)} impl{'s' if len(targets) != 1 else ''})")
 

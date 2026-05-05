@@ -17,14 +17,14 @@ Recursive joke: the first benchmark task is implementing `sandbox.py` itself.
 
 ## How it works
 
-Drop a spec in `bench/tasks/<task>/SPEC.md`, write `PROMPT.md` (what the model sees), and a hidden test suite (it doesn't). Each model runs through opencode and produces a `sandbox.py`. Implementations are graded by every model in the lineup (including itself — self-judgments are surfaced separately as a bias check, not counted in the headline scoreboard). Optional expert tier via `expert_judges` in `bench/config.json`. Output: peer-median scoreboard, per-judge ranking, self-bias delta, inter-judge agreement, hidden-test results.
+Drop a spec in `bench/tasks/<task>/SPEC.md`, write `PROMPT.md` (what the model sees), and a hidden test suite (it doesn't). Each model runs through opencode and produces its implementation. The task's `task.json` defines the entrypoint filename, test invocation, and LOC counting method — defaults match round-1 (single-file Python). Implementations are graded by every model in the lineup (including itself — self-judgments are surfaced separately as a bias check, not counted in the headline scoreboard). Optional expert tier via `expert_judges` in `bench/config.json`. Output: peer-median scoreboard, per-judge ranking, self-bias delta, inter-judge agreement, hidden-test results.
 
 ## Run it
 
 End-to-end (canonical single round):
 
 ```bash
-JUDGE_CONCURRENCY=3 bench/scripts/run-all.sh sandbox
+JUDGE_CONCURRENCY=3 bench/scripts/run-all.py sandbox
 ```
 
 Judges run in parallel (cap with `JUDGE_CONCURRENCY` or the `--concurrency` flag on `start_judgments.py`); implementer phase is still sequential.
@@ -38,14 +38,14 @@ bench/scripts/perf-bench.py sandbox kimi 5
 One implementer at a time:
 
 ```bash
-bench/scripts/start-run.sh --auto sandbox kimi   # auto-drive
-bench/scripts/capture-run.sh sandbox kimi
+bench/scripts/start_run.py --auto sandbox kimi   # auto-drive
+bench/scripts/capture_run.py sandbox kimi
 ```
 
 Multiple samples per model on the same date — set `RUN_STAMP` to disambiguate worktree/branch names:
 
 ```bash
-RUN_STAMP="$(date +%F)-r2" bench/scripts/start-run.sh --auto sandbox kimi
+RUN_STAMP="$(date +%F)-r2" bench/scripts/start_run.py --auto sandbox kimi
 ```
 
 Stdlib + pytest only on the local side; no requirements file.
@@ -69,15 +69,21 @@ Edit `bench/config.json`:
 }
 ```
 
-Labels become `builds/<label>/` dirs. Add a new task with `bench/scripts/new-task.sh <name>`. Discover provider slugs with `opencode models <provider>`.
+Labels become `builds/<label>/` dirs. Add a new task with `bench/scripts/new_task.py <name>`. Discover provider slugs with `opencode models <provider>`.
 
-### Forking caveats (read before swapping the task)
+### Task configuration
 
-The current task is single-file Python (`sandbox.py`) and the harness reflects that today:
+Each task directory (`bench/tasks/<task>/`) can optionally contain a `task.json` that defines:
 
-- The output filename `sandbox.py` is hardcoded across `capture-run.sh`, `start-run.sh`, `perf-bench.py`, and `start_judgments.py` (~11 refs). For a same-shaped task (one Python file, different name), a sed-replace across those four files is enough.
-- Multi-file projects, non-Python stacks, or anything that doesn't run via `python3 -m pytest` need deeper edits — `capture-run.sh`'s test invocation and `perf-bench.py`'s LOC counter both assume single-file Python.
-- Parametrising the entrypoint via `bench/tasks/<task>/task.json` is on the roadmap; the framework will be honestly task-agnostic then. For now: forkable with a sed, not yet drop-in. See [`bench/plans/improvements.md`](bench/plans/improvements.md).
+| Field | Default | Purpose |
+|---|---|---|
+| `entrypoint` | `sandbox.py` | Filename the model produces |
+| `language` | `python` | Informational; drives test-runner defaults |
+| `test_runner` | `pytest` | String id for messaging |
+| `test_invocation` | `["python3", "-m", "pytest", "_eval_tests/", "-v", "--tb=short"]` | Argv to run hidden tests |
+| `loc_method` | `non_blank_non_comment_lines` | How to count implementation lines |
+
+If `task.json` is absent, the defaults reproduce round-1 behaviour (single-file Python). To add a different task, run `new_task.py` and edit the generated `task.json` to set the entrypoint and test invocation.
 
 ## Layout
 
@@ -89,7 +95,7 @@ bench/
 
 builds/                   # the apps themselves — one per model
 └── <model>/
-    ├── sandbox.py        # latest captured impl
+    ├── <entrypoint>      # latest captured impl (filename from task.json)
     └── rounds/
         └── <task>-<date>/  # round archive: impl, diff, transcript, tests, meta
 

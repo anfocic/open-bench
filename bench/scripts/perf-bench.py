@@ -39,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import _opencode  # noqa: E402
 import _opencode_run  # noqa: E402
 import _config  # noqa: E402
+import _task  # noqa: E402
 
 
 def median_or_none(xs: list[float]) -> float | None:
@@ -53,10 +54,12 @@ def stdev_or_none(xs: list[float]) -> float | None:
 
 def run_once(
     task_dir: Path,
+    task_cfg: dict,
     model_slug: str,
     repo_root: Path,
 ) -> dict:
     """Single run: fresh tmp dir, opencode, capture meta + tests."""
+    entrypoint = task_cfg["entrypoint"]
     run_id = uuid.uuid4().hex[:8]
     work = Path(tempfile.mkdtemp(prefix=f"perf-bench-{run_id}-"))
 
@@ -78,9 +81,9 @@ def run_once(
         directory=work,
         model=model_slug,
         message=(
-            "Read PROMPT.md and SPEC.md at the worktree root, then implement "
-            "sandbox.py per the spec. Stop when sandbox.py exists at the worktree "
-            "root and your own quick smoke check passes."
+            f"Read PROMPT.md and SPEC.md at the worktree root, then implement "
+            f"{entrypoint} per the spec. Stop when {entrypoint} exists at the worktree "
+            f"root and your own quick smoke check passes."
         ),
     )
 
@@ -88,12 +91,12 @@ def run_once(
     ended_iso = dt.datetime.fromtimestamp(ended, dt.timezone.utc).isoformat(timespec="seconds")
     envelope_seconds = round(ended - started, 1)
 
-    impl = work / "sandbox.py"
+    impl = work / entrypoint
     if not impl.exists():
         shutil.rmtree(work, ignore_errors=True)
         return {
             "ok": False,
-            "reason": "sandbox.py missing",
+            "reason": f"{entrypoint} missing",
             "opencode_rc": rc,
             "envelope_seconds": envelope_seconds,
             "started": started_iso,
@@ -154,8 +157,8 @@ def run_once(
                 failed = int(m.group(1))
             break
 
-    impl_loc = sum(1 for _ in impl.read_text(errors="replace").splitlines())
-    sandbox_py = impl.read_text(errors="replace")
+    impl_loc = _task.loc_count(impl, task_cfg["loc_method"])
+    impl_content = impl.read_text(errors="replace")
 
     shutil.rmtree(work, ignore_errors=True)
 
@@ -169,8 +172,8 @@ def run_once(
         "test_exit": test_exit,
         "tests_passed": passed,
         "tests_failed": failed,
-        "sandbox_py_loc": impl_loc,
-        "sandbox_py": sandbox_py,
+        "impl_loc": impl_loc,
+        "impl_content": impl_content,
         **summary,
     }
 
@@ -189,6 +192,8 @@ def main() -> int:
         return 1
 
     cfg = _config.load()
+    task_cfg = _task.load(args.task)
+
     if args.model not in cfg.slugs:
         print(f"error: model '{args.model}' has no slug in bench/config.json", file=sys.stderr)
         return 1
@@ -207,7 +212,7 @@ def main() -> int:
     for i in range(1, args.n + 1):
         print(f"\n--- run {i}/{args.n} ---")
         try:
-            result = run_once(task_dir, model_slug, repo_root)
+            result = run_once(task_dir, task_cfg, model_slug, repo_root)
         except Exception as e:
             result = {"ok": False, "reason": f"exception: {e}"}
         runs.append(result)
@@ -226,7 +231,7 @@ def main() -> int:
     envs = [r.get("envelope_seconds") for r in ok]
     costs = [r.get("cost_usd") for r in ok]
     toks = [r.get("tokens_total") for r in ok]
-    locs = [r.get("sandbox_py_loc") for r in ok]
+    locs = [r.get("impl_loc") for r in ok]
     test_pass = [r.get("tests_passed") for r in ok]
     test_fail = [r.get("tests_failed") for r in ok]
 
@@ -259,7 +264,7 @@ def main() -> int:
             "median": median_or_none(toks),
             "raw": toks,
         },
-        "sandbox_py_loc": {
+        "impl_loc": {
             "median": median_or_none(locs),
             "raw": locs,
         },
@@ -286,7 +291,7 @@ def main() -> int:
                 f"| {r.get('tokens_total')} "
                 f"| ${r.get('cost_usd')} "
                 f"| {r.get('tests_passed')}/{r.get('tests_passed') + r.get('tests_failed')} "
-                f"| {r.get('sandbox_py_loc')} |"
+                f"| {r.get('impl_loc')} |"
             )
         else:
             md.append(f"| {i} | FAIL | — | — | — | — | — |")
@@ -299,7 +304,7 @@ def main() -> int:
     md.append(f"| Wall (model) sec | {w['median']} | {w['stdev']} | {w['min']} | {w['max']} |")
     md.append(f"| Cost USD | {c['median']} | {c['stdev']} | — | — |")
     md.append(f"| Tokens | {summary['tokens_total']['median']} | — | — | — |")
-    md.append(f"| LOC | {summary['sandbox_py_loc']['median']} | — | — | — |")
+    md.append(f"| LOC | {summary['impl_loc']['median']} | — | — | — |")
     md.append(f"\nTotal cost across {len(ok)} runs: ${c['sum']}")
     md.append(f"\nAll runs pass hidden tests: {summary['tests']['all_pass']}")
 
