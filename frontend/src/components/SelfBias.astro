@@ -1,0 +1,69 @@
+---
+import type { SelfBiasEntry } from '../data/types';
+import { fmtNum } from '../lib/format';
+
+export interface Props {
+  entries: SelfBiasEntry[];
+}
+
+const { entries } = Astro.props;
+
+const maxAbs = Math.max(
+  1,
+  ...entries.flatMap(e => [Math.abs(e.deltaSpec ?? 0), Math.abs(e.deltaQual ?? 0)])
+);
+
+function deltaCell(v: number | null) {
+  if (v === null) return null;
+  const sign = v > 0 ? '+' : '';
+  const cls = v > 0.1 ? 'fail' : v < -0.1 ? 'win' : 'muted';
+  const pct = (Math.abs(v) / maxAbs) * 100;
+  const dir = v >= 0 ? 'right' : 'left';
+  return { text: `${sign}${fmtNum(v, 1)}`, cls, pct, dir };
+}
+---
+
+{entries.length > 0 && (
+  <section>
+    <h2 id="self-bias">self-bias check</h2>
+    <p class="muted" style="font-size: 14.4px;margin:-6px 0 12px">
+      Δ = self − peer median. <span class="fail">+red</span> = overrated self. <span class="win">−green</span> = humble.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>impl</th>
+            <th>self spec</th>
+            <th>peer med</th>
+            <th>Δ spec</th>
+            <th>self qual</th>
+            <th>peer med</th>
+            <th>Δ qual</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map(e => {
+            const ds = deltaCell(e.deltaSpec);
+            const dq = deltaCell(e.deltaQual);
+            return (
+              <tr>
+                <td class="model">{e.impl}</td>
+                <td class="num">{e.selfSpec !== null ? fmtNum(e.selfSpec, 1) : '—'}</td>
+                <td class="num">{e.peerMedSpec !== null ? fmtNum(e.peerMedSpec, 1) : '—'}</td>
+                <td class={`num delta-cell ${ds?.cls ?? ''}`}>
+                  {ds ? <><span>{ds.text}</span><span class={`bias-bar bias-bar-${ds.dir}`} style={`--pct:${ds.pct}%`}></span></> : '—'}
+                </td>
+                <td class="num">{e.selfQual !== null ? fmtNum(e.selfQual, 1) : '—'}</td>
+                <td class="num">{e.peerMedQual !== null ? fmtNum(e.peerMedQual, 1) : '—'}</td>
+                <td class={`num delta-cell ${dq?.cls ?? ''}`}>
+                  {dq ? <><span>{dq.text}</span><span class={`bias-bar bias-bar-${dq.dir}`} style={`--pct:${dq.pct}%`}></span></> : '—'}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </section>
+)}

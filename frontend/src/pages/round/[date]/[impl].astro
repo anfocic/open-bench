@@ -1,0 +1,173 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Header from '../../../components/Header.astro';
+import Footer from '../../../components/Footer.astro';
+import { loadRounds } from '../../../data/rounds';
+import { pickCanonicalRun, type RunArtifacts } from '../../../data/runs';
+import { highlight } from '../../../lib/highlight';
+import { fmtCost, fmtSec, fmtTok, fmtDate } from '../../../lib/format';
+import MarkdownIt from 'markdown-it';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const rounds = loadRounds();
+  const out: Array<{ params: { date: string; impl: string }; props: { artifacts: RunArtifacts; date: string; impl: string; runPathHint: string | null; allImpls: string[] } }> = [];
+  for (const r of rounds) {
+    const collected = new Map<string, { artifacts: RunArtifacts; runPathHint: string | null }>();
+    for (const detail of r.perImplDetail) {
+      if (collected.has(detail.impl)) continue;
+      const artifacts = pickCanonicalRun(detail.impl, r.date, detail.runPath);
+      if (!artifacts) continue;
+      collected.set(detail.impl, { artifacts, runPathHint: detail.runPath });
+    }
+    for (const sample of r.samples) {
+      if (collected.has(sample.model)) continue;
+      const artifacts = pickCanonicalRun(sample.model, r.date);
+      if (!artifacts) continue;
+      collected.set(sample.model, { artifacts, runPathHint: null });
+    }
+    const allImpls = [...collected.keys()];
+    for (const [impl, { artifacts, runPathHint }] of collected) {
+      out.push({ params: { date: r.date, impl }, props: { artifacts, date: r.date, impl, runPathHint, allImpls } });
+    }
+  }
+  return out;
+}
+
+const { artifacts, date, impl, allImpls } = Astro.props;
+const meta = artifacts.meta;
+
+const sandboxHtml = artifacts.sandboxPy ? await highlight(artifacts.sandboxPy, 'python') : null;
+const diffHtml = artifacts.diffPatch ? await highlight(artifacts.diffPatch, 'diff') : null;
+const testHtml = artifacts.testOutput ? await highlight(artifacts.testOutput, 'shellsession') : null;
+
+const md = new MarkdownIt({ html: false, linkify: true });
+const transcriptHtml = artifacts.transcript ? md.render(artifacts.transcript) : null;
+
+const sandboxLineCount = artifacts.sandboxPy?.split('\n').length ?? 0;
+const transcriptByteSize = artifacts.transcript ? new TextEncoder().encode(artifacts.transcript).length : 0;
+---
+
+<BaseLayout
+  title={`${impl} run — round ${date} · open-bench`}
+  description={`Full artifacts (code, diff, tests, transcript) for ${impl} in round ${date}.`}
+>
+  <Header subtitle={`${impl} / ${fmtDate(date)}`} />
+
+  <div style="margin:12px 0 0">
+    <a href={`/round/${date}`} class="back-link-arrow">&larr; back to round {fmtDate(date)}</a>
+  </div>
+
+  <div class="model-tabs" role="tablist" aria-label="Models in round">
+    {allImpls.map(name => (
+      <a
+        href={`/round/${date}/${name}`}
+        class:list={['model-tab', { active: name === impl }]}
+        aria-current={name === impl ? 'page' : 'false'}
+        data-impl={name}
+      >{name}</a>
+    ))}
+  </div>
+
+  <script>
+    // Persist active section hash when switching models
+    document.querySelectorAll<HTMLAnchorElement>('.model-tab').forEach(a => {
+      a.addEventListener('click', () => {
+        const hash = location.hash;
+        if (hash) a.setAttribute('href', a.getAttribute('href')!.split('#')[0] + hash);
+      });
+    });
+  </script>
+
+  <section class="masthead">
+    <h1 class="masthead-title">{impl}</h1>
+    <div class="muted" style="font-size: 14.4px">{artifacts.runPath}</div>
+    {meta?.modelSlug && (
+      <div style="margin-top:4px;font-size: 14.4px"><span class="muted">model:</span> <code>{meta.modelSlug}</code></div>
+    )}
+  </section>
+
+  <div class="run-stats">
+    <div class="run-stat"><div class="run-stat-label">wall</div><div class="run-stat-val">{fmtSec(meta?.wallSec ?? null)}</div></div>
+    <div class="run-stat"><div class="run-stat-label">cost</div><div class="run-stat-val">{fmtCost(meta?.costUsd ?? null)}</div></div>
+    <div class="run-stat"><div class="run-stat-label">tokens</div><div class="run-stat-val">{fmtTok(meta?.tokensTotal ?? null)}</div></div>
+    <div class="run-stat"><div class="run-stat-label">loc</div><div class="run-stat-val">{meta?.loc ?? '—'}</div></div>
+    <div class="run-stat">
+      <div class="run-stat-label">tests</div>
+      <div class="run-stat-val">
+        {meta?.testExitCode === 0
+          ? <span class="win">passed</span>
+          : meta?.testExitCode != null ? <span class="fail">exit {meta.testExitCode}</span>
+          : '—'}
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Run sections">
+    {sandboxHtml && <button class="tab" role="tab" data-tab="code" aria-selected="true">code</button>}
+    {diffHtml && <button class="tab" role="tab" data-tab="diff" aria-selected="false">diff</button>}
+    {testHtml && <button class="tab" role="tab" data-tab="tests" aria-selected="false">tests</button>}
+    {transcriptHtml && <button class="tab" role="tab" data-tab="transcript" aria-selected="false">transcript</button>}
+  </div>
+
+  <div class="tab-panels">
+    {sandboxHtml && (
+      <div class="tab-panel" data-panel="code">
+        <p class="muted" style="font-size:14.4px;margin:8px 0 10px">sandbox.py · {sandboxLineCount} lines</p>
+        <div class="code-block" set:html={sandboxHtml} />
+      </div>
+    )}
+    {diffHtml && (
+      <div class="tab-panel" data-panel="diff" hidden>
+        <p class="muted" style="font-size:14.4px;margin:8px 0 10px">diff.patch</p>
+        <div class="code-block" set:html={diffHtml} />
+      </div>
+    )}
+    {testHtml && (
+      <div class="tab-panel" data-panel="tests" hidden>
+        <p class="muted" style="font-size:14.4px;margin:8px 0 10px">pytest output (hidden tests)</p>
+        <div class="code-block" set:html={testHtml} />
+      </div>
+    )}
+    {transcriptHtml && (
+      <div class="tab-panel" data-panel="transcript" hidden>
+        <p class="muted" style="font-size:14.4px;margin:8px 0 10px">session transcript · {(transcriptByteSize / 1024).toFixed(0)}kb</p>
+        <div class="prose transcript-prose" set:html={transcriptHtml} />
+      </div>
+    )}
+  </div>
+
+  <script>
+    const tabs = document.querySelectorAll<HTMLButtonElement>('.tab');
+    const panels = document.querySelectorAll<HTMLElement>('.tab-panel');
+    const validNames = [...panels].map(p => p.dataset.panel!);
+
+    function activate(name: string) {
+      tabs.forEach(t => {
+        const on = t.dataset.tab === name;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      panels.forEach(p => { p.hidden = p.dataset.panel !== name; });
+    }
+
+    function go(name: string, push: boolean) {
+      const target = validNames.includes(name) ? name : validNames[0];
+      const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
+      const apply = () => activate(target);
+      if (doc.startViewTransition) doc.startViewTransition(apply);
+      else apply();
+      if (push) history.replaceState(null, '', '#' + target);
+    }
+
+    const initial = location.hash.slice(1);
+    activate(validNames.includes(initial) ? initial : validNames[0]);
+
+    tabs.forEach(t => t.addEventListener('click', () => go(t.dataset.tab!, true)));
+    window.addEventListener('hashchange', () => go(location.hash.slice(1) || validNames[0], false));
+  </script>
+
+  <a href="#top" class="back-to-top" aria-label="Back to top">&uarr;</a>
+  <Footer />
+</BaseLayout>

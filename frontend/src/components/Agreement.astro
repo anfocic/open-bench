@@ -1,0 +1,42 @@
+---
+import type { AgreementEntry } from '../data/types';
+import { fmtNum } from '../lib/format';
+
+export interface Props {
+  entries: AgreementEntry[];
+}
+
+const { entries } = Astro.props;
+---
+
+{entries.length > 0 && (
+  <section>
+    <h2 id="agreement">inter-judge agreement</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>impl</th>
+            <th>min</th>
+            <th>max</th>
+            <th>range</th>
+            <th>stdev</th>
+            <th>judges</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map(e => (
+            <tr>
+              <td class="model">{e.impl}</td>
+              <td class="num">{e.minSpec !== null ? fmtNum(e.minSpec, 1) : '—'}</td>
+              <td class="num">{e.maxSpec !== null ? fmtNum(e.maxSpec, 1) : '—'}</td>
+              <td class="num">{e.range !== null ? fmtNum(e.range, 1) : '—'}</td>
+              <td class="num">{e.stdev !== null ? fmtNum(e.stdev, 2) : '—'}</td>
+              <td class="num" style="font-size: 14.4px">{e.judges}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+)}

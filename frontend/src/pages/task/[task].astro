@@ -1,0 +1,79 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import MarkdownIt from 'markdown-it';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolve(__dirname, '../../../..');
+
+export async function getStaticPaths() {
+  const dn = dirname(fileURLToPath(import.meta.url));
+  const repo = resolve(dn, '../../../..');
+  const tasksDir = resolve(repo, 'bench/tasks');
+  let names: string[] = [];
+  try { names = readdirSync(tasksDir).filter(d => !d.startsWith('.')); } catch {}
+  return names.map(name => ({ params: { task: name } }));
+}
+
+const { task } = Astro.params;
+const taskDir = resolve(REPO_ROOT, 'bench/tasks', task!);
+const specPath = resolve(taskDir, 'SPEC.md');
+const promptPath = resolve(taskDir, 'PROMPT.md');
+const rubricPath = resolve(taskDir, 'JUDGE_RUBRIC.md');
+
+function readOpt(p: string): string | null {
+  try { return existsSync(p) ? readFileSync(p, 'utf-8') : null; } catch { return null; }
+}
+
+const spec = readOpt(specPath);
+const prompt = readOpt(promptPath);
+const rubric = readOpt(rubricPath);
+
+const md = new MarkdownIt({ html: false, linkify: true });
+const specHtml = spec ? md.render(spec) : null;
+const promptHtml = prompt ? md.render(prompt) : null;
+const rubricHtml = rubric ? md.render(rubric) : null;
+---
+
+<BaseLayout title={`${task} task · open-bench`} description={`Full spec, prompt, and rubric for the ${task} task.`}>
+  <Header subtitle={`task / ${task}`} />
+
+  <section class="masthead">
+    <h1 class="masthead-title">{task}</h1>
+    <p class="masthead-lede">
+      The spec each model is given, plus the rubric judges use to score. Read it as a contract: what counts as done, what counts as good.
+    </p>
+  </section>
+
+  <div class="section-nav">
+    {specHtml && <a href="#spec">spec</a>}
+    {promptHtml && <a href="#prompt">prompt</a>}
+    {rubricHtml && <a href="#rubric">rubric</a>}
+  </div>
+
+  {specHtml && (
+    <section>
+      <h2 id="spec">spec.md</h2>
+      <div class="prose" set:html={specHtml} />
+    </section>
+  )}
+  {promptHtml && (
+    <section>
+      <h2 id="prompt">prompt.md</h2>
+      <div class="prose" set:html={promptHtml} />
+    </section>
+  )}
+  {rubricHtml && (
+    <section>
+      <h2 id="rubric">judge_rubric.md</h2>
+      <div class="prose" set:html={rubricHtml} />
+    </section>
+  )}
+
+  <a href="#top" class="back-to-top" aria-label="Back to top">&uarr;</a>
+  <Footer />
+</BaseLayout>

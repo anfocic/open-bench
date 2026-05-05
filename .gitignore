@@ -14,3 +14,7 @@ results/judgments/*
 # repo. Published, public-facing writeups live in /blog/ at the repo root.
 bench/blog/
 bench/blog-internal-not-for-git/
+
+frontend/node_modules/
+frontend/dist/
+frontend/.astro/

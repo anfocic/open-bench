@@ -1,0 +1,78 @@
+---
+import type { PerImplDetail } from '../data/types';
+import { fmtNum } from '../lib/format';
+
+export interface Props {
+  entries: PerImplDetail[];
+  date: string;
+}
+
+const { entries, date } = Astro.props;
+---
+
+{entries.length > 0 && (
+  <section>
+    <h2 id="impl-detail">per-implementation detail</h2>
+    {entries.map(detail => {
+      const passed = detail.hiddenTests.filter(t => t.passed).length;
+      const total = detail.hiddenTests.length;
+      const allPass = total > 0 && passed === total;
+      return (
+      <div id={`impl-${detail.impl}`} class="impl-block">
+        <h3>
+          <a href={`#impl-${detail.impl}`} class="anchor-link">#</a>
+          {detail.impl}
+          <a href={`/round/${date}/${detail.impl}`} class="impl-view-run">view full run &rarr;</a>
+        </h3>
+        <p class="muted" style="font-size: 14.4px;font-family:var(--mono);margin:4px 0 10px">{detail.runPath}</p>
+        {detail.scores.length > 0 && (
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>judge</th>
+                  <th>tier</th>
+                  <th>build</th>
+                  <th>spec</th>
+                  <th>qual</th>
+                  <th>verdict</th>
+                  <th>note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail.scores.map(s => (
+                  <tr>
+                    <td class="model">{s.judge}</td>
+                    <td class="num">{s.tier}</td>
+                    <td class={`num ${s.hardFail ? 'win' : 'fail'}`}>{s.hardFail ? 'pass' : 'fail'}</td>
+                    <td class="num">{s.spec !== null ? fmtNum(s.spec, 1) : '—'}</td>
+                    <td class="num">{s.quality !== null ? fmtNum(s.quality, 1) : '—'}</td>
+                    <td class="num">{s.verdict}</td>
+                    <td style="text-align:left;font-size: 14.4px;max-width:400px;white-space:normal">{s.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {detail.hiddenTests.length > 0 && (
+          <div class="hidden-tests">
+            <div class="hidden-tests-head">
+              <span style="font-size: 14.4px;color:var(--muted)">hidden tests</span>
+              <span class={`pill ${allPass ? 'pill-green' : 'pill-red'}`}>{passed}/{total} passed</span>
+            </div>
+            <ul class="hidden-tests-list">
+              {detail.hiddenTests.map(t => (
+                <li class={t.passed ? 'pass' : 'fail'}>
+                  <span class="hidden-tests-icon">{t.passed ? '✓' : '✗'}</span>
+                  <code>{t.name}</code>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+      );
+    })}
+  </section>
+)}
