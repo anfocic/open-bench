@@ -1,0 +1,37 @@
+---
+import type { JudgeRankingEntry } from '../data/types';
+
+export interface Props {
+  entries: JudgeRankingEntry[];
+}
+
+const { entries } = Astro.props;
+---
+
+{entries.length > 0 && (
+  <section>
+    <h2 id="judge-ranking">per-judge ranking</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>judge</th>
+            <th>1st</th>
+            <th>2nd</th>
+            <th>3rd</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map(e => (
+            <tr>
+              <td class="model">{e.judge}</td>
+              <td class="num">{e.first}</td>
+              <td class="num">{e.second}</td>
+              <td class="num">{e.third}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+)}

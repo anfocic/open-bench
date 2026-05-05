@@ -1,0 +1,159 @@
+---
+import type { Run } from '../data/types';
+import { fmtSec, fmtCost, fmtTok } from '../lib/format';
+
+export interface Props {
+  runs: Run[];
+}
+
+const { runs } = Astro.props;
+
+function medByModel(runs: Run[]): { model: string; wallSec: number | null; costUsd: number | null; tokensTotal: number | null; loc: number | null; testExitCode: number | null; n: number }[] {
+  const groups = new Map<string, Run[]>();
+  for (const r of runs) {
+    if (!groups.has(r.model)) groups.set(r.model, []);
+    groups.get(r.model)!.push(r);
+  }
+  return [...groups.entries()].map(([model, rs]) => {
+    const mid = (arr: (number | null)[]) => {
+      const nums = arr.filter((n): n is number => n !== null).sort((a, b) => a - b);
+      if (nums.length === 0) return null;
+      return nums[Math.floor(nums.length / 2)];
+    };
+    return {
+      model,
+      wallSec: mid(rs.map(r => r.wallSec)),
+      costUsd: mid(rs.map(r => r.costUsd)),
+      tokensTotal: mid(rs.map(r => r.tokensTotal)),
+      loc: mid(rs.map(r => r.loc)),
+      testExitCode: mid(rs.map(r => r.testExitCode)),
+      n: rs.length,
+    };
+  });
+}
+
+const medians = medByModel(runs);
+---
+
+{runs.length > 0 && (
+  <section>
+    <h2 id="runs">runs</h2>
+    <div class="btn-group" id="view-toggle">
+      <button class="btn active" data-view="all">all samples · {runs.length}</button>
+      <button class="btn" data-view="medians">median per model · {medians.length}</button>
+    </div>
+    <div class="table-wrap">
+      <table id="runs-table">
+        <thead>
+          <tr>
+            <th aria-sort="none" data-col="model"><button type="button" class="sort-btn">model</button></th>
+            <th aria-sort="none" data-col="sample"><button type="button" class="sort-btn">sample</button></th>
+            <th aria-sort="none" data-col="wall"><button type="button" class="sort-btn">wall</button></th>
+            <th aria-sort="none" data-col="cost"><button type="button" class="sort-btn">cost</button></th>
+            <th aria-sort="none" data-col="tokens"><button type="button" class="sort-btn">tokens</button></th>
+            <th aria-sort="none" data-col="loc"><button type="button" class="sort-btn">loc</button></th>
+            <th aria-sort="none" data-col="exit"><button type="button" class="sort-btn">tests</button></th>
+          </tr>
+        </thead>
+        <tbody id="runs-body">
+          {runs.map((r, i) => (
+            <tr class="view-all"
+              data-model={r.model}
+              data-sample={r.sample}
+              data-wall={r.wallSec ?? ''}
+              data-cost={r.costUsd ?? ''}
+              data-tokens={r.tokensTotal ?? ''}
+              data-loc={r.loc ?? ''}
+              data-exit={r.testExitCode ?? ''}
+              data-idx={i}>
+              <td class="model">{r.model}</td>
+              <td class="num">{r.sample}</td>
+              <td class="num">{fmtSec(r.wallSec)}</td>
+              <td class="num">{fmtCost(r.costUsd)}</td>
+              <td class="num">{fmtTok(r.tokensTotal)}</td>
+              <td class="num">{r.loc ?? '—'}</td>
+              <td class={`num ${r.testExitCode === 0 ? 'win' : r.testExitCode !== null ? 'fail' : ''}`} title={r.testExitCode !== null ? `exit ${r.testExitCode}` : ''}>{r.testExitCode === 0 ? '✓' : r.testExitCode !== null ? '✗' : '—'}</td>
+            </tr>
+          ))}
+          {medians.map((m, i) => (
+            <tr class="view-median" style="display:none"
+              data-model={m.model}
+              data-wall={m.wallSec ?? ''}
+              data-cost={m.costUsd ?? ''}
+              data-tokens={m.tokensTotal ?? ''}
+              data-loc={m.loc ?? ''}
+              data-exit={m.testExitCode ?? ''}
+              data-idx={i}>
+              <td class="model">{m.model} <span class="muted" style="font-size: 13.2px">(n={m.n})</span></td>
+              <td class="num muted">&mdash;</td>
+              <td class="num">{fmtSec(m.wallSec)}</td>
+              <td class="num">{fmtCost(m.costUsd)}</td>
+              <td class="num">{fmtTok(m.tokensTotal)}</td>
+              <td class="num">{m.loc ?? '—'}</td>
+              <td class={`num ${m.testExitCode === 0 ? 'win' : m.testExitCode !== null ? 'fail' : ''}`} title={m.testExitCode !== null ? `exit ${m.testExitCode}` : ''}>{m.testExitCode === 0 ? '✓' : m.testExitCode !== null ? '✗' : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+)}
+
+<script>
+  let currentView = 'all';
+  let sortCol = '';
+  let sortDir = 'asc';
+
+  document.getElementById('view-toggle')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-view]');
+    if (!btn) return;
+    const view = btn.dataset.view;
+    if (view === currentView) return;
+    currentView = view;
+    document.querySelectorAll('#view-toggle .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view-all').forEach(el => el.style.display = view === 'all' ? '' : 'none');
+    document.querySelectorAll('.view-median').forEach(el => el.style.display = view === 'medians' ? '' : 'none');
+    if (sortCol) applySort(sortCol, sortDir);
+  });
+
+  function applySort(col, dir) {
+    const tbody = document.getElementById('runs-body');
+    const rows = [...tbody.querySelectorAll(`.view-${currentView}`)];
+    const mult = dir === 'asc' ? 1 : -1;
+
+    rows.sort((a, b) => {
+      const va = a.dataset[col] ?? '';
+      const vb = b.dataset[col] ?? '';
+      if (va === '' && vb === '') return 0;
+      if (va === '') return 1;
+      if (vb === '') return -1;
+      const na = parseFloat(va);
+      const nb = parseFloat(vb);
+      if (!isNaN(na) && !isNaN(nb)) return (na - nb) * mult;
+      return String(va).localeCompare(String(vb)) * mult;
+    });
+
+    rows.forEach(r => tbody.appendChild(r));
+  }
+
+  document.querySelectorAll('#runs-table th[data-col]').forEach(th => {
+    const btn = th.querySelector('.sort-btn');
+    btn?.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (sortCol === col) {
+        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortCol = col;
+        sortDir = 'asc';
+      }
+      document.querySelectorAll('#runs-table th[data-col]').forEach(h => {
+        h.setAttribute('aria-sort', 'none');
+        h.classList.remove('asc', 'desc');
+      });
+      th.setAttribute('aria-sort', sortDir === 'asc' ? 'ascending' : 'descending');
+      th.classList.add(sortDir);
+      applySort(sortCol, sortDir);
+    });
+  });
+</script>

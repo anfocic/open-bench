@@ -1,0 +1,51 @@
+---
+import type { CostEfficiencyEntry } from '../data/types';
+
+export interface Props {
+  entries: CostEfficiencyEntry[];
+}
+
+const { entries } = Astro.props;
+
+const sorted = [...entries].sort((a, b) => (a.costUsd ?? Infinity) - (b.costUsd ?? Infinity));
+const cheapest = sorted[0]?.impl;
+---
+
+{entries.length > 0 && (
+  <section>
+    <h2 id="cost">cost &amp; efficiency</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>impl</th>
+            <th>slug</th>
+            <th>loc</th>
+            <th>wall</th>
+            <th>tokens</th>
+            <th>cost</th>
+            <th>tests</th>
+            <th>$/test</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map(e => {
+            const isCheapest = e.impl === cheapest;
+            return (
+              <tr class:list={{ 'cheapest-row': isCheapest }}>
+                <td class="model">{isCheapest && <span class="leader-mark" title="cheapest">$</span>}{e.impl}</td>
+                <td class="num" style="font-size: 14.4px">{e.modelSlug}</td>
+                <td class="num">{e.loc !== null ? e.loc : '—'}</td>
+                <td class="num">{e.wallClock}</td>
+                <td class="num">{e.tokens !== null ? e.tokens.toLocaleString() : '—'}</td>
+                <td class={`num ${isCheapest ? 'win' : ''}`}>{e.costUsd !== null ? `$${e.costUsd.toFixed(3)}` : '—'}</td>
+                <td class="num">{e.testsPassed}</td>
+                <td class="num">{e.costPerTest}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </section>
+)}

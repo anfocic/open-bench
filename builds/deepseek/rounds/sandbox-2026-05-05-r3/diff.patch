@@ -1,0 +1,173 @@
+diff --git a/sandbox.py b/sandbox.py
+new file mode 100644
+index 0000000..c49ff6c
+--- /dev/null
++++ b/sandbox.py
+@@ -0,0 +1,167 @@
++import argparse
++import os
++import shutil
++import subprocess
++import sys
++import tempfile
++
++MAX_OUTPUT_BYTES = 50_000
++TRUNCATION_MARKER = "... [truncated]"
++
++
++def _find_runtime():
++    if shutil.which("podman"):
++        return "podman"
++    if shutil.which("docker"):
++        return "docker"
++    raise RuntimeError("Neither podman nor docker found on PATH")
++
++
++def _truncate_output(output: str) -> str:
++    encoded = output.encode()
++    if len(encoded) <= MAX_OUTPUT_BYTES:
++        return output
++
++    marker_encoded = TRUNCATION_MARKER.encode()
++    limit = MAX_OUTPUT_BYTES - len(marker_encoded)
++    if limit <= 0:
++        return TRUNCATION_MARKER
++
++    result = ""
++    for ch in output:
++        if len((result + ch).encode()) <= limit:
++            result += ch
++        else:
++            break
++    return result + TRUNCATION_MARKER
++
++
++def sandbox_run(
++    command: str,
++    workspace: str | None = None,
++    image: str = "debian:stable-slim",
++    timeout: int = 60,
++    network: str = "none",
++    memory: str = "2g",
++    pids: int = 512,
++    cpus: float = 2.0,
++) -> str:
++    runtime = _find_runtime()
++
++    argv = [
++        runtime,
++        "run",
++        "--rm",
++        "--pull=missing",
++        f"--network={network}",
++        f"--memory={memory}",
++        f"--pids-limit={pids}",
++        f"--cpus={cpus}",
++        "--cap-drop=ALL",
++        "--security-opt=no-new-privileges",
++    ]
++
++    if workspace is not None:
++        argv.extend([
++            "-v", f"{os.path.abspath(workspace)}:/workspace:rw",
++            "-w", "/workspace",
++        ])
++
++    fd, cidfile = tempfile.mkstemp(prefix="sandbox_cid_")
++    os.close(fd)
++    os.unlink(cidfile)
++
++    try:
++        argv_with_cid = argv + [f"--cidfile={cidfile}", image, "sh", "-c", command]
++        proc = subprocess.run(
++            argv_with_cid,
++            shell=False,
++            capture_output=True,
++            timeout=timeout,
++        )
++        exit_code = proc.returncode
++        stdout = proc.stdout.decode(errors="replace")
++        stderr = proc.stderr.decode(errors="replace")
++    except subprocess.TimeoutExpired:
++        try:
++            with open(cidfile) as f:
++                cid = f.read().strip()
++            if cid:
++                subprocess.run(
++                    [runtime, "kill", cid],
++                    capture_output=True,
++                    timeout=5,
++                )
++        except Exception:
++            pass
++        exit_code = 124
++        stdout = ""
++        stderr = ""
++    finally:
++        try:
++            os.unlink(cidfile)
++        except OSError:
++            pass
++
++    output = f"exit={exit_code}\n--- stdout ---\n"
++    if stdout:
++        output += stdout
++        if not output.endswith("\n"):
++            output += "\n"
++    output += "--- stderr ---\n"
++    output += stderr
++
++    return _truncate_output(output)
++
++
++def main():
++    parser = argparse.ArgumentParser(
++        description="Run commands inside ephemeral, network-isolated containers."
++    )
++    parser.add_argument("--image", default="debian:stable-slim")
++    parser.add_argument("--timeout", type=int, default=60)
++    parser.add_argument("--network", choices=["none", "bridge"], default="none")
++    parser.add_argument("--memory", default="2g")
++    parser.add_argument("--pids", type=int, default=512)
++    parser.add_argument("--cpus", type=float, default=2.0)
++    parser.add_argument("--workspace", default=None)
++
++    if "--" not in sys.argv:
++        parser.error("missing -- separator before command")
++
++    idx = sys.argv.index("--")
++    known_args = sys.argv[1:idx]
++    cmd_tokens = sys.argv[idx + 1:]
++
++    if not cmd_tokens:
++        parser.error("no command provided after --")
++
++    args = parser.parse_args(known_args)
++    command = " ".join(cmd_tokens)
++
++    workspace = args.workspace if args.workspace is not None else os.getcwd()
++
++    output = sandbox_run(
++        command=command,
++        workspace=workspace,
++        image=args.image,
++        timeout=args.timeout,
++        network=args.network,
++        memory=args.memory,
++        pids=args.pids,
++        cpus=args.cpus,
++    )
++
++    print(output, end="")
++
++    for line in output.split("\n"):
++        if line.startswith("exit="):
++            try:
++                sys.exit(int(line.split("=", 1)[1]))
++            except (ValueError, IndexError):
++                pass
++    sys.exit(1)
++
++
++if __name__ == "__main__":
++    main()

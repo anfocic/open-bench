@@ -1,0 +1,26 @@
+---
+export interface Props {
+  subtitle?: string;
+}
+
+const { subtitle } = Astro.props;
+const path = Astro.url.pathname;
+
+function isActive(prefix: string, exact = false): boolean {
+  if (exact) return path === prefix || path === prefix + '/';
+  return path === prefix || path === prefix + '/' || path.startsWith(prefix + '/');
+}
+---
+
+<header id="top" class="site-header">
+  <a href="/" class="brand" aria-label="open-bench home">
+    <span class="brand-text">open-bench</span>
+    {subtitle && <span class="brand-sub">/ {subtitle}</span>}
+  </a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/" class:list={{ active: isActive('/', true) }} aria-current={isActive('/', true) ? 'page' : undefined}>home</a>
+    <a href="/about" class:list={{ active: isActive('/about') }} aria-current={isActive('/about') ? 'page' : undefined}>about</a>
+    <a href="/task/sandbox" class:list={{ active: isActive('/task') }} aria-current={isActive('/task') ? 'page' : undefined}>task</a>
+    <a href="https://github.com/anfocic/open-bench" target="_blank" rel="noopener">github</a>
+  </nav>
+</header>

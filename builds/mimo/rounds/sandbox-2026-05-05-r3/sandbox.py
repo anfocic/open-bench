@@ -1,0 +1,112 @@
+"""sandbox.py — wraps Podman/Docker to run commands in ephemeral containers."""
+
+import argparse
+import shutil
+import subprocess
+import sys
+
+
+MAX_OUTPUT_BYTES = 50_000
+
+
+def _find_runtime() -> str:
+    for name in ("podman", "docker"):
+        if shutil.which(name):
+            return name
+    raise RuntimeError("Neither 'podman' nor 'docker' found on PATH.")
+
+
+def sandbox_run(
+    command: str,
+    workspace: str | None = None,
+    image: str = "debian:stable-slim",
+    timeout: int = 60,
+    network: str = "none",
+    memory: str = "2g",
+    pids: int = 512,
+    cpus: float = 2.0,
+) -> str:
+    runtime = _find_runtime()
+
+    argv = [
+        runtime, "run", "--rm", "--pull=missing",
+        f"--network={network}",
+        f"--memory={memory}",
+        f"--pids-limit={pids}",
+        f"--cpus={cpus}",
+        "--cap-drop=ALL",
+        "--security-opt=no-new-privileges",
+    ]
+
+    if workspace is not None:
+        argv += ["-v", f"{workspace}:/workspace:rw", "-w", "/workspace"]
+
+    argv += [image, "sh", "-c", command]
+
+    try:
+        proc = subprocess.run(
+            argv,
+            shell=False,
+            capture_output=True,
+            timeout=timeout,
+        )
+        exit_code = proc.returncode
+        stdout = proc.stdout
+        stderr = proc.stderr
+    except subprocess.TimeoutExpired as exc:
+        exit_code = 124
+        stdout = exc.stdout or b""
+        stderr = exc.stderr or b""
+
+    stdout_str = stdout.decode(errors="replace")
+    stderr_str = stderr.decode(errors="replace")
+
+    output = f"exit={exit_code}\n--- stdout ---\n{stdout_str}\n--- stderr ---\n{stderr_str}"
+
+    if len(output.encode()) > MAX_OUTPUT_BYTES:
+        output = output.encode()[:MAX_OUTPUT_BYTES].decode(errors="replace")
+        if not output.endswith("\n"):
+            output += "\n"
+        output += "... [truncated]\n"
+
+    return output
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Run a command in an ephemeral container.")
+    parser.add_argument("--image", default="debian:stable-slim")
+    parser.add_argument("--timeout", type=int, default=60)
+    parser.add_argument("--network", choices=["none", "bridge"], default="none")
+    parser.add_argument("--memory", default="2g")
+    parser.add_argument("--pids", type=int, default=512)
+    parser.add_argument("--cpus", type=float, default=2.0)
+    parser.add_argument("--workspace", default=None)
+    parser.add_argument("command", nargs="+", metavar="COMMAND")
+
+    args = parser.parse_args()
+
+    if args.workspace is None:
+        args.workspace = "."
+
+    command_str = " ".join(args.command)
+
+    output = sandbox_run(
+        command=command_str,
+        workspace=args.workspace,
+        image=args.image,
+        timeout=args.timeout,
+        network=args.network,
+        memory=args.memory,
+        pids=args.pids,
+        cpus=args.cpus,
+    )
+
+    sys.stdout.write(output)
+
+    marker = output.split("\n", 1)[0]
+    exit_code = int(marker.split("=", 1)[1])
+    sys.exit(exit_code)
+
+
+if __name__ == "__main__":
+    main()

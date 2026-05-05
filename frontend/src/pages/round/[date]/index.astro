@@ -1,0 +1,121 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Header from '../../../components/Header.astro';
+import Footer from '../../../components/Footer.astro';
+import Scoreboard from '../../../components/Scoreboard.astro';
+import RunsTable from '../../../components/RunsTable.astro';
+import SelfBias from '../../../components/SelfBias.astro';
+import JudgeRanking from '../../../components/JudgeRanking.astro';
+import Agreement from '../../../components/Agreement.astro';
+import PerImplDetail from '../../../components/PerImplDetail.astro';
+import CostEfficiency from '../../../components/CostEfficiency.astro';
+import { loadRounds } from '../../../data/rounds';
+import type { Round } from '../../../data/types';
+import { fmtNum, fmtCost, fmtDate } from '../../../lib/format';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const rounds = loadRounds();
+  return rounds.map(r => ({
+    params: { date: r.date },
+    props: { round: r },
+  }));
+}
+
+const { round } = Astro.props as { round: Round };
+const champ = round.scoreboard.reduce((best, e) => {
+  const score = (e.specPeer ?? 0) + (e.qualityPeer ?? 0);
+  return score > (best.score ?? 0) ? { impl: e.impl, score } : best;
+}, { impl: '—', score: 0 });
+const champEntry = round.scoreboard.find(e => e.impl === champ.impl);
+const modelCount = new Set(round.samples.map(s => s.model)).size;
+const totalCost = round.samples.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
+const allPassed = round.samples.every(s => s.testExitCode === 0);
+---
+
+<BaseLayout
+  title={`open-bench — round ${round.date}${champ.score > 0 ? ` — ${champ.impl} wins` : ''}`}
+  description={champ.score > 0 ? `Round ${round.date}: ${champ.impl} wins with ${fmtNum(champ.score, 1)}/30` : `Round ${round.date} results`}
+  ogImage={`/og/round-${round.date}.png`}
+>
+  <Header subtitle={`round ${fmtDate(round.date)}`} />
+
+  <section class="masthead">
+    <h1 class="masthead-title">round {fmtDate(round.date)}</h1>
+    {champ.score > 0 && (
+      <p class="masthead-lede">
+        <strong style="color:var(--accent)">{champ.impl}</strong> takes the round with
+        <strong> {fmtNum(champ.score, 1)}/30</strong> &mdash;
+        spec {fmtNum(champEntry?.specPeer ?? 0, 1)},
+        quality {fmtNum(champEntry?.qualityPeer ?? 0, 1)}.
+        {modelCount} models, {fmtCost(totalCost)} spent on outputs.
+        Hidden tests: <span class={allPassed ? 'win' : 'fail'}>{allPassed ? 'all passed' : 'some failures'}</span>.
+      </p>
+    )}
+  </section>
+
+  <div class="tabs" role="tablist" aria-label="Round sections">
+    <button class="tab" role="tab" data-tab="scoreboard" aria-selected="true">scoreboard</button>
+    <button class="tab" role="tab" data-tab="runs" aria-selected="false">runs</button>
+    <button class="tab" role="tab" data-tab="self-bias" aria-selected="false">self-bias</button>
+    <button class="tab" role="tab" data-tab="judges" aria-selected="false">judges</button>
+    <button class="tab" role="tab" data-tab="agreement" aria-selected="false">agreement</button>
+    <button class="tab" role="tab" data-tab="per-impl" aria-selected="false">per-impl</button>
+    <button class="tab" role="tab" data-tab="cost" aria-selected="false">cost</button>
+  </div>
+
+  <div class="tab-panels">
+    <div class="tab-panel" data-panel="scoreboard">
+      <Scoreboard entries={round.scoreboard} champion={champ.impl} />
+    </div>
+    <div class="tab-panel" data-panel="runs" hidden>
+      <RunsTable runs={round.samples} />
+    </div>
+    <div class="tab-panel" data-panel="self-bias" hidden>
+      <SelfBias entries={round.selfBias} />
+    </div>
+    <div class="tab-panel" data-panel="judges" hidden>
+      <JudgeRanking entries={round.judgeRanking} />
+    </div>
+    <div class="tab-panel" data-panel="agreement" hidden>
+      <Agreement entries={round.agreement} />
+    </div>
+    <div class="tab-panel" data-panel="per-impl" hidden>
+      <PerImplDetail entries={round.perImplDetail} date={round.date} />
+    </div>
+    <div class="tab-panel" data-panel="cost" hidden>
+      <CostEfficiency entries={round.costEfficiency} />
+    </div>
+  </div>
+
+  <script>
+    const tabs = document.querySelectorAll<HTMLButtonElement>('.tab');
+    const panels = document.querySelectorAll<HTMLElement>('.tab-panel');
+
+    function activate(name: string) {
+      tabs.forEach(t => {
+        const on = t.dataset.tab === name;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      panels.forEach(p => { p.hidden = p.dataset.panel !== name; });
+    }
+
+    function go(name: string, push: boolean) {
+      const target = [...panels].some(p => p.dataset.panel === name) ? name : 'scoreboard';
+      const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
+      const apply = () => activate(target);
+      if (doc.startViewTransition) doc.startViewTransition(apply);
+      else apply();
+      if (push) history.replaceState(null, '', '#' + target);
+    }
+
+    const initial = location.hash.slice(1) || 'scoreboard';
+    activate([...panels].some(p => p.dataset.panel === initial) ? initial : 'scoreboard');
+
+    tabs.forEach(t => t.addEventListener('click', () => go(t.dataset.tab!, true)));
+    window.addEventListener('hashchange', () => go(location.hash.slice(1) || 'scoreboard', false));
+  </script>
+  <Footer />
+</BaseLayout>
