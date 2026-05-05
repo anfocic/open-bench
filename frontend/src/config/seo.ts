@@ -82,7 +82,7 @@ export const seoPages = {
   leaderboard: {
     title: 'Leaderboard · open-bench',
     description: 'Cumulative standings across every round. ELO, win rate, podium count, cost per round.',
-    ogImage: '/og-default.png',
+    ogImage: '/og/leaderboard.png',
     jsonLd: ['organization', 'collectionPage', 'leaderboardCumulative'],
   },
   dataset: {
@@ -121,7 +121,7 @@ export const seoTemplates = {
   model: {
     titleTpl: '{impl} · model career{brandSuffix}',
     descTpl: '{impl} on open-bench: {rounds} round{roundSuffix}, {wins} win{winSuffix}, ELO {elo}, ${totalCost} total spend.',
-    ogTpl: '/og-default.png',
+    ogTpl: '/og/model-{impl}.png',
     ogAltTpl: 'open-bench — {impl} model career',
     ogType: 'article',
     jsonLd: ['organization', 'breadcrumb'],
