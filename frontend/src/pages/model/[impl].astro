@@ -1,0 +1,103 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import Masthead from '../../components/Masthead.astro';
+import { getCollection } from 'astro:content';
+import { fmtCost, fmtNum, fmtDate } from '../../lib/format';
+import { computeStandings, sparkline } from '../../lib/aggregate';
+import { templateSeo } from '../../lib/seo';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const entries = await getCollection('rounds');
+  const rounds = entries.map(e => e.data);
+  const impls = new Set<string>();
+  for (const r of rounds) for (const e of r.scoreboard) impls.add(e.impl);
+  return [...impls].map(impl => ({ params: { impl }, props: { impl } }));
+}
+
+const { impl } = Astro.props;
+const entries = await getCollection('rounds');
+const rounds = entries.map(e => e.data);
+const standings = computeStandings(rounds);
+const standing = standings.find(s => s.impl === impl);
+if (!standing) return Astro.redirect('/404');
+
+const rank = standings.findIndex(s => s.impl === impl) + 1;
+const canonicalPath = `/model/${impl}`;
+const seo = templateSeo(
+  'model',
+  canonicalPath,
+  {
+    impl,
+    rounds: standing.rounds,
+    roundSuffix: standing.rounds === 1 ? '' : 's',
+    wins: standing.wins,
+    winSuffix: standing.wins === 1 ? '' : 's',
+    elo: Math.round(standing.elo),
+    totalCost: fmtNum(standing.totalCost, 2),
+  },
+  { trail: [
+    { name: 'open-bench', path: '/' },
+    { name: 'leaderboard', path: '/leaderboard' },
+    { name: impl, path: canonicalPath },
+  ] },
+);
+
+const history = [...standing.history].sort((a, b) => b.date.localeCompare(a.date));
+---
+
+<BaseLayout seo={seo}>
+  <Header subtitle={impl} />
+  <Masthead title={impl} subtitle={`Rank <strong>#${rank}</strong> &middot; ELO <strong>${Math.round(standing.elo)}</strong> &middot; ${standing.wins} win${standing.wins === 1 ? '' : 's'} in ${standing.rounds} round${standing.rounds === 1 ? '' : 's'} &middot; ${fmtCost(standing.totalCost)} total spend`}>
+    <div class="masthead-meta">
+      <span>podium {standing.podium}</span>
+      <span>avg {fmtNum(standing.avgScore, 1)}/30</span>
+      <span>$/round {fmtCost(standing.avgCost)}</span>
+      <span>last {fmtDate(standing.lastSeen)}</span>
+      <span class="trend">{sparkline(standing.history)}</span>
+    </div>
+  </Masthead>
+
+  <section>
+    <h2>history</h2>
+    <table class="model-history">
+      <thead>
+        <tr>
+          <th>round</th>
+          <th class="num">score</th>
+          <th class="num">rank</th>
+          <th class="num">cost</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {history.map(h => (
+          <tr class={h.dnf ? 'hardfail' : ''}>
+            <td>{fmtDate(h.date)}</td>
+            <td class="num">{h.dnf ? '—' : `${fmtNum(h.score, 1)}/30`}</td>
+            <td class="num">{h.dnf ? 'DNF' : `#${h.rank}`}</td>
+            <td class="num">{fmtCost(h.cost)}</td>
+            <td><a href={`/round/${h.date}`}>view round &rarr;</a></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <p><a href="/leaderboard">&larr; back to leaderboard</a></p>
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .model-history { width: 100%; border-collapse: collapse; }
+  .model-history th, .model-history td { padding: 6px 10px; border-bottom: 1px solid var(--rule); }
+  .model-history .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .model-history tr.hardfail { color: var(--muted); }
+  .trend { font-family: var(--mono); letter-spacing: -1px; color: var(--accent); }
+</style>

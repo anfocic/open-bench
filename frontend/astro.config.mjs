@@ -1,8 +1,19 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import { fileURLToPath } from 'node:url';
+import { generateOg } from './scripts/gen-og.mjs';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
+
+const ogIntegration = {
+  name: 'open-bench-og',
+  hooks: {
+    'astro:build:start': async ({ logger }) => {
+      const n = await generateOg();
+      logger.info(`generated ${n} OG image${n === 1 ? '' : 's'}`);
+    },
+  },
+};
 
 const dateFromRoundUrl = (url) => {
   const m = url.match(/\/round\/(\d{4}-\d{2}-\d{2})(?:\/|$)/);
@@ -13,6 +24,7 @@ export default defineConfig({
   site: 'https://openbenchmark.dev',
   trailingSlash: 'never',
   integrations: [
+    ogIntegration,
     sitemap({
       serialize(item) {
         const u = item.url;
@@ -29,6 +41,15 @@ export default defineConfig({
         } else if (u.endsWith('/model-royale')) {
           item.changefreq = 'weekly';
           item.priority = 0.9;
+        } else if (u.endsWith('/round')) {
+          item.changefreq = 'weekly';
+          item.priority = 0.7;
+        } else if (u.endsWith('/leaderboard')) {
+          item.changefreq = 'weekly';
+          item.priority = 0.9;
+        } else if (u.includes('/model/')) {
+          item.changefreq = 'weekly';
+          item.priority = 0.6;
         } else if (u.endsWith('/about')) {
           item.changefreq = 'yearly';
           item.priority = 0.3;

@@ -19,13 +19,18 @@ export const prerender = true;
 
 export async function getStaticPaths() {
   const entries = await getCollection('rounds');
-  return entries.map(e => ({
+  const sorted = [...entries].sort((a, b) => a.id.localeCompare(b.id));
+  return sorted.map((e, i) => ({
     params: { date: e.id },
-    props: { roundId: e.id },
+    props: {
+      roundId: e.id,
+      prevDate: i > 0 ? sorted[i - 1].id : null,
+      nextDate: i < sorted.length - 1 ? sorted[i + 1].id : null,
+    },
   }));
 }
 
-const { roundId } = Astro.props;
+const { roundId, prevDate, nextDate } = Astro.props;
 const entry = await getEntry('rounds', roundId);
 if (!entry) return Astro.redirect('/404');
 const round = entry.data;
@@ -61,9 +66,14 @@ const seo = templateSeo(
   },
   { round: roundLite, trail: [
     { name: 'open-bench', path: '/' },
+    { name: 'rounds', path: '/round' },
     { name: `round ${round.date}`, path: canonicalPath },
   ] },
   round.date,
+  {
+    prevPath: prevDate ? `/round/${prevDate}` : undefined,
+    nextPath: nextDate ? `/round/${nextDate}` : undefined,
+  },
 );
 ---
 

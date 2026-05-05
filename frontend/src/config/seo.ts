@@ -2,6 +2,10 @@ export const seoSite = {
   name: 'open-bench',
   url: 'https://openbenchmark.dev',
   defaultOgImage: '/og-default.png',
+  defaultOgImageAlt: 'open-bench — weekly LLM coding battle royale',
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  twitterHandle: '@folezof',
   locale: 'en',
   brand: 'open-bench',
   brandSuffix: ' · open-bench',
@@ -21,16 +25,21 @@ export type JsonLdKey =
   | 'website'
   | 'datasetSite'
   | 'datasetRound'
+  | 'roundArticle'
   | 'aboutPage'
   | 'leaderboard'
   | 'softwareSourceCode'
   | 'techArticle'
-  | 'breadcrumb';
+  | 'breadcrumb'
+  | 'collectionPage'
+  | 'roundList'
+  | 'leaderboardCumulative';
 
 export interface StaticPageSeo {
   readonly title: string;
   readonly description: string;
   readonly ogImage: string;
+  readonly ogImageAlt?: string;
   readonly jsonLd: readonly JsonLdKey[];
 }
 
@@ -38,6 +47,7 @@ export interface TemplateSeo {
   readonly titleTpl: string;
   readonly descTpl: string;
   readonly ogTpl: string;
+  readonly ogAltTpl?: string;
   readonly ogType: 'website' | 'article';
   readonly jsonLd: readonly JsonLdKey[];
 }
@@ -61,6 +71,18 @@ export const seoPages = {
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'website'],
   },
+  roundIndex: {
+    title: 'Rounds · open-bench',
+    description: 'Every round of open-bench, newest first. Weekly LLM coding battle royale archive — winners, scoreboards, full artifacts.',
+    ogImage: '/og-default.png',
+    jsonLd: ['organization', 'collectionPage', 'roundList'],
+  },
+  leaderboard: {
+    title: 'Leaderboard · open-bench',
+    description: 'Cumulative standings across every round. ELO, win rate, podium count, cost per round.',
+    ogImage: '/og-default.png',
+    jsonLd: ['organization', 'collectionPage', 'leaderboardCumulative'],
+  },
 } as const satisfies Record<string, StaticPageSeo>;
 
 export type StaticPageKey = keyof typeof seoPages;
@@ -70,15 +92,25 @@ export const seoTemplates = {
     titleTpl: 'Round {date}{winnerSuffix}{brandSuffix}',
     descTpl: 'Round {date}: {modelCount} models on {task}. Winner {winner} at {score}/30. {modelCount} models, ${cost} spend.',
     ogTpl: '/og/round-{date}.png',
+    ogAltTpl: 'open-bench round {date} — winner {winner}',
     ogType: 'article',
-    jsonLd: ['organization', 'datasetRound', 'leaderboard', 'breadcrumb'],
+    jsonLd: ['organization', 'datasetRound', 'roundArticle', 'leaderboard', 'breadcrumb'],
   },
   impl: {
     titleTpl: '{impl} · round {date}{brandSuffix}',
     descTpl: 'Full artifacts (code, diff, hidden tests, transcript) for {impl} in round {date}.',
     ogTpl: '/og/round-{date}.png',
+    ogAltTpl: 'open-bench round {date} — {impl} artifacts',
     ogType: 'article',
     jsonLd: ['organization', 'softwareSourceCode', 'breadcrumb'],
+  },
+  model: {
+    titleTpl: '{impl} · model career{brandSuffix}',
+    descTpl: '{impl} on open-bench: {rounds} round{roundSuffix}, {wins} win{winSuffix}, ELO {elo}, ${totalCost} total spend.',
+    ogTpl: '/og-default.png',
+    ogAltTpl: 'open-bench — {impl} model career',
+    ogType: 'article',
+    jsonLd: ['organization', 'breadcrumb'],
   },
   task: {
     titleTpl: '{task} task{brandSuffix}',

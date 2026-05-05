@@ -9,10 +9,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(__dirname, '..');
 const REPO = resolve(FRONTEND, '..');
 const OG_DIR = resolve(FRONTEND, 'public/og');
-const FONT_REG = readFileSync(resolve(FRONTEND, 'og-assets/inter-regular.woff'));
-const FONT_BOLD = readFileSync(resolve(FRONTEND, 'og-assets/inter-bold.woff'));
-
-mkdirSync(OG_DIR, { recursive: true });
 
 const BG = '#0d1117';
 const FG = '#e6edf3';
@@ -126,19 +122,33 @@ function card(round) {
   };
 }
 
-const rounds = loadRounds();
-if (rounds.length === 0) { console.error('No rounds found.'); process.exit(1); }
+export async function generateOg() {
+  mkdirSync(OG_DIR, { recursive: true });
+  const fontReg = readFileSync(resolve(FRONTEND, 'og-assets/inter-regular.woff'));
+  const fontBold = readFileSync(resolve(FRONTEND, 'og-assets/inter-bold.woff'));
+  const rounds = loadRounds();
+  if (rounds.length === 0) {
+    console.warn('[og] no rounds found, skipping');
+    return 0;
+  }
+  for (const round of rounds) {
+    const svg = await satori(card(round), {
+      width: 1200, height: 630,
+      fonts: [
+        { name: 'Inter', data: fontReg, weight: 400, style: 'normal' },
+        { name: 'Inter', data: fontBold, weight: 700, style: 'normal' },
+      ],
+    });
+    const png = new Resvg(svg).render().asPng();
+    const out = resolve(OG_DIR, `round-${round.date}.png`);
+    writeFileSync(out, png);
+    console.log(`[og] wrote ${out}`);
+  }
+  return rounds.length;
+}
 
-for (const round of rounds) {
-  const svg = await satori(card(round), {
-    width: 1200, height: 630,
-    fonts: [
-      { name: 'Inter', data: FONT_REG, weight: 400, style: 'normal' },
-      { name: 'Inter', data: FONT_BOLD, weight: 700, style: 'normal' },
-    ],
-  });
-  const png = new Resvg(svg).render().asPng();
-  const out = resolve(OG_DIR, `round-${round.date}.png`);
-  writeFileSync(out, png);
-  console.log(`wrote ${out}`);
+const isCli = import.meta.url === `file://${process.argv[1]}`;
+if (isCli) {
+  const n = await generateOg();
+  if (n === 0) process.exit(1);
 }

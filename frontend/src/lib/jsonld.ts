@@ -131,6 +131,66 @@ function techArticle(d: { task: string; canonicalPath: string }): Json {
   };
 }
 
+function roundArticle(d: { round: RoundLite; canonicalPath: string; ogImage?: string }): Json {
+  const r = d.round;
+  const image = d.ogImage ? url(d.ogImage) : url(`/og/round-${r.date}.png`);
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: `open-bench round ${r.date} — ${r.winner} wins`,
+    datePublished: r.date,
+    author: { '@type': 'Organization', name: seoSite.name, url: seoSite.url },
+    publisher: { '@type': 'Organization', name: seoSite.name, url: seoSite.url, logo: url('/favicon.svg') },
+    image,
+    mainEntityOfPage: url(d.canonicalPath),
+    description: `Round ${r.date}: ${r.modelCount} models on ${r.task}. Winner ${r.winner} at ${r.winnerScore}/30.`,
+  };
+}
+
+function collectionPage(d: { canonicalPath: string }): Json {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'open-bench rounds',
+    url: url(d.canonicalPath),
+    description: 'Every round of open-bench, newest first.',
+    isPartOf: { '@type': 'WebSite', name: seoSite.name, url: seoSite.url },
+  };
+}
+
+function leaderboardCumulative(d: { standings: { impl: string; elo: number }[]; canonicalPath: string }): Json {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'open-bench cumulative standings',
+    url: url(d.canonicalPath),
+    numberOfItems: d.standings.length,
+    itemListOrder: 'https://schema.org/ItemListOrderDescending',
+    itemListElement: d.standings.map((s, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: s.impl,
+      url: url(`/model/${s.impl}`),
+    })),
+  };
+}
+
+function roundList(d: { rounds: { date: string; winner: string }[] }): Json {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'open-bench rounds',
+    numberOfItems: d.rounds.length,
+    itemListOrder: 'https://schema.org/ItemListOrderDescending',
+    itemListElement: d.rounds.map((r, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: `Round ${r.date} — ${r.winner}`,
+      url: url(`/round/${r.date}`),
+    })),
+  };
+}
+
 function breadcrumb(d: { trail: BreadcrumbItem[] }): Json {
   return {
     '@context': 'https://schema.org',
@@ -149,11 +209,15 @@ const builders: Record<JsonLdKey, (data: Json) => Json> = {
   website: () => website(),
   datasetSite: () => datasetSite(),
   datasetRound: (d) => datasetRound(d as never),
+  roundArticle: (d) => roundArticle(d as never),
   aboutPage: (d) => aboutPage(d as never),
   leaderboard: (d) => leaderboard(d as never),
   softwareSourceCode: (d) => softwareSourceCode(d as never),
   techArticle: (d) => techArticle(d as never),
   breadcrumb: (d) => breadcrumb(d as never),
+  collectionPage: (d) => collectionPage(d as never),
+  roundList: (d) => roundList(d as never),
+  leaderboardCumulative: (d) => leaderboardCumulative(d as never),
 };
 
 export function buildJsonLd(keys: readonly JsonLdKey[], data: Record<string, unknown> = {}): Json[] {

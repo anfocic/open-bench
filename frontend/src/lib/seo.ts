@@ -11,11 +11,14 @@ export interface SeoProps {
   title: string;
   description: string;
   ogImage: string;
+  ogImageAlt: string;
   ogType: 'website' | 'article';
   canonicalPath: string;
   jsonLd: readonly JsonLdKey[];
   jsonLdData?: Record<string, unknown>;
   publishedTime?: string;
+  prevPath?: string;
+  nextPath?: string;
   noindex?: boolean;
 }
 
@@ -28,15 +31,21 @@ function interp(tpl: string, vars: Vars): string {
   });
 }
 
-export function pageSeo(key: StaticPageKey, canonicalPath: string): SeoProps {
+export function pageSeo(
+  key: StaticPageKey,
+  canonicalPath: string,
+  jsonLdData?: Record<string, unknown>,
+): SeoProps {
   const cfg = seoPages[key];
   return {
     title: cfg.title,
     description: cfg.description,
     ogImage: cfg.ogImage,
+    ogImageAlt: cfg.ogImageAlt ?? seoSite.defaultOgImageAlt,
     ogType: 'website',
     canonicalPath,
     jsonLd: cfg.jsonLd,
+    jsonLdData,
   };
 }
 
@@ -46,6 +55,7 @@ export function templateSeo(
   vars: Vars,
   jsonLdData?: Record<string, unknown>,
   publishedTime?: string,
+  nav?: { prevPath?: string; nextPath?: string },
 ): SeoProps {
   const cfg = seoTemplates[template];
   const fullVars: Vars = { brandSuffix: seoSite.brandSuffix, ...vars };
@@ -53,11 +63,14 @@ export function templateSeo(
     title: interp(cfg.titleTpl, fullVars),
     description: interp(cfg.descTpl, fullVars),
     ogImage: interp(cfg.ogTpl, fullVars),
+    ogImageAlt: cfg.ogAltTpl ? interp(cfg.ogAltTpl, fullVars) : seoSite.defaultOgImageAlt,
     ogType: cfg.ogType,
     canonicalPath,
     jsonLd: cfg.jsonLd,
     jsonLdData,
     publishedTime,
+    prevPath: nav?.prevPath,
+    nextPath: nav?.nextPath,
   };
 }
 
