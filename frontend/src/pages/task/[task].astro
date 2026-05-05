@@ -8,6 +8,7 @@ import { resolve } from 'node:path';
 import { repoRoot } from '../../lib/paths';
 import { readOptional, listDirs } from '../../lib/io';
 import { renderMarkdown } from '../../lib/markdown';
+import { templateSeo } from '../../lib/seo';
 
 export async function getStaticPaths() {
   const tasksDir = resolve(repoRoot, 'bench/tasks');
@@ -23,9 +24,23 @@ const rubricRaw = readOptional(resolve(taskDir, 'JUDGE_RUBRIC.md'));
 const specHtml = specRaw ? renderMarkdown(specRaw) : null;
 const promptHtml = promptRaw ? renderMarkdown(promptRaw) : null;
 const rubricHtml = rubricRaw ? renderMarkdown(rubricRaw) : null;
+
+const canonicalPath = `/task/${task}`;
+const seo = templateSeo(
+  'task',
+  canonicalPath,
+  { task: task! },
+  {
+    task: task!,
+    trail: [
+      { name: 'open-bench', path: '/' },
+      { name: `task ${task}`, path: canonicalPath },
+    ],
+  },
+);
 ---
 
-<BaseLayout title={`${task} task · open-bench`} description={`Full spec, prompt, and rubric for the ${task} task.`}>
+<BaseLayout seo={seo}>
   <Header subtitle={`task / ${task}`} />
 
   <Masthead title={task!} subtitle="The spec each model is given, plus the rubric judges use to score. Read it as a contract: what counts as done, what counts as good." />

@@ -9,6 +9,7 @@ import { pickCanonicalRun, type RunArtifacts } from '../../../lib/runs';
 import { highlight } from '../../../lib/highlight';
 import { fmtCost, fmtSec, fmtTok, fmtDate, passFailIcon, passFailClass } from '../../../lib/format';
 import { renderMarkdown } from '../../../lib/markdown';
+import { templateSeo } from '../../../lib/seo';
 
 export const prerender = true;
 
@@ -49,12 +50,23 @@ const transcriptHtml = artifacts.transcript ? renderMarkdown(artifacts.transcrip
 const sandboxLineCount = artifacts.sandboxPy?.split('\n').length ?? 0;
 const transcriptByteSize = artifacts.transcript ? new TextEncoder().encode(artifacts.transcript).length : 0;
 const firstTab = sandboxHtml ? 'code' : diffHtml ? 'diff' : testHtml ? 'tests' : transcriptHtml ? 'transcript' : 'code';
+
+const canonicalPath = `/round/${date}/${impl}`;
+const trail = [
+  { name: 'open-bench', path: '/' },
+  { name: `round ${date}`, path: `/round/${date}` },
+  { name: impl, path: canonicalPath },
+];
+const seo = templateSeo(
+  'impl',
+  canonicalPath,
+  { date, impl },
+  { impl, date, canonicalPath, trail },
+  date,
+);
 ---
 
-<BaseLayout
-  title={`${impl} run — round ${date} · open-bench`}
-  description={`Full artifacts (code, diff, tests, transcript) for ${impl} in round ${date}.`}
->
+<BaseLayout seo={seo}>
   <Header subtitle={`${impl} / ${fmtDate(date)}`} />
 
   <div style="margin:12px 0 0">

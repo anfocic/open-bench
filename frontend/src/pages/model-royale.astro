@@ -4,6 +4,7 @@ import Header from '../components/Header.astro';
 import { resolve } from 'node:path';
 import { repoRoot } from '../lib/paths';
 import { readJsonOptional, readOptional, listDirs } from '../lib/io';
+import { pageSeo } from '../lib/seo';
 import '../styles/deck.css';
 
 interface Config {
@@ -98,10 +99,7 @@ const sections = [
 ];
 ---
 
-<BaseLayout
-  title="open-bench — model royale"
-  description="Model Royale: a weekly elimination-style coding tournament between every major LLM, run on the open-bench harness."
->
+<BaseLayout seo={pageSeo('modelRoyale', '/model-royale')}>
   <Header subtitle="model royale" />
 
   <nav class="deck-toc" aria-label="Sections">

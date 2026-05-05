@@ -1,15 +1,14 @@
 ---
 import '../styles/globals.css';
 import { ClientRouter } from 'astro:transitions';
+import SEO from '../components/SEO.astro';
+import type { SeoProps } from '../lib/seo';
 
 export interface Props {
-  title: string;
-  description?: string;
-  ogImage?: string;
+  seo: SeoProps;
 }
 
-const { title, description, ogImage } = Astro.props;
-const site = 'https://openbenchmark.dev';
+const { seo } = Astro.props;
 ---
 
 <!doctype html>
@@ -17,15 +16,7 @@ const site = 'https://openbenchmark.dev';
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{title}</title>
-  <meta name="description" content={description ?? 'open-bench weekly coding battle royale'}>
-  <meta property="og:title" content={title}>
-  <meta property="og:description" content={description ?? 'open-bench weekly coding battle royale'}>
-  <meta property="og:type" content="website">
-  <meta property="og:url" content={site + Astro.url.pathname}>
-  <meta property="og:image" content={ogImage ? site + ogImage : site + '/og-default.png'}>
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="canonical" href={site + Astro.url.pathname}>
+  <SEO {...seo} />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <ClientRouter />
   <script is:inline>
