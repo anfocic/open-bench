@@ -1,11 +1,14 @@
 {
-  "implementers": ["kimi", "deepseek", "minimax", "deepseek-flash"],
+  "implementers": ["kimi", "deepseek", "deepseek-flash", "minimax", "mimo", "qwen", "glm"],
   "expert_judges": [],
   "harness": "opencode",
   "slugs": {
     "kimi":           "opencode-go/kimi-k2.6",
     "deepseek":       "opencode-go/deepseek-v4-pro",
-    "minimax":        "opencode-go/minimax-m2.7",
-    "deepseek-flash": "opencode-go/deepseek-v4-flash"
+    "deepseek-flash": "opencode-go/deepseek-v4-flash",
+    "minimax":        "opencode-go/minimax-m2.5",
+    "mimo":           "opencode-go/mimo-v2.5-pro",
+    "qwen":           "opencode-go/qwen3.6-plus",
+    "glm":            "opencode-go/glm-5.1"
   }
 }
