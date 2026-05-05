@@ -3,11 +3,26 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Masthead from '../components/Masthead.astro';
+
+const principles = [
+  { k: 'objective gate', v: 'Hidden tests run before any judge sees the code. No subjective vibe-check inflating a non-functional output.' },
+  { k: 'peer scoring', v: 'Models judge each other under blinded labels. Self-bias is measured, then excluded from the headline median.' },
+  { k: 'cost & wall-clock', v: 'Tracked through the harness. Cheapest-and-correct wins ties; slow-and-correct loses them.' },
+  { k: 'reproducible', v: 'Every transcript, diff, rubric and score is committed to the repo. Re-run a round, audit a judgment, fork the lineup.' },
+];
+
+const steps = [
+  { n: 1, body: 'Every model in the lineup gets the same task and an isolated git worktree.' },
+  { n: 2, body: 'Each writes its implementation through opencode under a fixed wall-clock budget.' },
+  { n: 3, body: 'A hidden pytest battery runs against each output — the objective gate.' },
+  { n: 4, body: 'Every model judges every implementation, blinded. Cost and tokens are captured.' },
+  { n: 5, body: 'Scores are aggregated into one ranked review per round, plus a self-bias delta.' },
+];
 ---
 
 <BaseLayout
   title="open-bench — about"
-  description="Why open-bench exists: a weekly head-to-head between coding LLMs, run on the same task with the same harness, scored by hidden tests and by the models themselves."
+  description="Why open-bench exists: a coding-LLM benchmark harness built around real agent loops, hidden tests, peer review, and committed artifacts."
 >
   <Header subtitle="about" />
 
@@ -17,48 +32,161 @@ import Masthead from '../components/Masthead.astro';
   />
 
   <article class="prose about-prose">
+    <nav class="about-toc" aria-label="Sections">
+      <a href="#what">what</a>
+      <a href="#why">why</a>
+      <a href="#how">how</a>
+      <a href="#principles">principles</a>
+      <a href="#more">more</a>
+    </nav>
+
+    <h2 id="what">what</h2>
     <p>
-      <strong>open-bench</strong> is a weekly head-to-head between every major coding LLM I
-      can get an API key for. Same blank repo, same <code>SPEC.md</code>, same hidden test
-      suite. Each round produces a single ranked review &mdash; who passed, who didn't,
-      who was cheapest, who was fastest, who other models thought wrote the cleanest code.
+      <strong>open-bench</strong> is a benchmark harness for coding LLMs. It drops a
+      task spec into a fresh repo, drives every model in the lineup through a real
+      agent loop, runs a hidden test suite as the objective gate, has the models score
+      each other, and commits the full artifact set &mdash; transcripts, diffs, judge
+      rubrics, scores &mdash; to the repository. One round, one ranked review.
+    </p>
+    <p>
+      The flagship format running on top of it is <a href="/model-royale">Model Royale</a>:
+      a weekly elimination tournament between every major LLM I can get a key for. The
+      harness is general; the tournament is one thing you can run on it.
     </p>
 
+    <h2 id="why">why</h2>
     <p>
-      I built it because I kept reaching for vendor leaderboards when picking a model
-      to drop into an agent, and the numbers there never matched what I saw in
-      practice. They benchmark one-shot prompts; I run multi-turn agents. They report
-      pass@1 on synthetic problems; I care about wall-clock, dollars, and whether the
-      output reads like something a teammate would write. open-bench is a small, opinionated
-      answer to that &mdash; one task, one harness, one set of hidden tests, run against
-      everyone at once. No marketing pages, no fine print. Just artifacts.
+      Picking a coding model from leaderboards is a bad time. They benchmark one-shot
+      prompts, report pass@1 on synthetic problems, and update on a vendor's calendar.
+      None of that survives contact with a real agent loop where wall-clock, cost, and
+      code quality matter as much as whether it solves the problem at all.
     </p>
 
-    <p>
-      How a round works: every model in the lineup gets the same task and an isolated
-      git worktree, and writes its implementation through opencode. A hidden pytest
-      battery runs against each output as the objective gate. Then every model in the
-      lineup judges every other implementation (blinded), so the qualitative score
-      comes from peer consensus rather than my taste. Cost, tokens, and wall-clock are
-      tracked through the harness. Self-bias is measured but excluded from the
-      headline median. The full output of a round &mdash; transcripts, diffs, judge
-      rubrics, scores &mdash; is committed to the repo so anyone can replay or audit it.
-    </p>
+    <blockquote class="about-pull">
+      Vendor leaderboards measure the model in a vacuum. open-bench measures it in the
+      shape you'd actually deploy it.
+    </blockquote>
 
+    <h2 id="how">how</h2>
     <p>
-      For the methodology in detail (task config, scoring, forking it for your own
-      lineup, limitations) read <a href="https://github.com/anfocic/open-bench/blob/main/ABOUT.md">ABOUT.md</a>.
-      For the harness internals see <a href="https://github.com/anfocic/open-bench/tree/main/bench/scripts">bench/scripts</a>,
-      and the round artifacts live under <a href="https://github.com/anfocic/open-bench/tree/main/builds">builds/</a>
-      and <a href="https://github.com/anfocic/open-bench/tree/main/results">results/</a>.
-      Latest results: <a href="/">home</a>.
+      A round is the same five steps every time:
     </p>
+    <ol class="about-steps">
+      {steps.map(s => (
+        <li>
+          <span class="step-num">{s.n}</span>
+          <span class="step-body">{s.body}</span>
+        </li>
+      ))}
+    </ol>
+
+    <h2 id="principles">principles</h2>
+    <dl class="about-principles">
+      {principles.map(p => (
+        <div>
+          <dt>{p.k}</dt>
+          <dd>{p.v}</dd>
+        </div>
+      ))}
+    </dl>
+
+    <h2 id="more">more</h2>
+    <ul class="about-links">
+      <li><a href="https://github.com/anfocic/open-bench/blob/main/ABOUT.md">ABOUT.md</a> &mdash; full methodology, scoring math, task config</li>
+      <li><a href="https://github.com/anfocic/open-bench/tree/main/bench/scripts">bench/scripts</a> &mdash; harness internals (start_run, capture_run, judges, aggregator)</li>
+      <li><a href="https://github.com/anfocic/open-bench/tree/main/builds">builds/</a> &mdash; per-model artifacts: implementation, transcript, diff, meta</li>
+      <li><a href="https://github.com/anfocic/open-bench/tree/main/results">results/</a> &mdash; aggregated round reviews and judgments</li>
+      <li><a href="/">latest round &rarr;</a></li>
+    </ul>
   </article>
 
   <Footer />
 </BaseLayout>
 
 <style>
-  .about-prose { max-width: 68ch; margin-top: 8px; }
-  .about-prose p { margin: 14px 0; }
+  .about-prose { max-width: 70ch; margin-top: 8px; }
+  .about-prose p { margin: 12px 0; }
+  .about-prose h2 {
+    font-size: 17px;
+    margin: 32px 0 8px;
+    color: var(--fg-bright);
+    text-transform: lowercase;
+    scroll-margin-top: 80px;
+  }
+  .about-prose h2::before { content: '## '; color: var(--accent); }
+
+  .about-toc {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 8px 0 12px;
+    border-bottom: 1px dashed var(--rule);
+    font-size: 14.4px;
+  }
+  .about-toc a { color: var(--muted); }
+  .about-toc a:hover { color: var(--fg-bright); }
+  .about-toc a::before { content: '# '; color: var(--dim); }
+
+  .about-pull {
+    margin: 18px 0;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--bg-elev, transparent);
+    color: var(--fg-bright);
+    font-style: normal;
+  }
+
+  .about-steps {
+    list-style: none;
+    margin: 12px 0;
+    padding: 0;
+    counter-reset: step;
+  }
+  .about-steps li {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .about-steps li:last-child { border-bottom: none; }
+  .step-num { color: var(--accent); font-weight: 700; }
+  .step-num::before { content: '['; color: var(--dim); font-weight: 400; }
+  .step-num::after { content: ']'; color: var(--dim); font-weight: 400; }
+
+  .about-principles {
+    margin: 12px 0;
+    display: grid;
+    gap: 10px;
+  }
+  .about-principles > div {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 14px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .about-principles > div:last-child { border-bottom: none; }
+  .about-principles dt {
+    color: var(--fg-bright);
+    font-weight: 700;
+    text-transform: lowercase;
+  }
+  .about-principles dd { margin: 0; color: var(--muted); }
+
+  .about-links {
+    margin: 12px 0;
+    padding-left: 0;
+    list-style: none;
+  }
+  .about-links li {
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .about-links li:last-child { border-bottom: none; }
+  .about-links li::before { content: '> '; color: var(--dim); }
+
+  @media (max-width: 600px) {
+    .about-principles > div { grid-template-columns: 1fr; gap: 4px; }
+  }
 </style>
