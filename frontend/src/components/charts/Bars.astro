@@ -1,0 +1,59 @@
+---
+export interface BarDatum {
+  label: string;
+  value: number;
+  highlight?: boolean;
+}
+
+export interface Props {
+  data: BarDatum[];
+  max?: number;
+  unit?: string;
+  decimals?: number;
+  width?: number;
+  rowHeight?: number;
+}
+
+const {
+  data,
+  max,
+  unit = '',
+  decimals = 1,
+  width = 720,
+  rowHeight = 28,
+} = Astro.props;
+
+const sorted = [...data].sort((a, b) => b.value - a.value);
+const maxValue = max ?? Math.max(...sorted.map(d => d.value), 1);
+const labelWidth = 120;
+const valueWidth = 60;
+const barAreaWidth = width - labelWidth - valueWidth - 16;
+const height = sorted.length * rowHeight + 8;
+const fmt = (v: number) => decimals === 0 ? String(Math.round(v)) : v.toFixed(decimals);
+---
+
+<svg viewBox={`0 0 ${width} ${height}`} class="chart-bars" role="img" aria-label="bar chart">
+  {sorted.map((d, i) => {
+    const y = i * rowHeight + 4;
+    const w = (d.value / maxValue) * barAreaWidth;
+    return (
+      <g>
+        <text x={labelWidth - 8} y={y + rowHeight / 2 + 4} text-anchor="end" class={`bar-label ${d.highlight ? 'highlight' : ''}`}>{d.label}</text>
+        <rect x={labelWidth} y={y + 4} width={w} height={rowHeight - 12} class={`bar ${d.highlight ? 'highlight' : ''}`} />
+        <line x1={labelWidth} x2={labelWidth + barAreaWidth} y1={y + rowHeight - 4} y2={y + rowHeight - 4} class="bar-axis" />
+        <text x={labelWidth + w + 6} y={y + rowHeight / 2 + 4} class={`bar-value ${d.highlight ? 'highlight' : ''}`}>{fmt(d.value)}{unit}</text>
+      </g>
+    );
+  })}
+</svg>
+
+<style>
+  .chart-bars { width: 100%; max-width: 100%; height: auto; font-family: var(--mono); font-size: 12px; }
+  .bar { fill: var(--dim); }
+  .bar.highlight { fill: var(--accent); }
+  .bar-label { fill: var(--fg); }
+  .bar-label.highlight { fill: var(--accent); font-weight: 700; }
+  .bar-value { fill: var(--muted); }
+  .bar-value.highlight { fill: var(--accent); font-weight: 700; }
+  .bar-axis { stroke: var(--rule); stroke-width: 1; }
+</style>

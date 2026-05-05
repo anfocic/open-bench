@@ -1,0 +1,26 @@
+---
+import { getEntry } from 'astro:content';
+import Bars from './Bars.astro';
+import { findChampion } from '../../lib/scoreboard';
+
+export interface Props {
+  date: string;
+}
+
+const { date } = Astro.props;
+const entry = await getEntry('rounds', date);
+const champ = entry ? findChampion(entry.data.scoreboard) : null;
+const data = entry
+  ? entry.data.scoreboard.map(e => ({
+      label: e.impl,
+      value: (e.specPeer ?? 0) + (e.qualityPeer ?? 0),
+      highlight: e.impl === champ?.impl,
+    }))
+  : [];
+---
+
+{entry ? (
+  <Bars data={data} max={30} unit="/30" decimals={1} />
+) : (
+  <p class="muted"><em>(no round found for {date})</em></p>
+)}

@@ -18,3 +18,4 @@ bench/blog-internal-not-for-git/
 frontend/node_modules/
 frontend/dist/
 frontend/.astro/
+frontend/public/og/

@@ -1,0 +1,194 @@
+/* Slide-deck — single-section visible at a time, push transition between
+   sections. Driven by src/scripts/deck.ts. Pages opt in by importing this
+   file and rendering the .deck-toc + .deck markup. */
+
+html.deck-on,
+html.deck-on body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  height: 100%;
+}
+html.deck-on body { touch-action: none; }
+
+.deck-toc {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  padding: 10px 0;
+  margin-top: 4px;
+  border-bottom: 1px dashed var(--rule);
+  font-size: 14.4px;
+}
+.deck-toc a {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2px 4px;
+}
+.deck-toc a::before { content: '# '; color: var(--dim); }
+.deck-toc a:hover { color: var(--fg-bright); }
+.deck-toc a.active { color: var(--accent); font-weight: 700; }
+.deck-toc a.active::before { color: var(--accent); }
+
+.deck-progress {
+  margin-left: auto;
+  font-size: 14.4px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.deck-progress-num { color: var(--accent); font-weight: 700; }
+
+.deck {
+  position: relative;
+  height: calc(100vh - 130px);
+  overflow: hidden;
+}
+.deck-section {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 24px 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.deck-section[data-active] {
+  opacity: 1;
+  pointer-events: auto;
+  view-transition-name: deck;
+}
+
+.deck-inner {
+  width: 100%;
+  max-width: 70ch;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+.deck-section h2 {
+  font-size: 28px;
+  margin: 0 0 18px;
+  color: var(--fg-bright);
+  text-transform: lowercase;
+  letter-spacing: -0.01em;
+}
+.deck-h-num {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 16px;
+  margin-right: 8px;
+}
+
+.deck-body p { margin: 12px 0; line-height: 1.6; font-size: 16.2px; }
+.deck-body strong { color: var(--fg-bright); }
+.deck-body a { color: var(--accent); }
+
+.deck-pull {
+  margin: 18px 0 0;
+  padding: 14px 18px;
+  border-left: 3px solid var(--accent);
+  color: var(--fg-bright);
+  font-size: 17px;
+  line-height: 1.5;
+  font-style: normal;
+}
+
+.deck-steps { list-style: none; margin: 0; padding: 0; }
+.deck-steps li {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--rule);
+  font-size: 16.2px;
+  line-height: 1.5;
+}
+.deck-steps li:last-child { border-bottom: none; }
+.deck-step-num { color: var(--accent); font-weight: 700; }
+.deck-step-num::before { content: '['; color: var(--dim); font-weight: 400; }
+.deck-step-num::after { content: ']'; color: var(--dim); font-weight: 400; }
+
+.deck-defs { margin: 0; display: grid; gap: 0; }
+.deck-defs > div {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--rule);
+}
+.deck-defs > div:last-child { border-bottom: none; }
+.deck-defs dt {
+  color: var(--fg-bright);
+  font-weight: 700;
+  text-transform: lowercase;
+}
+.deck-defs dd {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15.6px;
+  line-height: 1.55;
+}
+
+.deck-links { margin: 0; padding-left: 0; list-style: none; }
+.deck-links li {
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--rule);
+  font-size: 16.2px;
+}
+.deck-links li:last-child { border-bottom: none; }
+.deck-links li::before { content: '> '; color: var(--dim); }
+.deck-links a { color: var(--accent); }
+
+.deck-hint {
+  position: fixed;
+  bottom: 14px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 13.2px;
+  pointer-events: none;
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 600px) {
+  .deck-defs > div { grid-template-columns: 1fr; gap: 4px; }
+  .deck-section h2 { font-size: 22px; }
+  .deck { height: calc(100vh - 110px); }
+}
+
+/* Push transition: outgoing and incoming move in lockstep at full width.
+   Forward = both slide left; back = both slide right. */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; }
+
+@keyframes deck-push-out-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+@keyframes deck-push-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes deck-push-out-right {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+@keyframes deck-push-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+html:not(.deck-back) ::view-transition-old(deck) {
+  animation: deck-push-out-left 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+html:not(.deck-back) ::view-transition-new(deck) {
+  animation: deck-push-in-right 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+html.deck-back ::view-transition-old(deck) {
+  animation: deck-push-out-right 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+html.deck-back ::view-transition-new(deck) {
+  animation: deck-push-in-left 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}

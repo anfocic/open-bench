@@ -5,8 +5,10 @@ export interface NavLink {
 }
 
 export const navLinks: NavLink[] = [
-  { href: '/', label: 'home' },
+  { href: '/round', label: 'rounds' },
+  { href: '/notes', label: 'writeups' },
+  { href: '/leaderboard', label: 'leaderboard' },
   { href: '/about', label: 'about' },
-  { href: '/task/sandbox', label: 'task' },
+  { href: '/model-royale', label: 'model royale' },
   { href: 'https://github.com/anfocic/open-bench', label: 'github', external: true },
 ];

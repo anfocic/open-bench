@@ -1,0 +1,36 @@
+---
+import { getEntry } from 'astro:content';
+import Scatter from './Scatter.astro';
+import { findChampion, totalCost } from '../../lib/scoreboard';
+
+export interface Props {
+  date: string;
+}
+
+const { date } = Astro.props;
+const entry = await getEntry('rounds', date);
+
+let data: { label: string; x: number; y: number; highlight?: boolean }[] = [];
+if (entry) {
+  const round = entry.data;
+  const champ = findChampion(round.scoreboard);
+  const costByImpl = new Map<string, number>();
+  for (const s of round.samples) {
+    costByImpl.set(s.model, (costByImpl.get(s.model) ?? 0) + (s.costUsd ?? 0));
+  }
+  data = round.scoreboard
+    .map(e => ({
+      label: e.impl,
+      x: costByImpl.get(e.impl) ?? 0,
+      y: (e.specPeer ?? 0) + (e.qualityPeer ?? 0),
+      highlight: e.impl === champ.impl,
+    }))
+    .filter(d => d.x > 0);
+}
+---
+
+{entry ? (
+  <Scatter data={data} xLabel="cost (USD, log)" yLabel="composite score (/30)" xLog yMax={30} />
+) : (
+  <p class="muted"><em>(no round found for {date})</em></p>
+)}

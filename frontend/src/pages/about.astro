@@ -1,18 +1,130 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
-import { repoRoot } from '../lib/paths';
-import { readOptional } from '../lib/io';
-import { renderMarkdown } from '../lib/markdown';
+import '../styles/deck.css';
+import { pageSeo } from '../lib/seo';
 
-const aboutPath = repoRoot + '/ABOUT.md';
-const content = readOptional(aboutPath) ?? '# About\n\nPage not found.';
-const html = renderMarkdown(content);
+const sections = [
+  {
+    id: 'what',
+    title: 'what',
+    body: `<p><strong>open-bench</strong> is a benchmark harness for coding LLMs. It drops a task spec into a fresh repo, drives every model in the lineup through a real agent loop, runs a hidden test suite as the objective gate, has the models score each other, and commits the full artifact set — transcripts, diffs, judge rubrics, scores — to the repository. One round, one ranked review.</p><p>The flagship format on top of it is <a href="/model-royale">Model Royale</a>: a weekly elimination tournament between every major LLM I can get a key for. The harness is general; the tournament is one thing you can run on it.</p>`,
+  },
+  {
+    id: 'why',
+    title: 'why',
+    body: `<p>Picking a coding model from leaderboards is a bad time. They benchmark one-shot prompts, report pass@1 on synthetic problems, and update on a vendor's calendar. None of that survives contact with a real agent loop where wall-clock, cost, and code quality matter as much as whether it solves the problem at all.</p><blockquote class="deck-pull">Vendor leaderboards measure the model in a vacuum. open-bench measures it in the shape you'd actually deploy it.</blockquote>`,
+  },
+  {
+    id: 'how',
+    title: 'how',
+    steps: [
+      'Every model in the lineup gets the same task and an isolated git worktree.',
+      'Each writes its implementation through opencode under a fixed wall-clock budget.',
+      'A hidden pytest battery runs against each output — the objective gate.',
+      'Every model judges every implementation, blinded. Cost and tokens are captured.',
+      'Scores are aggregated into one ranked review per round, plus a self-bias delta.',
+    ],
+  },
+  {
+    id: 'principles',
+    title: 'principles',
+    defs: [
+      ['objective gate', 'Hidden tests run before any judge sees the code. No vibe-check inflating a non-functional output.'],
+      ['peer scoring', 'Models judge each other under blinded labels. Self-bias is measured, then excluded from the headline median.'],
+      ['cost & wall-clock', 'Tracked through the harness. Cheapest-and-correct wins ties; slow-and-correct loses them.'],
+      ['reproducible', 'Every transcript, diff, rubric and score is committed. Re-run a round, audit a judgment, fork the lineup.'],
+    ],
+  },
+  {
+    id: 'more',
+    title: 'more',
+    links: [
+      { href: 'https://github.com/anfocic/open-bench/blob/main/ABOUT.md', label: 'ABOUT.md', note: 'full methodology, scoring math, task config' },
+      { href: 'https://github.com/anfocic/open-bench/tree/main/bench/scripts', label: 'bench/scripts', note: 'harness internals' },
+      { href: 'https://github.com/anfocic/open-bench/tree/main/builds', label: 'builds/', note: 'per-model artifacts' },
+      { href: 'https://github.com/anfocic/open-bench/tree/main/results', label: 'results/', note: 'aggregated reviews' },
+      { href: '/dataset', label: 'dataset', note: 'JSON + CSV exports, schema, citation' },
+      { href: '/', label: 'latest round →', note: '' },
+    ],
+  },
+];
+
+const seo = pageSeo('about', '/about');
 ---
 
-<BaseLayout title="open-bench — About" description="How the open-bench harness works.">
+<BaseLayout seo={seo}>
   <Header subtitle="about" />
-  <article class="prose" set:html={html} />
-  <Footer />
+
+  <nav class="deck-toc" aria-label="Sections">
+    {sections.map(s => (
+      <a href={`#${s.id}`} data-toc={s.id}>{s.title}</a>
+    ))}
+    <span class="deck-progress" aria-hidden="true">
+      <span class="deck-progress-num" data-progress-num>1</span>
+      <span class="muted"> / {sections.length}</span>
+    </span>
+  </nav>
+
+  <main class="deck">
+    {sections.map((s, i) => (
+      <section
+        id={s.id}
+        class="deck-section"
+        data-section={s.id}
+        data-index={i}
+        data-active={i === 0 ? 'true' : undefined}
+        aria-hidden={i === 0 ? 'false' : 'true'}
+      >
+        <div class="deck-inner">
+          <h2><span class="deck-h-num">[{String(i + 1).padStart(2, '0')}]</span> {s.title}</h2>
+
+          {s.body && <div class="deck-body" set:html={s.body} />}
+
+          {s.steps && (
+            <ol class="deck-steps">
+              {s.steps.map((step, j) => (
+                <li>
+                  <span class="deck-step-num">{j + 1}</span>
+                  <span class="step-body">{step}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+
+          {s.defs && (
+            <dl class="deck-defs">
+              {s.defs.map(([k, v]) => (
+                <div>
+                  <dt>{k}</dt>
+                  <dd>{v}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+
+          {s.links && (
+            <ul class="deck-links">
+              {s.links.map(l => (
+                <li>
+                  <a href={l.href}>{l.label}</a>
+                  {l.note && <span class="muted"> &mdash; {l.note}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+    ))}
+  </main>
+
+  <div class="deck-hint muted" aria-hidden="true">
+    <span>scroll · arrows · swipe</span>
+  </div>
 </BaseLayout>
+
+<script>
+  import { setupDeck } from '../scripts/deck';
+  setupDeck();
+  document.addEventListener('astro:after-swap', setupDeck);
+</script>

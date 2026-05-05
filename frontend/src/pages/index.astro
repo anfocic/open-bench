@@ -9,11 +9,14 @@ import { resolve } from 'node:path';
 import { repoRoot } from '../lib/paths';
 import { fmtCost, fmtNum, fmtDate } from '../lib/format';
 import { findChampion, uniqueModelCount, totalCost } from '../lib/scoreboard';
+import { computeStandings } from '../lib/aggregate';
 import { readJsonOptional } from '../lib/io';
+import { pageSeo } from '../lib/seo';
 
 const entries = await getCollection('rounds');
 const rounds = entries.sort((a, b) => b.id.localeCompare(a.id)).map(e => e.data);
 const latestRound = rounds[0];
+const top3 = computeStandings(rounds).slice(0, 3);
 const configPath = resolve(repoRoot, 'bench/config.json');
 const config = readJsonOptional<{ implementers: string[]; slugs: Record<string, string> }>(configPath) ?? { implementers: [], slugs: {} };
 
@@ -23,9 +26,10 @@ const modelCount = latestRound ? uniqueModelCount(latestRound.samples) : 0;
 const latestCost = latestRound ? totalCost(latestRound.samples) : 0;
 const totalSamples = rounds.reduce((sum, r) => sum + r.samples.length, 0);
 const totalSpend = rounds.reduce((sum, r) => sum + totalCost(r.samples), 0);
+const seo = pageSeo('home', '/');
 ---
 
-<BaseLayout title="open-bench — weekly LLM coding battle royale" description="Every week, every major coding LLM gets the same blank repo and the same SPEC.md. Hidden tests run first — the gate. Then the models judge each other. Cost and wall-clock are tracked. Loser is eliminated.">
+<BaseLayout seo={seo}>
   <Header />
 
   <Masthead title="open-bench" subtitle={`Every week, every major coding LLM gets the same blank repo and the same SPEC.md. Hidden tests run first &mdash; the gate. Then the models judge each other. Cost and wall-clock are tracked. Loser is eliminated.`}>
@@ -37,6 +41,22 @@ const totalSpend = rounds.reduce((sum, r) => sum + totalCost(r.samples), 0);
       <span>last: {latestRound ? fmtDate(latestRound.date) : '&mdash;'}</span>
     </div>
   </Masthead>
+
+  {top3.length > 0 && (
+    <section>
+      <h2>standings</h2>
+      <div class="summary-line">
+        {top3.map((s, i) => (
+          <span>
+            {i > 0 && <span class="sep">|</span>}
+            <strong>#{i + 1}</strong> <a href={`/model/${s.impl}`}>{s.impl}</a> <span class="muted">{Math.round(s.elo)} ELO</span>
+          </span>
+        ))}
+        <span class="sep">|</span>
+        <a href="/leaderboard">full leaderboard &rarr;</a>
+      </div>
+    </section>
+  )}
 
   {latestRound && champ.score > 0 && (
     <section>
