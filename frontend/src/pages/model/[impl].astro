@@ -51,7 +51,7 @@ const history = [...standing.history].sort((a, b) => b.date.localeCompare(a.date
 
 <BaseLayout seo={seo}>
   <Header subtitle={impl} />
-  <Masthead title={impl} subtitle={`Rank <strong>#${rank}</strong> &middot; ELO <strong>${Math.round(standing.elo)}</strong> &middot; ${standing.wins} win${standing.wins === 1 ? '' : 's'} in ${standing.rounds} round${standing.rounds === 1 ? '' : 's'} &middot; ${fmtCost(standing.totalCost)} total spend`}>
+  <Masthead title={impl} titleTransitionName={`model-${impl}`} subtitle={`Rank <strong>#${rank}</strong> &middot; ELO <strong>${Math.round(standing.elo)}</strong> &middot; ${standing.wins} win${standing.wins === 1 ? '' : 's'} in ${standing.rounds} round${standing.rounds === 1 ? '' : 's'} &middot; ${fmtCost(standing.totalCost)} total spend`}>
     <div class="masthead-meta">
       <span>podium {standing.podium}</span>
       <span>avg {fmtNum(standing.avgScore, 1)}/30</span>

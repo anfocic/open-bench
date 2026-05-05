@@ -64,7 +64,7 @@ const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.dat
 
   <section class="cards">
     <article class={`card ${eloLeader === a ? 'card-lead' : ''}`}>
-      <header><a href={`/model/${a}`}>{a}</a> <span class="rank">#{aRank}</span></header>
+      <header><a href={`/model/${a}`} transition:name={`model-${a}`}>{a}</a> <span class="rank">#{aRank}</span></header>
       <dl>
         <div><dt>ELO</dt><dd>{Math.round(cmp.a.elo)}</dd></div>
         <div><dt>rounds</dt><dd>{cmp.a.rounds}</dd></div>
@@ -76,7 +76,7 @@ const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.dat
       </dl>
     </article>
     <article class={`card ${eloLeader === b ? 'card-lead' : ''}`}>
-      <header><a href={`/model/${b}`}>{b}</a> <span class="rank">#{bRank}</span></header>
+      <header><a href={`/model/${b}`} transition:name={`model-${b}`}>{b}</a> <span class="rank">#{bRank}</span></header>
       <dl>
         <div><dt>ELO</dt><dd>{Math.round(cmp.b.elo)}</dd></div>
         <div><dt>rounds</dt><dd>{cmp.b.rounds}</dd></div>

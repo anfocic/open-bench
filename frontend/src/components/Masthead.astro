@@ -2,13 +2,14 @@
 export interface Props {
   title: string;
   subtitle?: string;
+  titleTransitionName?: string;
 }
 
-const { title, subtitle } = Astro.props;
+const { title, subtitle, titleTransitionName } = Astro.props;
 ---
 
 <section class="masthead">
-  <h1 class="masthead-title">{title}</h1>
+  <h1 class="masthead-title" transition:name={titleTransitionName}>{title}</h1>
   {subtitle && <p class="masthead-lede" set:html={subtitle} />}
   <slot />
 </section>

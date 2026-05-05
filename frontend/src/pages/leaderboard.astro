@@ -46,7 +46,7 @@ const seo = pageSeo('leaderboard', '/leaderboard', {
           {standings.map((s, i) => (
             <tr>
               <td class="num">{i + 1}</td>
-              <td><a href={`/model/${s.impl}`}>{s.impl}</a></td>
+              <td><a href={`/model/${s.impl}`} transition:name={`model-${s.impl}`}>{s.impl}</a></td>
               <td class="num"><strong>{Math.round(s.elo)}</strong></td>
               <td class="num">{s.rounds}</td>
               <td class="num">{s.wins}</td>
