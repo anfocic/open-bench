@@ -1,0 +1,118 @@
+---
+export interface ScatterPoint {
+  label: string;
+  x: number;
+  y: number;
+  highlight?: boolean;
+}
+
+export interface Props {
+  data: ScatterPoint[];
+  xLabel?: string;
+  yLabel?: string;
+  xLog?: boolean;
+  yMax?: number;
+  yMin?: number;
+  width?: number;
+  height?: number;
+}
+
+const {
+  data,
+  xLabel = 'x',
+  yLabel = 'y',
+  xLog = false,
+  yMax,
+  yMin = 0,
+  width = 720,
+  height = 360,
+} = Astro.props;
+
+const padLeft = 56;
+const padRight = 16;
+const padTop = 16;
+const padBottom = 44;
+const plotW = width - padLeft - padRight;
+const plotH = height - padTop - padBottom;
+
+const xs = data.map(d => d.x).filter(v => v > 0);
+const ys = data.map(d => d.y);
+const xMinRaw = xs.length ? Math.min(...xs) : 1;
+const xMaxRaw = xs.length ? Math.max(...xs) : 1;
+const yLo = yMin;
+const yHi = yMax ?? Math.max(...ys, 1);
+
+const xMin = xLog ? Math.pow(10, Math.floor(Math.log10(xMinRaw))) : 0;
+const xMax = xLog ? Math.pow(10, Math.ceil(Math.log10(xMaxRaw))) : xMaxRaw * 1.05;
+
+const xToPx = (v: number) => {
+  if (xLog) {
+    const lo = Math.log10(xMin || 1e-9);
+    const hi = Math.log10(xMax || 1);
+    return padLeft + ((Math.log10(Math.max(v, 1e-9)) - lo) / (hi - lo)) * plotW;
+  }
+  return padLeft + ((v - xMin) / (xMax - xMin || 1)) * plotW;
+};
+const yToPx = (v: number) => padTop + plotH - ((v - yLo) / (yHi - yLo || 1)) * plotH;
+
+const xTicks: { v: number; label: string }[] = [];
+if (xLog) {
+  const lo = Math.log10(xMin || 1e-9);
+  const hi = Math.log10(xMax || 1);
+  for (let p = Math.ceil(lo); p <= Math.floor(hi); p++) {
+    const v = Math.pow(10, p);
+    xTicks.push({ v, label: v < 0.01 ? `$${v.toFixed(3)}` : v < 1 ? `$${v.toFixed(2)}` : `$${v.toFixed(0)}` });
+  }
+} else {
+  for (let i = 0; i <= 4; i++) {
+    const v = xMin + (i / 4) * (xMax - xMin);
+    xTicks.push({ v, label: v.toFixed(2) });
+  }
+}
+
+const yTickCount = 5;
+const yTicks: { v: number; label: string }[] = [];
+for (let i = 0; i <= yTickCount; i++) {
+  const v = yLo + (i / yTickCount) * (yHi - yLo);
+  yTicks.push({ v, label: v.toFixed(0) });
+}
+---
+
+<svg viewBox={`0 0 ${width} ${height}`} class="chart-scatter" role="img" aria-label="scatter chart">
+  {yTicks.map(t => (
+    <g>
+      <line x1={padLeft} x2={padLeft + plotW} y1={yToPx(t.v)} y2={yToPx(t.v)} class="grid" />
+      <text x={padLeft - 8} y={yToPx(t.v) + 4} text-anchor="end" class="axis-label">{t.label}</text>
+    </g>
+  ))}
+  {xTicks.map(t => (
+    <g>
+      <line x1={xToPx(t.v)} x2={xToPx(t.v)} y1={padTop + plotH} y2={padTop + plotH + 4} class="axis" />
+      <text x={xToPx(t.v)} y={padTop + plotH + 18} text-anchor="middle" class="axis-label">{t.label}</text>
+    </g>
+  ))}
+  <line x1={padLeft} x2={padLeft + plotW} y1={padTop + plotH} y2={padTop + plotH} class="axis" />
+  <line x1={padLeft} x2={padLeft} y1={padTop} y2={padTop + plotH} class="axis" />
+
+  <text x={padLeft + plotW / 2} y={height - 6} text-anchor="middle" class="axis-title">{xLabel}</text>
+  <text x={14} y={padTop + plotH / 2} transform={`rotate(-90 14 ${padTop + plotH / 2})`} text-anchor="middle" class="axis-title">{yLabel}</text>
+
+  {data.map(p => p.x > 0 && (
+    <g class={p.highlight ? 'point highlight' : 'point'}>
+      <circle cx={xToPx(p.x)} cy={yToPx(p.y)} r="4" />
+      <text x={xToPx(p.x) + 8} y={yToPx(p.y) + 4} class="point-label">{p.label}</text>
+    </g>
+  ))}
+</svg>
+
+<style>
+  .chart-scatter { width: 100%; max-width: 100%; height: auto; font-family: var(--mono); font-size: 11px; }
+  .axis { stroke: var(--fg); stroke-width: 1; }
+  .grid { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 3; }
+  .axis-label { fill: var(--muted); font-size: 11px; }
+  .axis-title { fill: var(--fg); font-size: 12px; }
+  .point circle { fill: var(--dim); }
+  .point.highlight circle { fill: var(--accent); }
+  .point-label { fill: var(--fg); font-size: 11px; }
+  .point.highlight .point-label { fill: var(--accent); font-weight: 700; }
+</style>

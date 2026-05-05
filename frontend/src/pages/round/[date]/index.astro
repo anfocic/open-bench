@@ -4,6 +4,8 @@ import Header from '../../../components/Header.astro';
 import Footer from '../../../components/Footer.astro';
 import Masthead from '../../../components/Masthead.astro';
 import Scoreboard from '../../../components/Scoreboard.astro';
+import RoundBars from '../../../components/charts/RoundBars.astro';
+import RoundScatter from '../../../components/charts/RoundScatter.astro';
 import RunsTable from '../../../components/RunsTable.astro';
 import SelfBias from '../../../components/SelfBias.astro';
 import JudgeRanking from '../../../components/JudgeRanking.astro';
@@ -113,6 +115,9 @@ const seo = templateSeo(
   <div class="tab-panels">
     <div class="tab-panel" role="tabpanel" id="panel-scoreboard" data-panel="scoreboard" aria-labelledby="tab-scoreboard">
       <Scoreboard entries={round.scoreboard} champion={champ.impl} />
+      <div class="chart-block">
+        <RoundBars date={round.date} />
+      </div>
     </div>
     <div class="tab-panel" role="tabpanel" id="panel-runs" data-panel="runs" hidden aria-labelledby="tab-runs">
       <RunsTable runs={round.samples} />
@@ -131,6 +136,9 @@ const seo = templateSeo(
     </div>
     <div class="tab-panel" role="tabpanel" id="panel-cost" data-panel="cost" hidden aria-labelledby="tab-cost">
       <CostEfficiency entries={round.costEfficiency} />
+      <div class="chart-block">
+        <RoundScatter date={round.date} />
+      </div>
     </div>
   </div>
 
@@ -160,4 +168,5 @@ const seo = templateSeo(
   .writeup-title { grid-area: title; font-weight: 700; color: var(--fg-bright); }
   .writeup-summary { grid-area: summary; color: var(--muted); font-size: var(--font-sm); }
   .writeup-arrow { grid-area: arrow; color: var(--accent); font-size: 1.4rem; }
+  .chart-block { margin: 28px 0 8px; }
 </style>
