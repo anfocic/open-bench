@@ -123,6 +123,117 @@ export function computeStandings(rounds: Round[]): ModelStanding[] {
   return standings.sort((a, b) => b.elo - a.elo);
 }
 
+export interface CompareRoundEntry {
+  date: string;
+  aScore: number | null;
+  bScore: number | null;
+  aRank: number | null;
+  bRank: number | null;
+  aDnf: boolean;
+  bDnf: boolean;
+  aCost: number;
+  bCost: number;
+  winner: 'a' | 'b' | 'tie' | null;
+}
+
+export interface CompareSummary {
+  a: ModelStanding;
+  b: ModelStanding;
+  common: CompareRoundEntry[];
+  aOnly: CompareRoundEntry[];
+  bOnly: CompareRoundEntry[];
+  aWins: number;
+  bWins: number;
+  ties: number;
+  aTotalCost: number;
+  bTotalCost: number;
+  eloDiff: number;
+}
+
+export function pairKey(a: string, b: string): [string, string] {
+  return a <= b ? [a, b] : [b, a];
+}
+
+export function allPairs(impls: string[]): Array<[string, string]> {
+  const sorted = [...impls].sort();
+  const out: Array<[string, string]> = [];
+  for (let i = 0; i < sorted.length; i++) {
+    for (let j = i + 1; j < sorted.length; j++) out.push([sorted[i], sorted[j]]);
+  }
+  return out;
+}
+
+export function compareModels(a: string, b: string, rounds: Round[]): CompareSummary | null {
+  const standings = computeStandings(rounds);
+  const sa = standings.find(s => s.impl === a);
+  const sb = standings.find(s => s.impl === b);
+  if (!sa || !sb) return null;
+
+  const sorted = [...rounds].sort((x, y) => x.date.localeCompare(y.date));
+  const common: CompareRoundEntry[] = [];
+  const aOnly: CompareRoundEntry[] = [];
+  const bOnly: CompareRoundEntry[] = [];
+  let aWins = 0, bWins = 0, ties = 0;
+  let aTotalCost = 0, bTotalCost = 0;
+
+  for (const round of sorted) {
+    const ranked = rankOfRound(round);
+    const aIdx = ranked.findIndex(r => r.impl === a);
+    const bIdx = ranked.findIndex(r => r.impl === b);
+    const aHere = aIdx >= 0;
+    const bHere = bIdx >= 0;
+    if (!aHere && !bHere) continue;
+
+    const aR = aHere ? ranked[aIdx] : null;
+    const bR = bHere ? ranked[bIdx] : null;
+    const aCost = aHere ? costForImpl(round.samples, a) : 0;
+    const bCost = bHere ? costForImpl(round.samples, b) : 0;
+    aTotalCost += aCost;
+    bTotalCost += bCost;
+
+    let winner: CompareRoundEntry['winner'] = null;
+    if (aHere && bHere && !aR!.dnf && !bR!.dnf) {
+      if (aR!.score > bR!.score) { winner = 'a'; aWins++; }
+      else if (bR!.score > aR!.score) { winner = 'b'; bWins++; }
+      else { winner = 'tie'; ties++; }
+    } else if (aHere && bHere) {
+      if (aR!.dnf && !bR!.dnf) { winner = 'b'; bWins++; }
+      else if (bR!.dnf && !aR!.dnf) { winner = 'a'; aWins++; }
+    }
+
+    const entry: CompareRoundEntry = {
+      date: round.date,
+      aScore: aR ? aR.score : null,
+      bScore: bR ? bR.score : null,
+      aRank: aR ? aIdx + 1 : null,
+      bRank: bR ? bIdx + 1 : null,
+      aDnf: aR ? aR.dnf : false,
+      bDnf: bR ? bR.dnf : false,
+      aCost,
+      bCost,
+      winner,
+    };
+
+    if (aHere && bHere) common.push(entry);
+    else if (aHere) aOnly.push(entry);
+    else bOnly.push(entry);
+  }
+
+  return {
+    a: sa,
+    b: sb,
+    common,
+    aOnly,
+    bOnly,
+    aWins,
+    bWins,
+    ties,
+    aTotalCost,
+    bTotalCost,
+    eloDiff: sa.elo - sb.elo,
+  };
+}
+
 const SPARKS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 export function sparkline(history: ModelHistoryEntry[]): string {
   if (history.length === 0) return '';

@@ -20,7 +20,9 @@ const seo = pageSeo('leaderboard', '/leaderboard', {
 
 <BaseLayout seo={seo}>
   <Header subtitle="leaderboard" />
-  <Masthead title="leaderboard" subtitle={`Cumulative standings across ${totalRounds} round${totalRounds === 1 ? '' : 's'}. ELO base 1000, K=32. Hard-failed runs excluded from ranking.`} />
+  <Masthead title="leaderboard" subtitle={`Cumulative standings across ${totalRounds} round${totalRounds === 1 ? '' : 's'}. ELO base 1000, K=32. Hard-failed runs excluded from ranking.`}>
+    {standings.length >= 2 && <p class="masthead-meta"><a href="/compare">compare two models &rarr;</a></p>}
+  </Masthead>
 
   <section>
     {standings.length === 0 ? (

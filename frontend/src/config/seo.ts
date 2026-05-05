@@ -103,6 +103,12 @@ export const seoPages = {
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'collectionPage', 'blog'],
   },
+  compareIndex: {
+    title: 'Compare models · open-bench',
+    description: 'Pick any two models and compare them head-to-head: ELO, scores per round, win/loss record, total spend.',
+    ogImage: '/og-default.png',
+    jsonLd: ['organization', 'collectionPage'],
+  },
 } as const satisfies Record<string, StaticPageSeo>;
 
 export type StaticPageKey = keyof typeof seoPages;
@@ -139,6 +145,14 @@ export const seoTemplates = {
     ogAltTpl: 'open-bench writeup — {title}',
     ogType: 'article',
     jsonLd: ['organization', 'blogPosting', 'breadcrumb'],
+  },
+  compare: {
+    titleTpl: '{a} vs {b}{brandSuffix}',
+    descTpl: '{a} (ELO {aElo}) vs {b} (ELO {bElo}) head-to-head: {commonRounds} shared round{commonSuffix}, {aWins}-{bWins}-{ties} record.',
+    ogTpl: '/og-default.png',
+    ogAltTpl: 'open-bench compare — {a} vs {b}',
+    ogType: 'website',
+    jsonLd: ['organization', 'breadcrumb'],
   },
   task: {
     titleTpl: '{task} task{brandSuffix}',

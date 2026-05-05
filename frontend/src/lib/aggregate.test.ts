@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { computeStandings, computeElo, sparkline } from './aggregate.ts';
+import { computeStandings, computeElo, sparkline, compareModels, allPairs } from './aggregate.ts';
 import type { Round, ScoreboardEntry, Run } from '../data/types.ts';
 
 function entry(impl: string, specPeer: number, qualityPeer: number, dnf = false): ScoreboardEntry {
@@ -105,6 +105,59 @@ test('computeStandings: sorted by ELO desc', () => {
   assert.equal(s[2].impl, 'c');
   assert.ok(s[0].elo >= s[1].elo);
   assert.ok(s[1].elo >= s[2].elo);
+});
+
+test('compareModels: head-to-head across overlapping rounds', () => {
+  const r1 = round('2026-05-05', [entry('a', 14, 13), entry('b', 12, 12)],
+    [run('a', '2026-05-05', 0.10), run('b', '2026-05-05', 0.20)]);
+  const r2 = round('2026-05-12', [entry('a', 10, 10), entry('b', 14, 13)],
+    [run('a', '2026-05-12', 0.15), run('b', '2026-05-12', 0.25)]);
+  const cmp = compareModels('a', 'b', [r1, r2])!;
+  assert.equal(cmp.common.length, 2);
+  assert.equal(cmp.aWins, 1);
+  assert.equal(cmp.bWins, 1);
+  assert.equal(cmp.ties, 0);
+  assert.equal(cmp.aTotalCost, 0.25);
+  assert.equal(cmp.bTotalCost, 0.45);
+});
+
+test('compareModels: rounds where only one attended split into aOnly/bOnly', () => {
+  const r1 = round('2026-05-05', [entry('a', 14, 13), entry('b', 12, 12)]);
+  const r2 = round('2026-05-12', [entry('a', 14, 13)]);
+  const r3 = round('2026-05-19', [entry('b', 14, 13)]);
+  const cmp = compareModels('a', 'b', [r1, r2, r3])!;
+  assert.equal(cmp.common.length, 1);
+  assert.equal(cmp.aOnly.length, 1);
+  assert.equal(cmp.bOnly.length, 1);
+  assert.equal(cmp.aOnly[0].date, '2026-05-12');
+  assert.equal(cmp.bOnly[0].date, '2026-05-19');
+});
+
+test('compareModels: hardFail counts as loss for the failed model', () => {
+  const r = round('2026-05-05', [entry('a', 14, 13), entry('b', 0, 0, true)]);
+  const cmp = compareModels('a', 'b', [r])!;
+  assert.equal(cmp.aWins, 1);
+  assert.equal(cmp.bWins, 0);
+  assert.equal(cmp.common[0].winner, 'a');
+});
+
+test('compareModels: ties counted separately', () => {
+  const r = round('2026-05-05', [entry('a', 12, 12), entry('b', 12, 12)]);
+  const cmp = compareModels('a', 'b', [r])!;
+  assert.equal(cmp.ties, 1);
+  assert.equal(cmp.aWins, 0);
+  assert.equal(cmp.bWins, 0);
+  assert.equal(cmp.common[0].winner, 'tie');
+});
+
+test('compareModels: returns null for unknown impl', () => {
+  const r = round('2026-05-05', [entry('a', 14, 13), entry('b', 12, 12)]);
+  assert.equal(compareModels('a', 'ghost', [r]), null);
+});
+
+test('allPairs: sorted, unordered, no self-pairs', () => {
+  const p = allPairs(['c', 'a', 'b']);
+  assert.deepEqual(p, [['a', 'b'], ['a', 'c'], ['b', 'c']]);
 });
 
 test('sparkline: handles flat series and varying series', () => {

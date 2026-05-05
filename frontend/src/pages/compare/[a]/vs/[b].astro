@@ -1,0 +1,165 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import Header from '../../../../components/Header.astro';
+import Footer from '../../../../components/Footer.astro';
+import Masthead from '../../../../components/Masthead.astro';
+import { getCollection } from 'astro:content';
+import { fmtCost, fmtNum, fmtDate } from '../../../../lib/format';
+import { compareModels, allPairs, computeStandings, sparkline } from '../../../../lib/aggregate';
+import { templateSeo } from '../../../../lib/seo';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const entries = await getCollection('rounds');
+  const rounds = entries.map(e => e.data);
+  const impls = new Set<string>();
+  for (const r of rounds) for (const e of r.scoreboard) impls.add(e.impl);
+  return allPairs([...impls]).map(([a, b]) => ({ params: { a, b }, props: { a, b } }));
+}
+
+const { a, b } = Astro.props;
+const entries = await getCollection('rounds');
+const rounds = entries.map(e => e.data);
+const cmp = compareModels(a, b, rounds);
+if (!cmp) return Astro.redirect('/404');
+
+const standings = computeStandings(rounds);
+const aRank = standings.findIndex(s => s.impl === a) + 1;
+const bRank = standings.findIndex(s => s.impl === b) + 1;
+
+const canonicalPath = `/compare/${a}/vs/${b}`;
+const seo = templateSeo(
+  'compare',
+  canonicalPath,
+  {
+    a,
+    b,
+    aElo: Math.round(cmp.a.elo),
+    bElo: Math.round(cmp.b.elo),
+    commonRounds: cmp.common.length,
+    commonSuffix: cmp.common.length === 1 ? '' : 's',
+    aWins: cmp.aWins,
+    bWins: cmp.bWins,
+    ties: cmp.ties,
+  },
+  { trail: [
+    { name: 'open-bench', path: '/' },
+    { name: 'compare', path: '/compare' },
+    { name: `${a} vs ${b}`, path: canonicalPath },
+  ] },
+);
+
+const eloDelta = cmp.eloDiff;
+const eloLeader = eloDelta > 0 ? a : eloDelta < 0 ? b : null;
+const costDelta = cmp.aTotalCost - cmp.bTotalCost;
+const cheaper = costDelta < 0 ? a : costDelta > 0 ? b : null;
+
+const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.date.localeCompare(x.date));
+---
+
+<BaseLayout seo={seo}>
+  <Header subtitle={`${a} vs ${b}`} />
+  <Masthead title={`${a} vs ${b}`} subtitle={`Head-to-head across ${cmp.common.length} shared round${cmp.common.length === 1 ? '' : 's'}. <strong>${cmp.aWins}</strong>–<strong>${cmp.bWins}</strong>${cmp.ties ? `–${cmp.ties}t` : ''}.`} />
+
+  <section class="cards">
+    <article class={`card ${eloLeader === a ? 'card-lead' : ''}`}>
+      <header><a href={`/model/${a}`}>{a}</a> <span class="rank">#{aRank}</span></header>
+      <dl>
+        <div><dt>ELO</dt><dd>{Math.round(cmp.a.elo)}</dd></div>
+        <div><dt>rounds</dt><dd>{cmp.a.rounds}</dd></div>
+        <div><dt>wins</dt><dd>{cmp.a.wins}</dd></div>
+        <div><dt>podium</dt><dd>{cmp.a.podium}</dd></div>
+        <div><dt>avg</dt><dd>{fmtNum(cmp.a.avgScore, 1)}/30</dd></div>
+        <div><dt>$/round</dt><dd>{fmtCost(cmp.a.avgCost)}</dd></div>
+        <div><dt>trend</dt><dd class="spark">{sparkline(cmp.a.history)}</dd></div>
+      </dl>
+    </article>
+    <article class={`card ${eloLeader === b ? 'card-lead' : ''}`}>
+      <header><a href={`/model/${b}`}>{b}</a> <span class="rank">#{bRank}</span></header>
+      <dl>
+        <div><dt>ELO</dt><dd>{Math.round(cmp.b.elo)}</dd></div>
+        <div><dt>rounds</dt><dd>{cmp.b.rounds}</dd></div>
+        <div><dt>wins</dt><dd>{cmp.b.wins}</dd></div>
+        <div><dt>podium</dt><dd>{cmp.b.podium}</dd></div>
+        <div><dt>avg</dt><dd>{fmtNum(cmp.b.avgScore, 1)}/30</dd></div>
+        <div><dt>$/round</dt><dd>{fmtCost(cmp.b.avgCost)}</dd></div>
+        <div><dt>trend</dt><dd class="spark">{sparkline(cmp.b.history)}</dd></div>
+      </dl>
+    </article>
+  </section>
+
+  <section>
+    <h2>summary</h2>
+    <ul class="summary">
+      <li><strong>ELO:</strong> {eloLeader ? <>{eloLeader} leads by {Math.abs(Math.round(eloDelta))}</> : 'tied'}.</li>
+      <li><strong>Head-to-head:</strong> {cmp.aWins} wins for {a}, {cmp.bWins} for {b}{cmp.ties ? `, ${cmp.ties} ${cmp.ties === 1 ? 'tie' : 'ties'}` : ''} across {cmp.common.length} shared round{cmp.common.length === 1 ? '' : 's'}.</li>
+      <li><strong>Spend:</strong> {fmtCost(cmp.aTotalCost)} ({a}) vs {fmtCost(cmp.bTotalCost)} ({b}){cheaper && Math.abs(costDelta) > 0.0001 ? <> — {cheaper} cheaper by {fmtCost(Math.abs(costDelta))}</> : null}.</li>
+    </ul>
+  </section>
+
+  {allRows.length > 0 && (
+    <section>
+      <h2>per-round</h2>
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th>round</th>
+            <th class="num">{a}</th>
+            <th class="num">{b}</th>
+            <th>winner</th>
+            <th class="num">Δ score</th>
+            <th class="num">Δ cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          {allRows.map(row => {
+            const aLabel = row.aScore === null ? '—' : row.aDnf ? 'DNF' : `${fmtNum(row.aScore, 1)} (#${row.aRank})`;
+            const bLabel = row.bScore === null ? '—' : row.bDnf ? 'DNF' : `${fmtNum(row.bScore, 1)} (#${row.bRank})`;
+            const w = row.winner === 'a' ? a : row.winner === 'b' ? b : row.winner === 'tie' ? 'tie' : '—';
+            const dScore = row.aScore !== null && row.bScore !== null && !row.aDnf && !row.bDnf
+              ? row.aScore - row.bScore : null;
+            const dCost = row.aScore !== null && row.bScore !== null
+              ? row.aCost - row.bCost : null;
+            return (
+              <tr>
+                <td><a href={`/round/${row.date}`}>{fmtDate(row.date)}</a></td>
+                <td class={`num ${row.winner === 'a' ? 'win' : ''}`}>{aLabel}</td>
+                <td class={`num ${row.winner === 'b' ? 'win' : ''}`}>{bLabel}</td>
+                <td>{w}</td>
+                <td class="num">{dScore === null ? '—' : (dScore > 0 ? '+' : '') + fmtNum(dScore, 1)}</td>
+                <td class="num">{dCost === null ? '—' : (dCost > 0 ? '+' : '') + fmtCost(Math.abs(dCost)).replace('$', dCost < 0 ? '-$' : '$')}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
+  )}
+
+  <section>
+    <p><a href="/compare">&larr; pick another pair</a> &middot; <a href="/leaderboard">leaderboard</a></p>
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  @media (max-width: 600px) { .cards { grid-template-columns: 1fr; } }
+  .card { border: 1px solid var(--rule); padding: 12px 16px; border-radius: 4px; }
+  .card-lead { border-color: var(--accent); }
+  .card header { font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .card .rank { color: var(--muted); font-weight: normal; }
+  .card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin: 0; }
+  .card dl div { display: flex; justify-content: space-between; }
+  .card dt { color: var(--muted); }
+  .card dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .card .spark { font-family: var(--mono); letter-spacing: -1px; color: var(--accent); }
+  .summary { padding-left: 18px; }
+  .summary li { margin: 4px 0; }
+  .cmp { width: 100%; border-collapse: collapse; }
+  .cmp th, .cmp td { padding: 6px 10px; border-bottom: 1px solid var(--rule); }
+  .cmp .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .cmp td.win { color: var(--accent); font-weight: 600; }
+</style>

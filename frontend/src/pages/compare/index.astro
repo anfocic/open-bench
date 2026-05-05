@@ -1,0 +1,66 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import Masthead from '../../components/Masthead.astro';
+import { getCollection } from 'astro:content';
+import { computeStandings } from '../../lib/aggregate';
+import { pageSeo } from '../../lib/seo';
+
+export const prerender = true;
+
+const entries = await getCollection('rounds');
+const rounds = entries.map(e => e.data);
+const standings = computeStandings(rounds);
+const impls = standings.map(s => s.impl);
+
+const seo = pageSeo('compareIndex', '/compare');
+---
+
+<BaseLayout seo={seo}>
+  <Header subtitle="compare" />
+  <Masthead title="compare models" subtitle="Pick any two models for a head-to-head: ELO, per-round scores, win/loss record, total spend." />
+
+  {standings.length < 2 ? (
+    <section><p class="muted">Need at least two models to compare.</p></section>
+  ) : (
+    <section>
+      <p class="muted">Click any cell. Row = model A, column = model B.</p>
+      <div class="matrix-wrap">
+        <table class="matrix">
+          <thead>
+            <tr>
+              <th></th>
+              {impls.map(b => <th class="diag"><span>{b}</span></th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {impls.map(a => (
+              <tr>
+                <th class="row-label">{a}</th>
+                {impls.map(b => {
+                  if (a === b) return <td class="self">—</td>;
+                  const [x, y] = a < b ? [a, b] : [b, a];
+                  return <td><a href={`/compare/${x}/vs/${y}`}>vs</a></td>;
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .matrix-wrap { overflow-x: auto; }
+  .matrix { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .matrix th, .matrix td { padding: 6px 10px; border: 1px solid var(--rule); text-align: center; min-width: 60px; }
+  .matrix .row-label { text-align: left; font-weight: normal; }
+  .matrix .diag { writing-mode: sideways-lr; vertical-align: bottom; height: 110px; padding: 4px; font-weight: normal; }
+  .matrix .self { color: var(--muted); background: var(--bg-alt); }
+  .matrix tbody tr:hover { background: var(--bg-alt); }
+  .matrix a { display: block; }
+</style>
