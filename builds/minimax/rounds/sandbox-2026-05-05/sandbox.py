@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+"""Ephemeral, network-isolated, resource-capped container runner using Podman/Docker."""
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+
+
+def _find_container_runtime():
+    if shutil.which("podman"):
+        return "podman"
+    if shutil.which("docker"):
+        return "docker"
+    raise RuntimeError("Neither podman nor docker found on PATH")
+
+
+def sandbox_run(
+    command: str,
+    workspace: str | None = None,
+    image: str = "debian:stable-slim",
+    timeout: int = 60,
+    network: str = "none",
+    memory: str = "2g",
+    pids: int = 512,
+    cpus: float = 2.0,
+) -> str:
+    runtime = _find_container_runtime()
+
+    argv = [
+        runtime, "run", "--rm", "--pull=missing",
+        f"--network={network}",
+        f"--memory={memory}",
+        f"--pids-limit={pids}",
+        f"--cpus={cpus}",
+        "--cap-drop=ALL",
+        "--security-opt=no-new-privileges",
+    ]
+
+    if workspace is not None:
+        argv.extend(["-v", f"{workspace}:/workspace:rw", "-w", "/workspace"])
+
+    argv.extend([image, "sh", "-c", command])
+
+    result = None
+    try:
+        result = subprocess.run(
+            argv,
+            capture_output=True,
+            timeout=timeout,
+            shell=False,
+        )
+        exit_code = result.returncode
+    except subprocess.TimeoutExpired:
+        exit_code = 124
+
+    stdout = result.stdout.decode("utf-8", errors="replace") if result and result.stdout else ""
+    stderr = result.stderr.decode("utf-8", errors="replace") if result and result.stderr else ""
+
+    output = f"exit={exit_code}\n--- stdout ---\n{stdout}--- stderr ---\n{stderr}"
+
+    output = output.encode("utf-8", errors="replace")
+    if len(output) > 50000:
+        output = output[:50000].decode("utf-8", errors="replace") + "\n... [truncated]"
+    else:
+        output = output.decode("utf-8", errors="replace") if isinstance(output, bytes) else output
+
+    return output
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="sandbox.py")
+    parser.add_argument("--image", default="debian:stable-slim")
+    parser.add_argument("--timeout", type=int, default=60)
+    parser.add_argument("--network", default="none", choices=["none", "bridge"])
+    parser.add_argument("--memory", default="2g")
+    parser.add_argument("--pids", type=int, default=512)
+    parser.add_argument("--cpus", type=float, default=2.0)
+    parser.add_argument("--workspace", default=os.getcwd())
+    parser.add_argument("command", nargs="*", default=[])
+
+    args, unknown = parser.parse_known_args()
+
+    if "--" in unknown:
+        idx = unknown.index("--")
+        remaining = unknown[idx + 1:]
+    else:
+        remaining = unknown
+
+    command_parts = args.command + remaining
+    if not command_parts:
+        parser.error("No command provided")
+
+    command = " ".join(command_parts)
+    output = sandbox_run(
+        command=command,
+        workspace=args.workspace,
+        image=args.image,
+        timeout=args.timeout,
+        network=args.network,
+        memory=args.memory,
+        pids=args.pids,
+        cpus=args.cpus,
+    )
+
+    print(output)
+
+    lines = output.split("\n")
+    if lines[0].startswith("exit="):
+        exit_code = int(lines[0].split("=")[1])
+    else:
+        exit_code = 0
+
+    sys.exit(exit_code)
+
+
+if __name__ == "__main__":
+    main()
