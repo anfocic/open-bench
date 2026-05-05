@@ -2,21 +2,53 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import Masthead from '../components/Masthead.astro';
 
-const principles = [
-  { k: 'objective gate', v: 'Hidden tests run before any judge sees the code. No subjective vibe-check inflating a non-functional output.' },
-  { k: 'peer scoring', v: 'Models judge each other under blinded labels. Self-bias is measured, then excluded from the headline median.' },
-  { k: 'cost & wall-clock', v: 'Tracked through the harness. Cheapest-and-correct wins ties; slow-and-correct loses them.' },
-  { k: 'reproducible', v: 'Every transcript, diff, rubric and score is committed to the repo. Re-run a round, audit a judgment, fork the lineup.' },
-];
-
-const steps = [
-  { n: 1, body: 'Every model in the lineup gets the same task and an isolated git worktree.' },
-  { n: 2, body: 'Each writes its implementation through opencode under a fixed wall-clock budget.' },
-  { n: 3, body: 'A hidden pytest battery runs against each output — the objective gate.' },
-  { n: 4, body: 'Every model judges every implementation, blinded. Cost and tokens are captured.' },
-  { n: 5, body: 'Scores are aggregated into one ranked review per round, plus a self-bias delta.' },
+const sections = [
+  {
+    id: 'what',
+    title: 'what',
+    body: `<p><strong>open-bench</strong> is a benchmark harness for coding LLMs. It drops a task spec into a fresh repo, drives every model in the lineup through a real agent loop, runs a hidden test suite as the objective gate, has the models score each other, and commits the full artifact set — transcripts, diffs, judge rubrics, scores — to the repository. One round, one ranked review.</p><p>The flagship format running on top of it is <a href="/model-royale">Model Royale</a>: a weekly elimination tournament between every major LLM I can get a key for. The harness is general; the tournament is one thing you can run on it.</p>`,
+  },
+  {
+    id: 'why',
+    title: 'why',
+    body: `<p>Picking a coding model from leaderboards is a bad time. They benchmark one-shot prompts, report pass@1 on synthetic problems, and update on a vendor's calendar. None of that survives contact with a real agent loop where wall-clock, cost, and code quality matter as much as whether it solves the problem at all.</p><blockquote class="about-pull">Vendor leaderboards measure the model in a vacuum. open-bench measures it in the shape you'd actually deploy it.</blockquote>`,
+  },
+  {
+    id: 'how',
+    title: 'how',
+    body: '',
+    steps: [
+      'Every model in the lineup gets the same task and an isolated git worktree.',
+      'Each writes its implementation through opencode under a fixed wall-clock budget.',
+      'A hidden pytest battery runs against each output — the objective gate.',
+      'Every model judges every implementation, blinded. Cost and tokens are captured.',
+      'Scores are aggregated into one ranked review per round, plus a self-bias delta.',
+    ],
+  },
+  {
+    id: 'principles',
+    title: 'principles',
+    body: '',
+    principles: [
+      ['objective gate', 'Hidden tests run before any judge sees the code. No subjective vibe-check inflating a non-functional output.'],
+      ['peer scoring', 'Models judge each other under blinded labels. Self-bias is measured, then excluded from the headline median.'],
+      ['cost & wall-clock', 'Tracked through the harness. Cheapest-and-correct wins ties; slow-and-correct loses them.'],
+      ['reproducible', 'Every transcript, diff, rubric and score is committed. Re-run a round, audit a judgment, fork the lineup.'],
+    ],
+  },
+  {
+    id: 'more',
+    title: 'more',
+    body: '',
+    links: [
+      { href: 'https://github.com/anfocic/open-bench/blob/main/ABOUT.md', label: 'ABOUT.md', note: 'full methodology, scoring math, task config' },
+      { href: 'https://github.com/anfocic/open-bench/tree/main/bench/scripts', label: 'bench/scripts', note: 'harness internals' },
+      { href: 'https://github.com/anfocic/open-bench/tree/main/builds', label: 'builds/', note: 'per-model artifacts' },
+      { href: 'https://github.com/anfocic/open-bench/tree/main/results', label: 'results/', note: 'aggregated reviews' },
+      { href: '/', label: 'latest round →', note: '' },
+    ],
+  },
 ];
 ---
 
@@ -26,128 +58,148 @@ const steps = [
 >
   <Header subtitle="about" />
 
-  <Masthead
-    title="about"
-    subtitle="Pick the right coding model without trusting a vendor leaderboard."
-  />
+  <nav class="about-toc" aria-label="Sections">
+    {sections.map(s => (
+      <a href={`#${s.id}`} data-toc={s.id}>{s.title}</a>
+    ))}
+  </nav>
 
-  <article class="prose about-prose">
-    <nav class="about-toc" aria-label="Sections">
-      <a href="#what">what</a>
-      <a href="#why">why</a>
-      <a href="#how">how</a>
-      <a href="#principles">principles</a>
-      <a href="#more">more</a>
-    </nav>
+  <main class="about-deck">
+    {sections.map(s => (
+      <section id={s.id} class="about-section" data-section={s.id}>
+        <div class="about-inner">
+          <h2>{s.title}</h2>
 
-    <h2 id="what">what</h2>
-    <p>
-      <strong>open-bench</strong> is a benchmark harness for coding LLMs. It drops a
-      task spec into a fresh repo, drives every model in the lineup through a real
-      agent loop, runs a hidden test suite as the objective gate, has the models score
-      each other, and commits the full artifact set &mdash; transcripts, diffs, judge
-      rubrics, scores &mdash; to the repository. One round, one ranked review.
-    </p>
-    <p>
-      The flagship format running on top of it is <a href="/model-royale">Model Royale</a>:
-      a weekly elimination tournament between every major LLM I can get a key for. The
-      harness is general; the tournament is one thing you can run on it.
-    </p>
+          {s.body && <div class="about-body" set:html={s.body} />}
 
-    <h2 id="why">why</h2>
-    <p>
-      Picking a coding model from leaderboards is a bad time. They benchmark one-shot
-      prompts, report pass@1 on synthetic problems, and update on a vendor's calendar.
-      None of that survives contact with a real agent loop where wall-clock, cost, and
-      code quality matter as much as whether it solves the problem at all.
-    </p>
+          {s.steps && (
+            <ol class="about-steps">
+              {s.steps.map((step, i) => (
+                <li>
+                  <span class="step-num">{i + 1}</span>
+                  <span class="step-body">{step}</span>
+                </li>
+              ))}
+            </ol>
+          )}
 
-    <blockquote class="about-pull">
-      Vendor leaderboards measure the model in a vacuum. open-bench measures it in the
-      shape you'd actually deploy it.
-    </blockquote>
+          {s.principles && (
+            <dl class="about-principles">
+              {s.principles.map(([k, v]) => (
+                <div>
+                  <dt>{k}</dt>
+                  <dd>{v}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
 
-    <h2 id="how">how</h2>
-    <p>
-      A round is the same five steps every time:
-    </p>
-    <ol class="about-steps">
-      {steps.map(s => (
-        <li>
-          <span class="step-num">{s.n}</span>
-          <span class="step-body">{s.body}</span>
-        </li>
-      ))}
-    </ol>
-
-    <h2 id="principles">principles</h2>
-    <dl class="about-principles">
-      {principles.map(p => (
-        <div>
-          <dt>{p.k}</dt>
-          <dd>{p.v}</dd>
+          {s.links && (
+            <ul class="about-links">
+              {s.links.map(l => (
+                <li>
+                  <a href={l.href}>{l.label}</a>
+                  {l.note && <span class="muted"> &mdash; {l.note}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-      ))}
-    </dl>
-
-    <h2 id="more">more</h2>
-    <ul class="about-links">
-      <li><a href="https://github.com/anfocic/open-bench/blob/main/ABOUT.md">ABOUT.md</a> &mdash; full methodology, scoring math, task config</li>
-      <li><a href="https://github.com/anfocic/open-bench/tree/main/bench/scripts">bench/scripts</a> &mdash; harness internals (start_run, capture_run, judges, aggregator)</li>
-      <li><a href="https://github.com/anfocic/open-bench/tree/main/builds">builds/</a> &mdash; per-model artifacts: implementation, transcript, diff, meta</li>
-      <li><a href="https://github.com/anfocic/open-bench/tree/main/results">results/</a> &mdash; aggregated round reviews and judgments</li>
-      <li><a href="/">latest round &rarr;</a></li>
-    </ul>
-  </article>
+      </section>
+    ))}
+  </main>
 
   <Footer />
 </BaseLayout>
 
-<style>
-  .about-prose { max-width: 70ch; margin-top: 8px; }
-  .about-prose p { margin: 12px 0; }
-  .about-prose h2 {
-    font-size: 17px;
-    margin: 32px 0 8px;
-    color: var(--fg-bright);
-    text-transform: lowercase;
-    scroll-margin-top: 80px;
+<style is:global>
+  html.about-snap {
+    scroll-snap-type: y proximity;
+    scroll-padding-top: 56px;
+    scroll-behavior: smooth;
   }
-  .about-prose h2::before { content: '## '; color: var(--accent); }
+</style>
 
+<style>
   .about-toc {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     display: flex;
-    gap: 14px;
+    gap: 16px;
     flex-wrap: wrap;
-    padding: 8px 0 12px;
+    padding: 10px 0;
+    margin-top: 4px;
+    background: var(--bg);
     border-bottom: 1px dashed var(--rule);
     font-size: 14.4px;
   }
-  .about-toc a { color: var(--muted); }
-  .about-toc a:hover { color: var(--fg-bright); }
+  .about-toc a {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 2px 4px;
+  }
   .about-toc a::before { content: '# '; color: var(--dim); }
+  .about-toc a:hover { color: var(--fg-bright); }
+  .about-toc a.active {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .about-toc a.active::before { color: var(--accent); }
+
+  .about-deck {
+    margin-top: 0;
+  }
+  .about-section {
+    min-height: calc(100vh - 100px);
+    display: flex;
+    align-items: center;
+    scroll-snap-align: start;
+    scroll-margin-top: 56px;
+    padding: 24px 0;
+    border-bottom: 1px dashed var(--rule);
+    view-transition-name: var(--vt, none);
+  }
+  .about-section:last-child { border-bottom: none; }
+
+  .about-inner {
+    width: 100%;
+    max-width: 70ch;
+  }
+  .about-section h2 {
+    font-size: 22px;
+    margin: 0 0 14px;
+    color: var(--fg-bright);
+    text-transform: lowercase;
+  }
+  .about-section h2::before { content: '## '; color: var(--accent); }
+  .about-body p { margin: 12px 0; line-height: 1.6; font-size: 16.2px; }
+  .about-body strong { color: var(--fg-bright); }
+  .about-body a { color: var(--accent); }
 
   .about-pull {
-    margin: 18px 0;
-    padding: 12px 16px;
+    margin: 18px 0 0;
+    padding: 14px 18px;
     border-left: 3px solid var(--accent);
-    background: var(--bg-elev, transparent);
     color: var(--fg-bright);
+    font-size: 17px;
+    line-height: 1.5;
     font-style: normal;
   }
 
   .about-steps {
     list-style: none;
-    margin: 12px 0;
+    margin: 0;
     padding: 0;
-    counter-reset: step;
   }
   .about-steps li {
     display: grid;
-    grid-template-columns: 32px 1fr;
-    gap: 10px;
-    padding: 8px 0;
+    grid-template-columns: 36px 1fr;
+    gap: 12px;
+    padding: 10px 0;
     border-bottom: 1px dashed var(--rule);
+    font-size: 16.2px;
+    line-height: 1.5;
   }
   .about-steps li:last-child { border-bottom: none; }
   .step-num { color: var(--accent); font-weight: 700; }
@@ -155,15 +207,15 @@ const steps = [
   .step-num::after { content: ']'; color: var(--dim); font-weight: 400; }
 
   .about-principles {
-    margin: 12px 0;
+    margin: 0;
     display: grid;
-    gap: 10px;
+    gap: 0;
   }
   .about-principles > div {
     display: grid;
-    grid-template-columns: 160px 1fr;
-    gap: 14px;
-    padding: 8px 0;
+    grid-template-columns: 170px 1fr;
+    gap: 16px;
+    padding: 10px 0;
     border-bottom: 1px dashed var(--rule);
   }
   .about-principles > div:last-child { border-bottom: none; }
@@ -172,21 +224,104 @@ const steps = [
     font-weight: 700;
     text-transform: lowercase;
   }
-  .about-principles dd { margin: 0; color: var(--muted); }
+  .about-principles dd {
+    margin: 0;
+    color: var(--muted);
+    font-size: 15.6px;
+    line-height: 1.55;
+  }
 
   .about-links {
-    margin: 12px 0;
+    margin: 0;
     padding-left: 0;
     list-style: none;
   }
   .about-links li {
-    padding: 6px 0;
+    padding: 8px 0;
     border-bottom: 1px dashed var(--rule);
+    font-size: 16.2px;
   }
   .about-links li:last-child { border-bottom: none; }
   .about-links li::before { content: '> '; color: var(--dim); }
+  .about-links a { color: var(--accent); }
 
   @media (max-width: 600px) {
     .about-principles > div { grid-template-columns: 1fr; gap: 4px; }
+    .about-section h2 { font-size: 18px; }
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 280ms;
   }
 </style>
+
+<script>
+  function withViewTransition(fn: () => void) {
+    const doc = document as any;
+    if (doc.startViewTransition) doc.startViewTransition(fn);
+    else fn();
+  }
+
+  function setupAboutDeck() {
+    const onAbout = location.pathname.startsWith('/about');
+    document.documentElement.classList.toggle('about-snap', onAbout);
+    if (!onAbout) return;
+
+    const tocLinks = [...document.querySelectorAll<HTMLAnchorElement>('.about-toc a[data-toc]')];
+    const sections = [...document.querySelectorAll<HTMLElement>('.about-section[data-section]')];
+    if (!tocLinks.length || !sections.length) return;
+
+    const linkById = new Map<string, HTMLAnchorElement>();
+    tocLinks.forEach(l => linkById.set(l.dataset.toc!, l));
+
+    function setActive(id: string) {
+      tocLinks.forEach(l => {
+        const on = l.dataset.toc === id;
+        l.classList.toggle('active', on);
+        if (on) l.setAttribute('aria-current', 'true'); else l.removeAttribute('aria-current');
+      });
+      if (location.hash.slice(1) !== id) {
+        history.replaceState(null, '', '#' + id);
+      }
+    }
+
+    const io = new IntersectionObserver(
+      entries => {
+        // pick the most-visible entry, not just any intersecting one
+        let best: IntersectionObserverEntry | null = null;
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
+        }
+        if (best) setActive((best.target as HTMLElement).dataset.section!);
+      },
+      { rootMargin: '-35% 0px -55% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] },
+    );
+    sections.forEach(s => io.observe(s));
+
+    tocLinks.forEach(a => {
+      a.addEventListener('click', e => {
+        const id = a.dataset.toc!;
+        const target = document.getElementById(id);
+        if (!target) return;
+        e.preventDefault();
+        withViewTransition(() => {
+          target.scrollIntoView({ block: 'start' });
+          setActive(id);
+        });
+      });
+    });
+
+    // Initial active state from hash, else first section
+    const initial = location.hash.slice(1);
+    if (initial && linkById.has(initial)) {
+      setActive(initial);
+    } else {
+      setActive(sections[0].dataset.section!);
+    }
+  }
+
+  setupAboutDeck();
+  document.addEventListener('astro:after-swap', setupAboutDeck);
+</script>
