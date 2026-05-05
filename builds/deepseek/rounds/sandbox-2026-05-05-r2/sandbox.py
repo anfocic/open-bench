@@ -3,17 +3,18 @@ import os
 import shutil
 import subprocess
 import sys
-import tempfile
 
 MAX_OUTPUT_BYTES = 50_000
-TRUNCATION_MARKER = "... [truncated]"
+TRUNCATION_MARKER = "\n... [truncated]"
 
 
 def _find_runtime():
-    if shutil.which("podman"):
-        return "podman"
-    if shutil.which("docker"):
-        return "docker"
+    podman = shutil.which("podman")
+    if podman:
+        return podman
+    docker = shutil.which("docker")
+    if docker:
+        return docker
     raise RuntimeError("Neither podman nor docker found on PATH")
 
 
@@ -22,18 +23,15 @@ def _truncate_output(output: str) -> str:
     if len(encoded) <= MAX_OUTPUT_BYTES:
         return output
 
-    marker_encoded = TRUNCATION_MARKER.encode()
-    limit = MAX_OUTPUT_BYTES - len(marker_encoded)
-    if limit <= 0:
-        return TRUNCATION_MARKER
+    marker_bytes = len(TRUNCATION_MARKER.encode())
+    limit = MAX_OUTPUT_BYTES - marker_bytes
+    if limit < 0:
+        limit = 0
 
-    result = ""
-    for ch in output:
-        if len((result + ch).encode()) <= limit:
-            result += ch
-        else:
-            break
-    return result + TRUNCATION_MARKER
+    while len(output.encode()) > limit:
+        output = output[:-1]
+
+    return output + TRUNCATION_MARKER
 
 
 def sandbox_run(
@@ -67,15 +65,11 @@ def sandbox_run(
             "-w", "/workspace",
         ])
 
-    fd, cidfile = tempfile.mkstemp(prefix="sandbox_cid_")
-    os.close(fd)
-    os.unlink(cidfile)
+    argv.extend([image, "sh", "-c", command])
 
     try:
-        argv_with_cid = argv + [f"--cidfile={cidfile}", image, "sh", "-c", command]
         proc = subprocess.run(
-            argv_with_cid,
-            shell=False,
+            argv,
             capture_output=True,
             timeout=timeout,
         )
@@ -83,40 +77,25 @@ def sandbox_run(
         stdout = proc.stdout.decode(errors="replace")
         stderr = proc.stderr.decode(errors="replace")
     except subprocess.TimeoutExpired:
-        try:
-            with open(cidfile) as f:
-                cid = f.read().strip()
-            if cid:
-                subprocess.run(
-                    [runtime, "kill", cid],
-                    capture_output=True,
-                    timeout=5,
-                )
-        except Exception:
-            pass
         exit_code = 124
         stdout = ""
         stderr = ""
-    finally:
-        try:
-            os.unlink(cidfile)
-        except OSError:
-            pass
 
-    output = f"exit={exit_code}\n--- stdout ---\n"
+    result = f"exit={exit_code}\n--- stdout ---\n"
     if stdout:
-        output += stdout
-        if not output.endswith("\n"):
-            output += "\n"
-    output += "--- stderr ---\n"
-    output += stderr
+        result += stdout
+        if not stdout.endswith("\n"):
+            result += "\n"
+    result += "--- stderr ---\n"
+    if stderr:
+        result += stderr
 
-    return _truncate_output(output)
+    return _truncate_output(result)
 
 
-def main():
+def _parse_args():
     parser = argparse.ArgumentParser(
-        description="Run commands inside ephemeral, network-isolated containers."
+        description="Run commands inside ephemeral, network-isolated containers.",
     )
     parser.add_argument("--image", default="debian:stable-slim")
     parser.add_argument("--timeout", type=int, default=60)
@@ -125,20 +104,20 @@ def main():
     parser.add_argument("--pids", type=int, default=512)
     parser.add_argument("--cpus", type=float, default=2.0)
     parser.add_argument("--workspace", default=None)
+    parser.add_argument("command", nargs=argparse.REMAINDER)
+    return parser.parse_args()
 
-    if "--" not in sys.argv:
-        parser.error("missing -- separator before command")
 
-    idx = sys.argv.index("--")
-    known_args = sys.argv[1:idx]
-    cmd_tokens = sys.argv[idx + 1:]
+def main():
+    args = _parse_args()
+    cmd_parts = args.command
+    if cmd_parts and cmd_parts[0] == "--":
+        cmd_parts = cmd_parts[1:]
+    if not cmd_parts:
+        print("Error: no command provided", file=sys.stderr)
+        sys.exit(1)
 
-    if not cmd_tokens:
-        parser.error("no command provided after --")
-
-    args = parser.parse_args(known_args)
-    command = " ".join(cmd_tokens)
-
+    command = " ".join(cmd_parts)
     workspace = args.workspace if args.workspace is not None else os.getcwd()
 
     output = sandbox_run(
@@ -151,7 +130,6 @@ def main():
         pids=args.pids,
         cpus=args.cpus,
     )
-
     print(output, end="")
 
     for line in output.split("\n"):

@@ -1,0 +1,129 @@
+diff --git a/sandbox.py b/sandbox.py
+new file mode 100644
+index 0000000..1706f19
+--- /dev/null
++++ b/sandbox.py
+@@ -0,0 +1,123 @@
++import argparse
++import os
++import shutil
++import subprocess
++import sys
++
++
++def sandbox_run(
++    command: str,
++    workspace: str | None = None,
++    image: str = "debian:stable-slim",
++    timeout: int = 60,
++    network: str = "none",
++    memory: str = "2g",
++    pids: int = 512,
++    cpus: float = 2.0,
++) -> str:
++    runner = _find_runner()
++
++    cmd = [
++        runner, "run", "--rm", "--pull=missing",
++        f"--network={network}",
++        f"--memory={memory}",
++        f"--pids-limit={pids}",
++        f"--cpus={cpus}",
++        "--cap-drop=ALL",
++        "--security-opt=no-new-privileges",
++    ]
++
++    if workspace is not None:
++        cmd.extend(["-v", f"{workspace}:/workspace:rw", "-w", "/workspace"])
++
++    cmd.extend([image, "sh", "-c", command])
++
++    proc = subprocess.Popen(
++        cmd,
++        stdout=subprocess.PIPE,
++        stderr=subprocess.PIPE,
++    )
++
++    try:
++        stdout_bytes, stderr_bytes = proc.communicate(timeout=timeout)
++        exit_code = proc.returncode
++    except subprocess.TimeoutExpired:
++        proc.kill()
++        stdout_bytes, stderr_bytes = proc.communicate()
++        exit_code = 124
++
++    stdout = stdout_bytes.decode("utf-8", errors="replace")
++    stderr = stderr_bytes.decode("utf-8", errors="replace")
++
++    result = f"exit={exit_code}\n--- stdout ---\n"
++    if stdout:
++        result += stdout.rstrip("\n") + "\n"
++    result += "--- stderr ---\n"
++    if stderr:
++        result += stderr
++
++    MAX_BYTES = 50000
++    encoded = result.encode("utf-8")
++    if len(encoded) > MAX_BYTES:
++        result = encoded[:MAX_BYTES].decode("utf-8", errors="ignore")
++        result += "... [truncated]"
++
++    return result
++
++
++def _find_runner() -> str:
++    for runner in ("podman", "docker"):
++        if shutil.which(runner) is not None:
++            return runner
++    raise RuntimeError(
++        "neither podman nor docker found on PATH; install one of them"
++    )
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser(
++        description="Run a command in an ephemeral container sandbox."
++    )
++    parser.add_argument("--image", default="debian:stable-slim")
++    parser.add_argument("--timeout", type=int, default=60)
++    parser.add_argument("--network", choices=("none", "bridge"), default="none")
++    parser.add_argument("--memory", default="2g")
++    parser.add_argument("--pids", type=int, default=512)
++    parser.add_argument("--cpus", type=float, default=2.0)
++    parser.add_argument("--workspace", default=None)
++    parser.add_argument("cmd", nargs="*", default=[])
++
++    args = parser.parse_args()
++
++    if not args.cmd:
++        parser.error("a command is required (use -- before the command)")
++
++    command = " ".join(args.cmd)
++
++    workspace = args.workspace
++    if workspace is None:
++        workspace = os.getcwd()
++
++    output = sandbox_run(
++        command=command,
++        workspace=workspace,
++        image=args.image,
++        timeout=args.timeout,
++        network=args.network,
++        memory=args.memory,
++        pids=args.pids,
++        cpus=args.cpus,
++    )
++
++    sys.stdout.write(output)
++
++    for line in output.split("\n"):
++        if line.startswith("exit="):
++            try:
++                sys.exit(int(line[5:]))
++            except ValueError:
++                sys.exit(1)
++
++
++if __name__ == "__main__":
++    main()

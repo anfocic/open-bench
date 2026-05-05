@@ -1,0 +1,148 @@
+diff --git a/sandbox.py b/sandbox.py
+new file mode 100644
+index 0000000..86d26a7
+--- /dev/null
++++ b/sandbox.py
+@@ -0,0 +1,142 @@
++#!/usr/bin/env python3
++import argparse
++import os
++import shutil
++import subprocess
++import sys
++import uuid
++
++
++_MAX_BYTES = 50000
++_TRUNC_MARKER = "... [truncated]"
++
++
++def _resolve_runner() -> str:
++    podman = shutil.which("podman")
++    if podman:
++        return podman
++    docker = shutil.which("docker")
++    if docker:
++        return docker
++    raise RuntimeError(
++        "Neither podman nor docker found on PATH. "
++        "Install one of them to use the sandbox."
++    )
++
++
++def _truncate(result: str) -> str:
++    encoded = result.encode("utf-8")
++    if len(encoded) <= _MAX_BYTES:
++        return result
++    marker = _TRUNC_MARKER
++    available = _MAX_BYTES - len(marker.encode("utf-8"))
++    truncated = encoded[:available].decode("utf-8", errors="ignore")
++    while len((truncated + marker).encode("utf-8")) > _MAX_BYTES:
++        truncated = truncated[:-1]
++    return truncated + marker
++
++
++def sandbox_run(
++    command: str,
++    workspace: str | None = None,
++    image: str = "debian:stable-slim",
++    timeout: int = 60,
++    network: str = "none",
++    memory: str = "2g",
++    pids: int = 512,
++    cpus: float = 2.0,
++) -> str:
++    runner = _resolve_runner()
++    container_name = f"sandbox-{uuid.uuid4().hex[:12]}"
++
++    argv = [
++        runner, "run", "--rm", "--pull=missing",
++        "--name", container_name,
++        f"--network={network}",
++        f"--memory={memory}",
++        f"--pids-limit={pids}",
++        f"--cpus={cpus}",
++        "--cap-drop=ALL",
++        "--security-opt=no-new-privileges",
++    ]
++
++    if workspace is not None:
++        argv.extend(["-v", f"{workspace}:/workspace:rw", "-w", "/workspace"])
++
++    argv.extend([image, "sh", "-c", command])
++
++    try:
++        proc = subprocess.run(argv, capture_output=True, timeout=timeout)
++        exit_code = proc.returncode
++        stdout = (proc.stdout or b"").decode("utf-8", errors="replace")
++        stderr = (proc.stderr or b"").decode("utf-8", errors="replace")
++    except subprocess.TimeoutExpired as e:
++        exit_code = 124
++        stdout = (e.stdout or b"").decode("utf-8", errors="replace")
++        stderr = (e.stderr or b"").decode("utf-8", errors="replace")
++        subprocess.run(
++            [runner, "kill", container_name],
++            capture_output=True,
++            timeout=10,
++        )
++
++    result = f"exit={exit_code}\n--- stdout ---\n"
++    if stdout:
++        result += stdout.rstrip("\n") + "\n"
++    result += "--- stderr ---\n"
++    if stderr:
++        result += stderr
++
++    return _truncate(result)
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser(
++        description="Run commands in a sandboxed container"
++    )
++    parser.add_argument("--image", default="debian:stable-slim")
++    parser.add_argument("--timeout", type=int, default=60)
++    parser.add_argument("--network", choices=["none", "bridge"], default="none")
++    parser.add_argument("--memory", default="2g")
++    parser.add_argument("--pids", type=int, default=512)
++    parser.add_argument("--cpus", type=float, default=2.0)
++    parser.add_argument("--workspace", default=None)
++    parser.add_argument("command", nargs=argparse.REMAINDER)
++
++    args = parser.parse_args()
++
++    if not args.command:
++        parser.error("no command specified")
++
++    if args.command[0] == "--":
++        args.command = args.command[1:]
++
++    if not args.command:
++        parser.error("no command specified")
++
++    command = " ".join(args.command)
++
++    if args.workspace is None:
++        args.workspace = os.getcwd()
++
++    result = sandbox_run(
++        command=command,
++        workspace=args.workspace,
++        image=args.image,
++        timeout=args.timeout,
++        network=args.network,
++        memory=args.memory,
++        pids=args.pids,
++        cpus=args.cpus,
++    )
++
++    sys.stdout.write(result)
++    try:
++        exit_code = int(result.split("\n")[0].removeprefix("exit="))
++    except (ValueError, IndexError):
++        exit_code = 1
++    sys.exit(exit_code)
++
++
++if __name__ == "__main__":
++    main()

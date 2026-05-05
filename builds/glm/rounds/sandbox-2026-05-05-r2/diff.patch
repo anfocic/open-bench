@@ -1,0 +1,146 @@
+diff --git a/sandbox.py b/sandbox.py
+new file mode 100644
+index 0000000..01bdad6
+--- /dev/null
++++ b/sandbox.py
+@@ -0,0 +1,139 @@
++#!/usr/bin/env python3
++"""Ephemeral, network-isolated, resource-capped container sandbox. Stdlib only."""
++
++import argparse
++import os
++import shutil
++import subprocess
++import sys
++
++_MAX_OUTPUT = 50_000
++_TRUNCATE_MARKER = "... [truncated]"
++_TIMEOUT_EXIT = 124
++
++
++def _find_runtime() -> str:
++    for cmd in ("podman", "docker"):
++        if shutil.which(cmd):
++            return cmd
++    raise RuntimeError(
++        "Neither podman nor docker found on PATH. Install one to use sandbox.py."
++    )
++
++
++def _truncate(s: str) -> str:
++    if len(s.encode("utf-8")) <= _MAX_OUTPUT:
++        return s
++    marker = _TRUNCATE_MARKER
++    budget = _MAX_OUTPUT - len(marker.encode("utf-8"))
++    chars = list(s)
++    kept = 0
++    buf = ""
++    for ch in chars:
++        if len((buf + ch).encode("utf-8")) > budget:
++            break
++        buf += ch
++        kept += 1
++    return s[:kept] + marker
++
++
++def sandbox_run(
++    command: str,
++    workspace: str | None = None,
++    image: str = "debian:stable-slim",
++    timeout: int = 60,
++    network: str = "none",
++    memory: str = "2g",
++    pids: int = 512,
++    cpus: float = 2.0,
++) -> str:
++    runtime = _find_runtime()
++    argv = [
++        runtime, "run", "--rm", "--pull=missing",
++        f"--network={network}",
++        f"--memory={memory}",
++        f"--pids-limit={pids}",
++        f"--cpus={cpus}",
++        "--cap-drop=ALL",
++        "--security-opt=no-new-privileges",
++    ]
++    if workspace is not None:
++        argv += ["-v", f"{os.path.abspath(workspace)}:/workspace:rw", "-w", "/workspace"]
++    argv += [image, "sh", "-c", command]
++
++    try:
++        proc = subprocess.run(
++            argv,
++            stdout=subprocess.PIPE,
++            stderr=subprocess.PIPE,
++            timeout=timeout,
++        )
++        out = proc.stdout.decode("utf-8", errors="replace")
++        err = proc.stderr.decode("utf-8", errors="replace")
++        code = proc.returncode
++    except subprocess.TimeoutExpired as exc:
++        out = (exc.stdout or b"").decode("utf-8", errors="replace")
++        err = (exc.stderr or b"").decode("utf-8", errors="replace")
++        code = _TIMEOUT_EXIT
++
++    parts = [f"exit={code}\n--- stdout ---\n"]
++    if out:
++        parts.append(out if out.endswith("\n") else out + "\n")
++    parts.append("--- stderr ---\n")
++    if err:
++        parts.append(err)
++
++    return _truncate("".join(parts))
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser(
++        description="Run a command inside an ephemeral container."
++    )
++    parser.add_argument("--image", default="debian:stable-slim")
++    parser.add_argument("--timeout", type=int, default=60)
++    parser.add_argument("--network", default="none", choices=["none", "bridge"])
++    parser.add_argument("--memory", default="2g")
++    parser.add_argument("--pids", type=int, default=512)
++    parser.add_argument("--cpus", type=float, default=2.0)
++    parser.add_argument("--workspace", default=os.getcwd())
++    parser.add_argument("command", nargs=argparse.REMAINDER)
++
++    args = parser.parse_args()
++
++    if not args.command:
++        parser.error("No command provided. Use -- COMMAND [ARG ...]")
++
++    if args.command[0] == "--":
++        cmd_parts = args.command[1:]
++    else:
++        cmd_parts = args.command
++
++    if not cmd_parts:
++        parser.error("No command provided after --")
++
++    command = " ".join(cmd_parts)
++    workspace = args.workspace if args.workspace else None
++
++    result = sandbox_run(
++        command=command,
++        workspace=workspace,
++        image=args.image,
++        timeout=args.timeout,
++        network=args.network,
++        memory=args.memory,
++        pids=args.pids,
++        cpus=args.cpus,
++    )
++    print(result, end="")
++    lines = result.split("\n")
++    exit_line = lines[0]
++    try:
++        exit_code = int(exit_line.split("=", 1)[1])
++    except (ValueError, IndexError):
++        exit_code = 1
++    sys.exit(exit_code)
++
++
++if __name__ == "__main__":
++    main()
+\ No newline at end of file
