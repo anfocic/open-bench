@@ -1,10 +1,8 @@
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { MetaJson, Run } from './types';
-import { parseMeta } from '../lib/parse-meta';
-
-// astro build / dev cwd is the frontend/ dir; repo root is one up.
-const REPO_ROOT = resolve(process.cwd(), '..');
+import type { MetaJson, Run, RunIndex } from '../data/types';
+import { parseMeta } from './parse';
+import { repoRoot } from './paths';
+import { readOptional, listDirs } from './io';
 
 export interface RunArtifacts {
   model: string;
@@ -18,22 +16,8 @@ export interface RunArtifacts {
   transcript: string | null;
 }
 
-export interface RunIndex {
-  model: string;
-  date: string;
-  sample: number;
-  runPath: string;
-}
-
-function readOptional(p: string): string | null {
-  try { return existsSync(p) ? readFileSync(p, 'utf-8') : null; }
-  catch { return null; }
-}
-
 export function loadRunArtifacts(model: string, roundDir: string): RunArtifacts | null {
-  const fullDir = resolve(REPO_ROOT, 'builds', model, 'rounds', roundDir);
-  if (!existsSync(fullDir)) return null;
-
+  const fullDir = resolve(repoRoot, 'builds', model, 'rounds', roundDir);
   const m = roundDir.match(/^sandbox-(\d{4}-\d{2}-\d{2})(?:-r(\d+))?$/);
   if (!m) return null;
   const date = m[1];
@@ -63,16 +47,12 @@ export function loadRunArtifacts(model: string, roundDir: string): RunArtifacts 
 }
 
 export function listRuns(): RunIndex[] {
-  const buildsDir = resolve(REPO_ROOT, 'builds');
+  const buildsDir = resolve(repoRoot, 'builds');
   const out: RunIndex[] = [];
-  let models: string[];
-  try { models = readdirSync(buildsDir).filter(d => !d.startsWith('.')); }
-  catch { return []; }
+  const models = listDirs(buildsDir);
   for (const model of models) {
     const roundsDir = resolve(buildsDir, model, 'rounds');
-    let dirs: string[];
-    try { dirs = readdirSync(roundsDir); }
-    catch { continue; }
+    const dirs = listDirs(roundsDir);
     for (const rd of dirs) {
       const m = rd.match(/^sandbox-(\d{4}-\d{2}-\d{2})(?:-r(\d+))?$/);
       if (!m) continue;

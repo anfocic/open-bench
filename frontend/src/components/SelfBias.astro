@@ -1,6 +1,8 @@
 ---
 import type { SelfBiasEntry } from '../data/types';
-import { fmtNum } from '../lib/format';
+import { fmtNum, fmtOr } from '../lib/format';
+import SectionHeader from './SectionHeader.astro';
+import DataTable from './DataTable.astro';
 
 export interface Props {
   entries: SelfBiasEntry[];
@@ -25,11 +27,8 @@ function deltaCell(v: number | null) {
 
 {entries.length > 0 && (
   <section>
-    <h2 id="self-bias">self-bias check</h2>
-    <p class="muted" style="font-size: 14.4px;margin:-6px 0 12px">
-      Δ = self − peer median. <span class="fail">+red</span> = overrated self. <span class="win">−green</span> = humble.
-    </p>
-    <div class="table-wrap">
+    <SectionHeader id="self-bias" title="self-bias check" subtitle={`Δ = self − peer median. <span class="fail">+red</span> = overrated self. <span class="win">−green</span> = humble.`} />
+    <DataTable>
       <table>
         <thead>
           <tr>
@@ -49,13 +48,13 @@ function deltaCell(v: number | null) {
             return (
               <tr>
                 <td class="model">{e.impl}</td>
-                <td class="num">{e.selfSpec !== null ? fmtNum(e.selfSpec, 1) : '—'}</td>
-                <td class="num">{e.peerMedSpec !== null ? fmtNum(e.peerMedSpec, 1) : '—'}</td>
+                <td class="num">{fmtOr(e.selfSpec, 1)}</td>
+                <td class="num">{fmtOr(e.peerMedSpec, 1)}</td>
                 <td class={`num delta-cell ${ds?.cls ?? ''}`}>
                   {ds ? <><span>{ds.text}</span><span class={`bias-bar bias-bar-${ds.dir}`} style={`--pct:${ds.pct}%`}></span></> : '—'}
                 </td>
-                <td class="num">{e.selfQual !== null ? fmtNum(e.selfQual, 1) : '—'}</td>
-                <td class="num">{e.peerMedQual !== null ? fmtNum(e.peerMedQual, 1) : '—'}</td>
+                <td class="num">{fmtOr(e.selfQual, 1)}</td>
+                <td class="num">{fmtOr(e.peerMedQual, 1)}</td>
                 <td class={`num delta-cell ${dq?.cls ?? ''}`}>
                   {dq ? <><span>{dq.text}</span><span class={`bias-bar bias-bar-${dq.dir}`} style={`--pct:${dq.pct}%`}></span></> : '—'}
                 </td>
@@ -64,6 +63,6 @@ function deltaCell(v: number | null) {
           })}
         </tbody>
       </table>
-    </div>
+    </DataTable>
   </section>
 )}

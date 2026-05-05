@@ -26,6 +26,24 @@ export function fmtNum(n: number | null | undefined, decimals = 0): string {
   return n.toFixed(decimals);
 }
 
+export function fmtOr(n: number | null, decimals: number, fallback = '—'): string {
+  return n !== null && n !== undefined ? n.toFixed(decimals) : fallback;
+}
+
+export function passFailIcon(exitCode: number | null): string {
+  if (exitCode === 0) return '✓';
+  if (exitCode !== null) return '✗';
+  return '—';
+}
+
+export function passFailClass(exitCode: number | null, variant: 'pill' | 'cell' = 'cell'): string {
+  const passed = exitCode === 0;
+  if (exitCode === null) return '';
+  return variant === 'pill'
+    ? `pill ${passed ? 'pill-green' : 'pill-red'}`
+    : passed ? 'win' : 'fail';
+}
+
 export function fmtDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
   if (!y || !m || !d) return iso;

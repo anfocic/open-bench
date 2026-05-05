@@ -2,6 +2,7 @@
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import Header from '../../../components/Header.astro';
 import Footer from '../../../components/Footer.astro';
+import Masthead from '../../../components/Masthead.astro';
 import Scoreboard from '../../../components/Scoreboard.astro';
 import RunsTable from '../../../components/RunsTable.astro';
 import SelfBias from '../../../components/SelfBias.astro';
@@ -9,28 +10,28 @@ import JudgeRanking from '../../../components/JudgeRanking.astro';
 import Agreement from '../../../components/Agreement.astro';
 import PerImplDetail from '../../../components/PerImplDetail.astro';
 import CostEfficiency from '../../../components/CostEfficiency.astro';
-import { loadRounds } from '../../../data/rounds';
-import type { Round } from '../../../data/types';
+import { getCollection, getEntry } from 'astro:content';
 import { fmtNum, fmtCost, fmtDate } from '../../../lib/format';
+import { findChampion, uniqueModelCount, totalCost } from '../../../lib/scoreboard';
 
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const rounds = loadRounds();
-  return rounds.map(r => ({
-    params: { date: r.date },
-    props: { round: r },
+  const entries = await getCollection('rounds');
+  return entries.map(e => ({
+    params: { date: e.id },
+    props: { roundId: e.id },
   }));
 }
 
-const { round } = Astro.props as { round: Round };
-const champ = round.scoreboard.reduce((best, e) => {
-  const score = (e.specPeer ?? 0) + (e.qualityPeer ?? 0);
-  return score > (best.score ?? 0) ? { impl: e.impl, score } : best;
-}, { impl: '—', score: 0 });
+const { roundId } = Astro.props;
+const entry = await getEntry('rounds', roundId);
+if (!entry) return Astro.redirect('/404');
+const round = entry.data;
+const champ = findChampion(round.scoreboard);
 const champEntry = round.scoreboard.find(e => e.impl === champ.impl);
-const modelCount = new Set(round.samples.map(s => s.model)).size;
-const totalCost = round.samples.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
+const modelCount = uniqueModelCount(round.samples);
+const roundCost = totalCost(round.samples);
 const allPassed = round.samples.every(s => s.testExitCode === 0);
 ---
 
@@ -41,81 +42,45 @@ const allPassed = round.samples.every(s => s.testExitCode === 0);
 >
   <Header subtitle={`round ${fmtDate(round.date)}`} />
 
-  <section class="masthead">
-    <h1 class="masthead-title">round {fmtDate(round.date)}</h1>
-    {champ.score > 0 && (
-      <p class="masthead-lede">
-        <strong style="color:var(--accent)">{champ.impl}</strong> takes the round with
-        <strong> {fmtNum(champ.score, 1)}/30</strong> &mdash;
-        spec {fmtNum(champEntry?.specPeer ?? 0, 1)},
-        quality {fmtNum(champEntry?.qualityPeer ?? 0, 1)}.
-        {modelCount} models, {fmtCost(totalCost)} spent on outputs.
-        Hidden tests: <span class={allPassed ? 'win' : 'fail'}>{allPassed ? 'all passed' : 'some failures'}</span>.
-      </p>
-    )}
-  </section>
+  <Masthead title={`round ${fmtDate(round.date)}`} subtitle={champ.score > 0 ? `<strong style="color:var(--accent)">${champ.impl}</strong> takes the round with <strong> ${fmtNum(champ.score, 1)}/30</strong> &mdash; spec ${fmtNum(champEntry?.specPeer ?? 0, 1)}, quality ${fmtNum(champEntry?.qualityPeer ?? 0, 1)}. ${modelCount} models, ${fmtCost(roundCost)} spent on outputs. Hidden tests: <span class="${allPassed ? 'win' : 'fail'}">${allPassed ? 'all passed' : 'some failures'}</span>.` : undefined} />
 
   <div class="tabs" role="tablist" aria-label="Round sections">
-    <button class="tab" role="tab" data-tab="scoreboard" aria-selected="true">scoreboard</button>
-    <button class="tab" role="tab" data-tab="runs" aria-selected="false">runs</button>
-    <button class="tab" role="tab" data-tab="self-bias" aria-selected="false">self-bias</button>
-    <button class="tab" role="tab" data-tab="judges" aria-selected="false">judges</button>
-    <button class="tab" role="tab" data-tab="agreement" aria-selected="false">agreement</button>
-    <button class="tab" role="tab" data-tab="per-impl" aria-selected="false">per-impl</button>
-    <button class="tab" role="tab" data-tab="cost" aria-selected="false">cost</button>
+    <button class="tab" role="tab" id="tab-scoreboard" data-tab="scoreboard" aria-selected="true" aria-controls="panel-scoreboard">scoreboard</button>
+    <button class="tab" role="tab" id="tab-runs" data-tab="runs" aria-selected="false" aria-controls="panel-runs">runs</button>
+    <button class="tab" role="tab" id="tab-self-bias" data-tab="self-bias" aria-selected="false" aria-controls="panel-self-bias">self-bias</button>
+    <button class="tab" role="tab" id="tab-judges" data-tab="judges" aria-selected="false" aria-controls="panel-judges">judges</button>
+    <button class="tab" role="tab" id="tab-agreement" data-tab="agreement" aria-selected="false" aria-controls="panel-agreement">agreement</button>
+    <button class="tab" role="tab" id="tab-per-impl" data-tab="per-impl" aria-selected="false" aria-controls="panel-per-impl">per-impl</button>
+    <button class="tab" role="tab" id="tab-cost" data-tab="cost" aria-selected="false" aria-controls="panel-cost">cost</button>
   </div>
 
   <div class="tab-panels">
-    <div class="tab-panel" data-panel="scoreboard">
+    <div class="tab-panel" role="tabpanel" id="panel-scoreboard" data-panel="scoreboard" aria-labelledby="tab-scoreboard">
       <Scoreboard entries={round.scoreboard} champion={champ.impl} />
     </div>
-    <div class="tab-panel" data-panel="runs" hidden>
+    <div class="tab-panel" role="tabpanel" id="panel-runs" data-panel="runs" hidden aria-labelledby="tab-runs">
       <RunsTable runs={round.samples} />
     </div>
-    <div class="tab-panel" data-panel="self-bias" hidden>
+    <div class="tab-panel" role="tabpanel" id="panel-self-bias" data-panel="self-bias" hidden aria-labelledby="tab-self-bias">
       <SelfBias entries={round.selfBias} />
     </div>
-    <div class="tab-panel" data-panel="judges" hidden>
+    <div class="tab-panel" role="tabpanel" id="panel-judges" data-panel="judges" hidden aria-labelledby="tab-judges">
       <JudgeRanking entries={round.judgeRanking} />
     </div>
-    <div class="tab-panel" data-panel="agreement" hidden>
+    <div class="tab-panel" role="tabpanel" id="panel-agreement" data-panel="agreement" hidden aria-labelledby="tab-agreement">
       <Agreement entries={round.agreement} />
     </div>
-    <div class="tab-panel" data-panel="per-impl" hidden>
+    <div class="tab-panel" role="tabpanel" id="panel-per-impl" data-panel="per-impl" hidden aria-labelledby="tab-per-impl">
       <PerImplDetail entries={round.perImplDetail} date={round.date} />
     </div>
-    <div class="tab-panel" data-panel="cost" hidden>
+    <div class="tab-panel" role="tabpanel" id="panel-cost" data-panel="cost" hidden aria-labelledby="tab-cost">
       <CostEfficiency entries={round.costEfficiency} />
     </div>
   </div>
 
   <script>
-    const tabs = document.querySelectorAll<HTMLButtonElement>('.tab');
-    const panels = document.querySelectorAll<HTMLElement>('.tab-panel');
-
-    function activate(name: string) {
-      tabs.forEach(t => {
-        const on = t.dataset.tab === name;
-        t.classList.toggle('active', on);
-        t.setAttribute('aria-selected', on ? 'true' : 'false');
-      });
-      panels.forEach(p => { p.hidden = p.dataset.panel !== name; });
-    }
-
-    function go(name: string, push: boolean) {
-      const target = [...panels].some(p => p.dataset.panel === name) ? name : 'scoreboard';
-      const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
-      const apply = () => activate(target);
-      if (doc.startViewTransition) doc.startViewTransition(apply);
-      else apply();
-      if (push) history.replaceState(null, '', '#' + target);
-    }
-
-    const initial = location.hash.slice(1) || 'scoreboard';
-    activate([...panels].some(p => p.dataset.panel === initial) ? initial : 'scoreboard');
-
-    tabs.forEach(t => t.addEventListener('click', () => go(t.dataset.tab!, true)));
-    window.addEventListener('hashchange', () => go(location.hash.slice(1) || 'scoreboard', false));
+    import { initTabs } from '../../../scripts/tabs';
+    initTabs('scoreboard');
   </script>
   <Footer />
 </BaseLayout>

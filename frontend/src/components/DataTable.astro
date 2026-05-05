@@ -1,0 +1,11 @@
+---
+export interface Props {
+  id?: string;
+}
+
+const { id } = Astro.props;
+---
+
+<div class="table-wrap" id={id}>
+  <slot />
+</div>

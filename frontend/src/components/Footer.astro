@@ -1,3 +1,6 @@
+---
+import { navLinks } from '../data/nav';
+---
 <footer class="site-footer">
   <div class="footer-grid">
     <div class="footer-col">
@@ -6,10 +9,9 @@
     </div>
     <div class="footer-col">
       <div class="footer-heading">project</div>
-      <a href="/">home</a>
-      <a href="/about">about</a>
-      <a href="/task/sandbox">task spec</a>
-      <a href="https://github.com/anfocic/open-bench" target="_blank" rel="noopener">repo</a>
+      {navLinks.map(link => (
+        <a href={link.href} target={link.external ? '_blank' : undefined} rel={link.external ? 'noopener' : undefined}>{link.label === 'task' ? 'task spec' : link.label}</a>
+      ))}
     </div>
     <div class="footer-col">
       <div class="footer-heading">data</div>

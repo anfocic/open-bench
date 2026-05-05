@@ -1,5 +1,8 @@
 ---
 import type { CostEfficiencyEntry } from '../data/types';
+import { fmtCost, fmtTok, fmtOr } from '../lib/format';
+import SectionHeader from './SectionHeader.astro';
+import DataTable from './DataTable.astro';
 
 export interface Props {
   entries: CostEfficiencyEntry[];
@@ -13,8 +16,8 @@ const cheapest = sorted[0]?.impl;
 
 {entries.length > 0 && (
   <section>
-    <h2 id="cost">cost &amp; efficiency</h2>
-    <div class="table-wrap">
+    <SectionHeader id="cost" title="cost &amp; efficiency" />
+    <DataTable>
       <table>
         <thead>
           <tr>
@@ -34,11 +37,11 @@ const cheapest = sorted[0]?.impl;
             return (
               <tr class:list={{ 'cheapest-row': isCheapest }}>
                 <td class="model">{isCheapest && <span class="leader-mark" title="cheapest">$</span>}{e.impl}</td>
-                <td class="num" style="font-size: 14.4px">{e.modelSlug}</td>
-                <td class="num">{e.loc !== null ? e.loc : '—'}</td>
+                <td class="num" style="font-size:var(--font-sm)">{e.modelSlug}</td>
+                <td class="num">{fmtOr(e.loc, 0)}</td>
                 <td class="num">{e.wallClock}</td>
-                <td class="num">{e.tokens !== null ? e.tokens.toLocaleString() : '—'}</td>
-                <td class={`num ${isCheapest ? 'win' : ''}`}>{e.costUsd !== null ? `$${e.costUsd.toFixed(3)}` : '—'}</td>
+                <td class="num">{fmtTok(e.tokens)}</td>
+                <td class={`num ${isCheapest ? 'win' : ''}`}>{fmtCost(e.costUsd)}</td>
                 <td class="num">{e.testsPassed}</td>
                 <td class="num">{e.costPerTest}</td>
               </tr>
@@ -46,6 +49,6 @@ const cheapest = sorted[0]?.impl;
           })}
         </tbody>
       </table>
-    </div>
+    </DataTable>
   </section>
 )}

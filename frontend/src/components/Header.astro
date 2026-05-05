@@ -1,4 +1,6 @@
 ---
+import { navLinks } from '../data/nav';
+
 export interface Props {
   subtitle?: string;
 }
@@ -6,21 +8,36 @@ export interface Props {
 const { subtitle } = Astro.props;
 const path = Astro.url.pathname;
 
-function isActive(prefix: string, exact = false): boolean {
-  if (exact) return path === prefix || path === prefix + '/';
-  return path === prefix || path === prefix + '/' || path.startsWith(prefix + '/');
+function isActive(href: string): boolean {
+  if (href === '/') return path === '/' || path === '/index.html';
+  return path === href || path === href + '/' || path.startsWith(href + '/');
 }
 ---
 
-<header id="top" class="site-header">
+<header id="top" class="site-header" transition:persist>
   <a href="/" class="brand" aria-label="open-bench home">
     <span class="brand-text">open-bench</span>
     {subtitle && <span class="brand-sub">/ {subtitle}</span>}
   </a>
   <nav class="site-nav" aria-label="Primary">
-    <a href="/" class:list={{ active: isActive('/', true) }} aria-current={isActive('/', true) ? 'page' : undefined}>home</a>
-    <a href="/about" class:list={{ active: isActive('/about') }} aria-current={isActive('/about') ? 'page' : undefined}>about</a>
-    <a href="/task/sandbox" class:list={{ active: isActive('/task') }} aria-current={isActive('/task') ? 'page' : undefined}>task</a>
-    <a href="https://github.com/anfocic/open-bench" target="_blank" rel="noopener">github</a>
+    {navLinks.map(link => link.external
+      ? <a href={link.href} target="_blank" rel="noopener">{link.label}</a>
+      : <a href={link.href} class:list={{ active: isActive(link.href) }} data-nav={link.href} aria-current={isActive(link.href) ? 'page' : undefined}>{link.label}</a>
+    )}
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" type="button">theme</button>
   </nav>
+  <script>
+    function withViewTransition(fn) { var doc = document; if (doc.startViewTransition) doc.startViewTransition(fn); else fn(); }
+    function updateActiveNav() {
+      const path = location.pathname;
+      document.querySelectorAll<HTMLAnchorElement>('[data-nav]').forEach(a => {
+        const prefix = a.dataset.nav!;
+        const active = prefix === '/' ? (path === '/' || path === '/index.html') : path.startsWith(prefix);
+        a.classList.toggle('active', active);
+        a.setAttribute('aria-current', active ? 'page' : 'false');
+      });
+    }
+    updateActiveNav();
+    document.addEventListener('astro:after-swap', updateActiveNav);
+  </script>
 </header>

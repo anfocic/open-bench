@@ -1,6 +1,7 @@
 ---
 import type { AgreementEntry } from '../data/types';
-import { fmtNum } from '../lib/format';
+import { fmtOr } from '../lib/format';
+import DataTable from './DataTable.astro';
 
 export interface Props {
   entries: AgreementEntry[];
@@ -12,7 +13,7 @@ const { entries } = Astro.props;
 {entries.length > 0 && (
   <section>
     <h2 id="agreement">inter-judge agreement</h2>
-    <div class="table-wrap">
+    <DataTable>
       <table>
         <thead>
           <tr>
@@ -28,15 +29,15 @@ const { entries } = Astro.props;
           {entries.map(e => (
             <tr>
               <td class="model">{e.impl}</td>
-              <td class="num">{e.minSpec !== null ? fmtNum(e.minSpec, 1) : '—'}</td>
-              <td class="num">{e.maxSpec !== null ? fmtNum(e.maxSpec, 1) : '—'}</td>
-              <td class="num">{e.range !== null ? fmtNum(e.range, 1) : '—'}</td>
-              <td class="num">{e.stdev !== null ? fmtNum(e.stdev, 2) : '—'}</td>
-              <td class="num" style="font-size: 14.4px">{e.judges}</td>
+              <td class="num">{fmtOr(e.minSpec, 1)}</td>
+              <td class="num">{fmtOr(e.maxSpec, 1)}</td>
+              <td class="num">{fmtOr(e.range, 1)}</td>
+              <td class="num">{fmtOr(e.stdev, 2)}</td>
+              <td class="num" style="font-size:var(--font-sm)">{e.judges}</td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </DataTable>
   </section>
 )}

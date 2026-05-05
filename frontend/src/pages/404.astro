@@ -2,16 +2,36 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import Masthead from '../components/Masthead.astro';
+import { getCollection } from 'astro:content';
+import { fmtDate } from '../lib/format';
+import { findChampion } from '../lib/scoreboard';
+
+const entries = await getCollection('rounds');
+const rounds = entries.sort((a, b) => b.id.localeCompare(a.id)).map(e => e.data);
+const latestRound = rounds[0];
 ---
 
 <BaseLayout title="open-bench — 404" description="Page not found.">
   <Header subtitle="404" />
-  <section class="masthead">
-    <h1 class="masthead-title">404</h1>
-    <p class="masthead-lede">no such round, page, or path.</p>
-    <div class="masthead-meta">
-      <a href="/">&larr; home</a>
-    </div>
-  </section>
+  <Masthead title="404" subtitle={`no such round, page, or path. ${latestRound ? `try <a href="/round/${latestRound.date}">round ${latestRound.date}</a> or <a href="/">home</a>.` : ''}`} />
+  {rounds.length > 0 && (
+    <section>
+      <h2>rounds</h2>
+      <div class="archive-list">
+        {rounds.slice(0, 5).map(r => {
+          const c = findChampion(r.scoreboard);
+          return (
+            <a href={`/round/${r.date}`}>
+              <div class="row">
+                <span class="date">{r.date}</span>
+                <span class="winner">{c.impl}</span>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+  )}
   <Footer />
 </BaseLayout>

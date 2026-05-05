@@ -3,7 +3,7 @@ import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
-import { parseReview } from './parse-review.ts';
+import { parseReview } from './parse.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REVIEW = resolve(__dirname, '../../../results/reviews/sandbox-2026-05-05.md');
