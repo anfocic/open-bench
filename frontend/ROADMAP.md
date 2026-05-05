@@ -11,9 +11,9 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done, `[-]` skipped.
 
 ## P2 — polish, ship next
 
-- [ ] **Per-round JSON endpoint** — `/round/[date].json` mirroring the `/dataset.json` shape but scoped to a single round. Researchers fetching one round shouldn't have to download the whole archive. ~10 lines, parallels the existing dataset endpoint.
+- [x] **Per-round JSON endpoint** — `/round/[date].json` mirrors the `/dataset.json` shape but scoped to a single round (`{ meta, round, flat }`). Reuses `roundsToRows` and `SCHEMA_VERSION` from `lib/dataset`. Cached `max-age=300`. Excluded from sitemap (Astro only emits HTML routes there).
 - [ ] **Empty-state polish for low-round-count pages** — at 1 round, `/changelog` is one entry, sparklines are single bars, ELO swings are degenerate. Either guard trend columns behind a `rounds >= 3` check or show a "round 2 ships {date}" placeholder so pages don't read as undercooked.
-- [ ] **iOS / Android touch icons + theme-color** — add `apple-touch-icon.png`, `theme-color` meta, minimal web manifest. Currently only `favicon.svg` exists. ~5 minutes, pure polish.
+- [~] **iOS / Android touch icons + theme-color** — `theme-color` meta (light/dark) and a minimal `site.webmanifest` shipped. Still pending: `apple-touch-icon.png` (needs a PNG asset; SVG-only manifest doesn't satisfy iOS home-screen).
 
 ## P3 — nice to have
 
@@ -29,7 +29,7 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done, `[-]` skipped.
 - [-] **Per-impl OG images** — impl pages rarely shared socially.
 - [-] **FAQPage JSON-LD** — about page is prose, not Q&A.
 - [-] **Google Search Console submission** — user-driven; happens outside repo.
-- [-] **A11y deep audit** — basics covered (semantic HTML, focus states); revisit if real users complain. Defer Lighthouse pass until the site gets linked from anywhere with traffic.
+- [-] **A11y deep audit** — basics covered (semantic HTML, focus states, skip-to-content link, glossary tooltips); revisit if real users complain. Defer Lighthouse pass until the site gets linked from anywhere with traffic.
 
 ## Done
 

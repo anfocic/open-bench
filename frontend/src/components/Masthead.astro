@@ -8,7 +8,7 @@ export interface Props {
 const { title, subtitle, titleTransitionName } = Astro.props;
 ---
 
-<section class="masthead">
+<section class="masthead" id="main" tabindex="-1">
   <h1 class="masthead-title" transition:name={titleTransitionName}>{title}</h1>
   {subtitle && <p class="masthead-lede" set:html={subtitle} />}
   <slot />

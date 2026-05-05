@@ -1,3 +1,26 @@
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -40px;
+  z-index: 100;
+  padding: 6px 12px;
+  background: var(--bg);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  text-decoration: none;
+  font-family: var(--mono, monospace);
+  font-size: 14px;
+  border-radius: 2px;
+  transition: top 0.15s ease-out;
+}
+.skip-link:focus {
+  top: 8px;
+  outline: none;
+}
+[id="main"]:focus {
+  outline: none;
+}
+
 /* Dark theme (default) */
 :root {
   --bg: #0a0a0a;

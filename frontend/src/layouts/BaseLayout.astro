@@ -18,12 +18,16 @@ const { seo } = Astro.props;
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <SEO {...seo} />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <ClientRouter />
   <script is:inline>
     (function(){var t=localStorage.getItem('theme');if(t){document.documentElement.setAttribute('data-theme',t)}else if(window.matchMedia('(prefers-color-scheme:light)').matches){document.documentElement.setAttribute('data-theme','light')}})();
   </script>
 </head>
 <body>
+  <a href="#main" class="skip-link">skip to content</a>
   <slot />
 </body>
 </html>

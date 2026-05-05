@@ -80,6 +80,7 @@ const seo = templateSeo(
         class:list={['model-tab', { active: name === impl }]}
         aria-current={name === impl ? 'page' : undefined}
         data-impl={name}
+        transition:name={name === impl ? `impl-${date}-${name}` : undefined}
       >{name}</a>
     ))}
   </nav>
@@ -93,7 +94,7 @@ const seo = templateSeo(
     });
   </script>
 
-  <Masthead title={impl} subtitle={`<span class="muted" style="font-size:var(--font-sm)">${artifacts.runPath}</span>${meta?.modelSlug ? `<div style="margin-top:4px;font-size:var(--font-sm)"><span class="muted">model:</span> <code>${meta.modelSlug}</code></div>` : ''}`} />
+  <Masthead title={impl} titleTransitionName={`impl-${date}-${impl}`} subtitle={`<span class="muted" style="font-size:var(--font-sm)">${artifacts.runPath}</span>${meta?.modelSlug ? `<div style="margin-top:4px;font-size:var(--font-sm)"><span class="muted">model:</span> <code>${meta.modelSlug}</code></div>` : ''}`} />
 
   <div class="run-stats">
     <div class="run-stat"><div class="run-stat-label">wall</div><div class="run-stat-val">{fmtSec(meta?.wallSec ?? null)}</div></div>
