@@ -281,30 +281,36 @@ const sections = [
     animation: none;
   }
 
-  @keyframes deck-out-left {
-    to { transform: translateX(-30%); opacity: 0; }
+  /* Push: outgoing and incoming move together at full width, no fade.
+     Forward = both slide left; back = both slide right. */
+  @keyframes deck-push-out-left {
+    from { transform: translateX(0); }
+    to { transform: translateX(-100%); }
   }
-  @keyframes deck-in-right {
-    from { transform: translateX(30%); opacity: 0; }
+  @keyframes deck-push-in-right {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
   }
-  @keyframes deck-out-right {
-    to { transform: translateX(30%); opacity: 0; }
+  @keyframes deck-push-out-right {
+    from { transform: translateX(0); }
+    to { transform: translateX(100%); }
   }
-  @keyframes deck-in-left {
-    from { transform: translateX(-30%); opacity: 0; }
+  @keyframes deck-push-in-left {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
   }
 
   html:not(.deck-back) ::view-transition-old(deck) {
-    animation: deck-out-left 320ms cubic-bezier(0.4, 0, 0.2, 1) both;
+    animation: deck-push-out-left 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
   }
   html:not(.deck-back) ::view-transition-new(deck) {
-    animation: deck-in-right 320ms cubic-bezier(0.4, 0, 0.2, 1) both;
+    animation: deck-push-in-right 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
   }
   html.deck-back ::view-transition-old(deck) {
-    animation: deck-out-right 320ms cubic-bezier(0.4, 0, 0.2, 1) both;
+    animation: deck-push-out-right 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
   }
   html.deck-back ::view-transition-new(deck) {
-    animation: deck-in-left 320ms cubic-bezier(0.4, 0, 0.2, 1) both;
+    animation: deck-push-in-left 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
   }
 </style>
 
