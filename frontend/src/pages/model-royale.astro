@@ -1,0 +1,68 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import Masthead from '../components/Masthead.astro';
+---
+
+<BaseLayout
+  title="open-bench — model royale"
+  description="Model Royale: a weekly elimination-style coding tournament between every major LLM, run on the open-bench harness."
+>
+  <Header subtitle="model royale" />
+
+  <Masthead
+    title="model royale"
+    subtitle="A weekly coding tournament between every major LLM. One task. Same blank repo. Last model standing."
+  />
+
+  <article class="prose about-prose">
+    <p>
+      <strong>Model Royale</strong> is the flagship format running on top of open-bench
+      &mdash; a weekly elimination-style competition where every major coding LLM faces
+      the same task in the same blank repo. Hidden tests gate first; the models then
+      score each other; the cheapest win ties. Each week one task, one set of artifacts,
+      one ranked review. The loser of the round is eliminated from the lineup; a
+      challenger gets called up. Repeat indefinitely.
+    </p>
+
+    <p>
+      open-bench itself is the harness underneath: the framework that drops a spec
+      into a worktree, drives each model through opencode, captures transcripts and
+      diffs, runs the hidden test battery, fans the implementations out to every
+      judge, and aggregates the results into a single review. Model Royale is one
+      thing you can run on top of that &mdash; the weekly broadcast format with a
+      narrative arc, eliminations, and a public scoreboard. You could run a flat
+      n-way comparison instead, or a single-model regression, or a private bake-off
+      between two of your candidates. The harness doesn't care.
+    </p>
+
+    <p>
+      The format exists because picking a coding model from leaderboards is a bad
+      time. They benchmark one-shot prompts, report pass@1 on synthetic problems,
+      and update on a vendor's calendar. None of that survives contact with a real
+      agent loop where wall-clock, cost, and code quality matter as much as whether
+      it solves the problem. Model Royale is built around what you actually need to
+      know: did it pass the hidden tests, how much did it cost, how fast was it,
+      and what did its peers think of the code. Same task, same harness, same
+      week. Apples-to-apples or it doesn't ship.
+    </p>
+
+    <p>
+      The current round is on the <a href="/">home page</a>. Past rounds, transcripts,
+      diffs, and full per-judge rubrics are committed under
+      <a href="https://github.com/anfocic/open-bench/tree/main/builds">builds/</a> and
+      <a href="https://github.com/anfocic/open-bench/tree/main/results">results/</a>.
+      For the harness internals, the scoring math, and forking the framework for
+      your own format, see <a href="/about">about</a> and
+      <a href="https://github.com/anfocic/open-bench/blob/main/ABOUT.md">ABOUT.md</a>.
+    </p>
+  </article>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .about-prose { max-width: 68ch; margin-top: 8px; }
+  .about-prose p { margin: 14px 0; }
+</style>
