@@ -635,8 +635,8 @@ tr.cheapest-row td.model::before { content: '$ '; color: var(--green); font-weig
 }
 .footer-grid {
   display: grid;
-  grid-template-columns: repeat(4, max-content);
-  gap: 24px 48px;
+  grid-template-columns: repeat(3, max-content);
+  gap: 24px 64px;
   margin-bottom: 24px;
   justify-content: center;
 }
@@ -659,8 +659,6 @@ tr.cheapest-row td.model::before { content: '$ '; color: var(--green); font-weig
   text-transform: lowercase;
 }
 .footer-heading::before { content: '// '; color: var(--dim); font-weight: 400; }
-.footer-meta { color: var(--muted); }
-.footer-meta code { background: none; border: none; padding: 0; color: var(--accent); }
 .footer-base {
   padding-top: 12px;
   border-top: 1px dashed var(--rule);

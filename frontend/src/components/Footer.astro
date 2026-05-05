@@ -1,5 +1,5 @@
 ---
-import { navLinks } from '../data/nav';
+const year = new Date().getFullYear();
 ---
 <footer class="site-footer">
   <div class="footer-grid">
@@ -8,32 +8,25 @@ import { navLinks } from '../data/nav';
       <p class="footer-tag">A weekly LLM coding battle royale. Open source, open data, open methods.</p>
     </div>
     <div class="footer-col">
-      <div class="footer-heading">project</div>
-      {navLinks.map(link => (
-        <a href={link.href}>{link.label}</a>
-      ))}
-    </div>
-    <div class="footer-col">
-      <div class="footer-heading">data</div>
-      <a href="/round">all rounds</a>
+      <div class="footer-heading">browse</div>
+      <a href="/round">rounds</a>
       <a href="/leaderboard">leaderboard</a>
       <a href="/notes">writeups</a>
-      <a href="/task/sandbox">spec &amp; rubric</a>
-      <a href="/dataset">dataset</a>
       <a href="/changelog">changelog</a>
-      <a href="/embed">embed</a>
-      <a href="https://github.com/anfocic/open-bench/tree/main/builds" target="_blank" rel="noopener">raw artifacts</a>
-      <a href="/feed.xml">rss feed</a>
+      <a href="/model-royale">model royale</a>
+      <a href="/about">about</a>
     </div>
     <div class="footer-col">
-      <div class="footer-heading">stack</div>
-      <div class="footer-meta">harness <code>opencode</code></div>
-      <div class="footer-meta">site <code>astro</code></div>
-      <div class="footer-meta">host <code>cloudflare</code></div>
+      <div class="footer-heading">grab</div>
+      <a href="/dataset">dataset (json/csv)</a>
+      <a href="/feed.xml">rss feed</a>
+      <a href="/embed">embed widgets</a>
+      <a href="https://github.com/anfocic/open-bench" target="_blank" rel="noopener">github repo</a>
+      <a href="https://github.com/anfocic/open-bench/tree/main/builds" target="_blank" rel="noopener">raw artifacts</a>
     </div>
   </div>
   <div class="footer-base">
-    <span>2026</span>
+    <span>{year}</span>
     <span>·</span>
     <span>MIT</span>
     <span>·</span>
