@@ -132,12 +132,8 @@ def capture(task: str, model: str) -> int:
                          cwd=worktree_dir, check=False)
     diff_lines.append(diff_out)
 
-    old_cwd = os.getcwd()
-    os.chdir(worktree_dir)
-    try:
-        untracked = _run_git("ls-files", "--others", "--exclude-standard").strip().splitlines()
-    finally:
-        os.chdir(old_cwd)
+    untracked = _run_git("ls-files", "--others", "--exclude-standard",
+                          cwd=worktree_dir).strip().splitlines()
 
     for f in untracked:
         f = f.strip()
@@ -160,15 +156,12 @@ def capture(task: str, model: str) -> int:
     (run_dir / "diff.patch").write_text("\n".join(diff_lines))
 
     suffix = pathlib.Path(entrypoint).suffix
-    os.chdir(worktree_dir)
-    try:
-        modified_ext = _run_git("diff", "--name-only", base, "--", f"*{suffix}",
-                                 check=False).strip().splitlines()
-        modified_ext += _run_git("diff", "--name-only", "HEAD", "--", f"*{suffix}",
-                                  check=False).strip().splitlines()
-        untracked_ext = _run_git("ls-files", "--others", "--exclude-standard", f"*{suffix}").strip().splitlines()
-    finally:
-        os.chdir(old_cwd)
+    modified_ext = _run_git("diff", "--name-only", base, "--", f"*{suffix}",
+                             cwd=worktree_dir, check=False).strip().splitlines()
+    modified_ext += _run_git("diff", "--name-only", "HEAD", "--", f"*{suffix}",
+                              cwd=worktree_dir, check=False).strip().splitlines()
+    untracked_ext = _run_git("ls-files", "--others", "--exclude-standard", f"*{suffix}",
+                              cwd=worktree_dir).strip().splitlines()
 
     all_modified = sorted(set(
         f.strip() for f in modified_ext + untracked_ext
