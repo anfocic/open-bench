@@ -6,18 +6,21 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done, `[-]` skipped.
 
 ## P1 — high leverage, ship soon
 
-_(empty — all P1 items shipped; see Done section)_
+- [ ] **Glossary / scoring legend** — `/scoring` page defining `specPeer`, `qualityPeer`, peer vs expert, hardFail, ELO base/K, podium. Wire `<abbr>`/`<dfn>` or `title=` tooltips on column headers across the leaderboard, scoreboard, and compare tables so terms are explained where they're read, not just on `/about`.
+- [ ] **Reproduce-it walkthrough** — prominent CTA (`/reproduce` page or top of `/about`) with the minimal "clone, run X, get the same scores" recipe. The whole pitch is open methods; the site never invites verification.
 
 ## P2 — polish, ship next
 
-<!-- Charts: shipped, see Done. -->
-
-<!-- Methodology changelog: shipped, see Done. -->
-<!-- Dataset export: shipped, see Done. -->
+- [ ] **Per-round JSON endpoint** — `/round/[date].json` mirroring the `/dataset.json` shape but scoped to a single round. Researchers fetching one round shouldn't have to download the whole archive. ~10 lines, parallels the existing dataset endpoint.
+- [ ] **Empty-state polish for low-round-count pages** — at 1 round, `/changelog` is one entry, sparklines are single bars, ELO swings are degenerate. Either guard trend columns behind a `rounds >= 3` check or show a "round 2 ships {date}" placeholder so pages don't read as undercooked.
+- [ ] **iOS / Android touch icons + theme-color** — add `apple-touch-icon.png`, `theme-color` meta, minimal web manifest. Currently only `favicon.svg` exists. ~5 minutes, pure polish.
 
 ## P3 — nice to have
 
-_(empty — all P3 items shipped or skipped; see Done section)_
+- [ ] **Multi-way compare (3+ models)** — current `/compare` is pairwise only. Revisit when the lineup hits ~10+ models and pairwise no longer scales.
+- [ ] **Search / filter for models** — same trigger as multi-way compare.
+- [ ] **`/round/[date]` → `/compare/x/vs/y` deep links** — clickable scoreboard rows that pre-fill a comparison. Useful once `rounds >= 2`.
+- [ ] **Newsletter signup** — only if RSS analytics show < 50 readers after 5 rounds.
 
 ## Skipped (no fit)
 
@@ -26,7 +29,7 @@ _(empty — all P3 items shipped or skipped; see Done section)_
 - [-] **Per-impl OG images** — impl pages rarely shared socially.
 - [-] **FAQPage JSON-LD** — about page is prose, not Q&A.
 - [-] **Google Search Console submission** — user-driven; happens outside repo.
-- [-] **A11y deep audit** — basics covered (semantic HTML, focus states); revisit if real users complain.
+- [-] **A11y deep audit** — basics covered (semantic HTML, focus states); revisit if real users complain. Defer Lighthouse pass until the site gets linked from anywhere with traffic.
 
 ## Done
 
