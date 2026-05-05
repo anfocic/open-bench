@@ -20,14 +20,11 @@ function isActive(href: string): boolean {
     {subtitle && <span class="brand-sub">/ {subtitle}</span>}
   </a>
   <nav class="site-nav" aria-label="Primary">
-    {navLinks.map(link => link.external
-      ? <a href={link.href} target="_blank" rel="noopener">{link.label}</a>
-      : <a href={link.href} class:list={{ active: isActive(link.href) }} data-nav={link.href} aria-current={isActive(link.href) ? 'page' : undefined}>{link.label}</a>
-    )}
-    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" type="button">theme</button>
+    {navLinks.map(link => (
+      <a href={link.href} class:list={{ active: isActive(link.href) }} data-nav={link.href} aria-current={isActive(link.href) ? 'page' : undefined}>{link.label}</a>
+    ))}
   </nav>
   <script>
-    function withViewTransition(fn) { var doc = document; if (doc.startViewTransition) doc.startViewTransition(fn); else fn(); }
     function updateActiveNav() {
       const path = location.pathname;
       document.querySelectorAll<HTMLAnchorElement>('[data-nav]').forEach(a => {

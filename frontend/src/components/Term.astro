@@ -1,0 +1,24 @@
+---
+import { glossary, type GlossaryKey } from '../data/glossary';
+
+export interface Props {
+  k: GlossaryKey;
+}
+
+const { k } = Astro.props;
+const definition = glossary[k];
+---
+
+<abbr class="term" title={definition}><slot /></abbr>
+
+<style>
+  .term {
+    text-decoration: underline dotted var(--rule);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    cursor: help;
+  }
+  .term:hover {
+    text-decoration-color: var(--accent);
+  }
+</style>
