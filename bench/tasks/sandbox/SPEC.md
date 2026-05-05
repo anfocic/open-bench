@@ -34,9 +34,13 @@ def sandbox_run(
   host shell must never interpolate it.
 - Wall-clock timeout enforced via `subprocess.run(timeout=...)`. On timeout,
   the container is terminated and the returned string indicates a timeout.
-- Combined output (stdout + stderr) is truncated to 50,000 bytes total
-  before being returned. Truncation is silent (no error), but a clear
-  marker like `... [truncated]` may be appended.
+- The formatted return string is truncated to 50,000 bytes total
+  *after* construction (i.e. apply truncation to the final string with
+  the headers in place, not to stdout/stderr separately and not via a
+  proportional split). Slice the tail; do not split mid-byte across a
+  multibyte sequence (decode first, then truncate by characters that
+  re-encode within the cap). Truncation is silent (no error), but a
+  clear marker like `... [truncated]` may be appended.
 - First-call latency is allowed: `--pull=missing` is fine for v0.1.
 
 ### Return format
@@ -53,6 +57,19 @@ exit=<n>
 
 Where `<n>` is the container's exit code (or `124` on timeout, matching
 GNU `timeout` convention). Decoding errors are replaced (`errors="replace"`).
+
+Format rules (normative):
+
+- Each header (`exit=<n>`, `--- stdout ---`, `--- stderr ---`) is on its
+  own line, terminated by `\n`.
+- The stdout body, if non-empty, comes immediately after the
+  `--- stdout ---\n` line and ends with exactly one `\n` before the
+  `--- stderr ---` header.
+- The stderr body, if non-empty, comes immediately after the
+  `--- stderr ---\n` line. It may or may not end with a trailing newline
+  (preserve whatever the underlying stream produced).
+- If a body is empty, the next header (or end of string) follows directly
+  after the previous header line — no blank line is inserted.
 
 ## Podman invocation (reference)
 

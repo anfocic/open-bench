@@ -1,40 +1,61 @@
 # open-bench
 
-Three open-weight Chinese models (Kimi K2.6, DeepSeek V4 Pro, MiniMax M2.7) each build their own copy of the same app over multiple weeks — one round per week, every round graded by hidden tests, peer-judged blind, and rubric-scored before the next round extends the spec. Round 1 is `sandbox.py`; later rounds bolt features onto each model's own codebase. Three parallel codebases, identical prompts, no cross-pollination. The bet: which model is the best long-haul solo builder, not just the best one-shot coder.
+**A weekly coding battle royale between AI models.**
 
-Two things in one repo:
+Each week, every model in the lineup gets the same spec and builds the same app, alone, in its own sandbox. The submissions are graded three ways:
 
-1. **`sandbox.py`** — single-file Python wrapper around Podman/Docker for ephemeral, network-isolated, resource-capped command execution. The thing the models implement.
-2. **`bench/`** — framework that runs them through opencode, captures transcripts and diffs, runs hidden tests, aggregates judgments into a single review.
+- **Hidden tests** — objective pass/fail the models never see.
+- **Peer review** — every model blind-grades every submission against a rubric. Self-judgments are tracked separately as a bias check.
+- **Cost & speed** — wall-clock, tokens, dollars per run.
+
+From round 2 onward, the lowest combined score gets **eliminated each week** until one model is left standing. Same prompt, no cross-pollination, public scoreboard.
+
+The bet: this measures whether a model can sustain a real codebase over weeks of feature growth — not just one-shot a clever solution.
+
+## What's in this repo
+
+1. **`sandbox.py`** — the round-1 task. A single-file Python wrapper around Podman/Docker for ephemeral, network-isolated, resource-capped command execution. The thing the models implement.
+2. **`bench/`** — the framework that runs them through opencode, captures transcripts and diffs, runs hidden tests, and aggregates judgments into a single review.
 
 Recursive joke: the first benchmark task is implementing `sandbox.py` itself.
 
-## Latest round (2026-05-03)
+## Who this is for
 
-| | kimi-k2.6 | deepseek-v4-pro | minimax-m2.7 |
-|---|---|---|---|
-| Hidden tests pass-rate (n=5) | 5/5 | 5/5 | 4/5 |
-| Spec score (median /10) | 10 | 10 | 7.5 |
-| Code quality (median /20) | 16.5 | 19 | 14.5 |
-| Cost / run (median) | $0.011 | $0.061 | $0.024 |
-| Wall-clock / run (median) | 1m23s | 4m08s | 2m41s |
-| Tokens / run (median) | 109k | 168k | 242k |
+- **AI engineers** picking a coding model for an agent and tired of one-shot benchmarks.
+- **Open-weight watchers** comparing the new wave (DeepSeek, Kimi, MiniMax, Qwen, GLM, MiMo) head-to-head on the same task.
+- **Anyone who wants a fork-and-go harness** for running their own n-way comparison — see [Forking](#forking-for-your-own-n-way-comparison) below.
 
-Total bill for the round (15 perf runs + 6 judging packets): $1.13.
+## Lineup (round 1)
 
-Full review: [`results/reviews/sandbox-2026-05-03.md`](results/reviews/sandbox-2026-05-03.md). Per-run perf data: `results/perf/sandbox-<model>-2026-05-03/`.
+| short | slug |
+|---|---|
+| kimi | `opencode-go/kimi-k2.6` |
+| deepseek | `opencode-go/deepseek-v4-pro` |
+| deepseek-flash | `opencode-go/deepseek-v4-flash` |
+| minimax | `opencode-go/minimax-m2.5` |
+| mimo | `opencode-go/mimo-v2.5-pro` |
+| qwen | `opencode-go/qwen3.6-plus` |
+| glm | `opencode-go/glm-5.1` |
+
+All seven race in round 1. From round 2 onward, the lowest combined score (spec/10 + quality/20, with hidden-test failures auto-last) is eliminated each week. Eliminated models stay in the archive; tombstones land in [`results/eliminated.md`](results/eliminated.md) (created on first elimination).
+
+## Latest round
+
+See [`results/reviews/`](results/reviews/) for the most recent finalized review. Each review file is named `sandbox-<date>.md` — the latest one is the canonical scoreboard.
 
 ## How it works
 
-Drop a spec in `bench/tasks/<task>/SPEC.md`, write `PROMPT.md` (what the model sees), and a hidden test suite (it doesn't). Each model runs through opencode and produces a `sandbox.py`. Implementations are graded by the other implementers — blinded labels, no self-judging. Optional expert tier via `expert_judges` in `bench/config.json`. Output: scoreboard, per-judge ranking, peer-vs-expert delta when configured, inter-judge agreement, hidden-test results.
+Drop a spec in `bench/tasks/<task>/SPEC.md`, write `PROMPT.md` (what the model sees), and a hidden test suite (it doesn't). Each model runs through opencode and produces a `sandbox.py`. Implementations are graded by every model in the lineup (including itself — self-judgments are surfaced separately as a bias check, not counted in the headline scoreboard). Optional expert tier via `expert_judges` in `bench/config.json`. Output: peer-median scoreboard, per-judge ranking, self-bias delta, inter-judge agreement, hidden-test results.
 
 ## Run it
 
 End-to-end (canonical single round):
 
 ```bash
-bench/scripts/run-all.sh sandbox
+JUDGE_CONCURRENCY=3 bench/scripts/run-all.sh sandbox
 ```
+
+Judges run in parallel (cap with `JUDGE_CONCURRENCY` or the `--concurrency` flag on `start_judgments.py`); implementer phase is still sequential.
 
 Per-model perf (n=5 with median + stdev):
 
@@ -49,11 +70,17 @@ bench/scripts/start-run.sh --auto sandbox kimi   # auto-drive
 bench/scripts/capture-run.sh sandbox kimi
 ```
 
-Cost: ~$1.20 to fully reproduce the latest round. Stdlib + pytest only on the local side; no requirements file.
+Multiple samples per model on the same date — set `RUN_STAMP` to disambiguate worktree/branch names:
+
+```bash
+RUN_STAMP="$(date +%F)-r2" bench/scripts/start-run.sh --auto sandbox kimi
+```
+
+Stdlib + pytest only on the local side; no requirements file.
 
 > **`--auto` runs `opencode run --dangerously-skip-permissions`.** Model has full host filesystem access during the session. Trust your task content.
 
-## Forking for your own three-way comparison
+## Forking for your own n-way comparison
 
 Edit `bench/config.json`:
 
@@ -70,15 +97,15 @@ Edit `bench/config.json`:
 }
 ```
 
-Labels become `builds/<label>/` dirs. Add a new task with `bench/scripts/new-task.sh <name>`.
+Labels become `builds/<label>/` dirs. Add a new task with `bench/scripts/new-task.sh <name>`. Discover provider slugs with `opencode models <provider>`.
 
 ### Forking caveats (read before swapping the task)
 
-Round 1's task is single-file Python (`sandbox.py`) and the harness reflects that today:
+The current task is single-file Python (`sandbox.py`) and the harness reflects that today:
 
 - The output filename `sandbox.py` is hardcoded across `capture-run.sh`, `start-run.sh`, `perf-bench.py`, and `start_judgments.py` (~11 refs). For a same-shaped task (one Python file, different name), a sed-replace across those four files is enough.
 - Multi-file projects, non-Python stacks, or anything that doesn't run via `python3 -m pytest` need deeper edits — `capture-run.sh`'s test invocation and `perf-bench.py`'s LOC counter both assume single-file Python.
-- Parametrising the entrypoint via `bench/tasks/<task>/task.json` is on the roadmap for round 2; the framework will be honestly task-agnostic then. For now: forkable with a sed, not yet drop-in.
+- Parametrising the entrypoint via `bench/tasks/<task>/task.json` is on the roadmap; the framework will be honestly task-agnostic then. For now: forkable with a sed, not yet drop-in.
 
 ## Layout
 
@@ -106,6 +133,7 @@ results/
 - Harness-locked to opencode. Different harness changes the numbers.
 - n=5 perf is the floor where median means anything; stdev with n=5 is itself noisy.
 - A different judge panel would likely produce a different consensus. Inter-judge variance is reported in each review.
+- Self-judging is included for bias measurement but excluded from headline medians. The peer-blind scoreboard remains the canonical signal.
 
 [opencode]: https://opencode.ai
 

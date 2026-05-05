@@ -148,13 +148,21 @@ def load_run_meta(run_dir_rel: str) -> dict:
 def split_judge_scores(judges: list[str],
                        scores_by_judge: dict[str, dict[str, dict | None]],
                        model: str) -> dict:
-    """Return spec/quality/verdict/hard_fail scores split by judge tier."""
+    """Return spec/quality/verdict/hard_fail scores split by judge tier.
+
+    Self-judgments (judge == impl model) are tracked separately in
+    self_spec / self_qual and excluded from the expert/peer/all medians,
+    so the scoreboard is not self-inflated. The self-bias section reads
+    self_* directly to compute deltas vs peer median.
+    """
     expert_specs: list[float] = []
     expert_quals: list[float] = []
     peer_specs: list[float] = []
     peer_quals: list[float] = []
     all_specs: list[float] = []
     all_quals: list[float] = []
+    self_spec: float | None = None
+    self_qual: float | None = None
     verdicts: list[str] = []
     hard_fails: list[str] = []
 
@@ -165,12 +173,22 @@ def split_judge_scores(judges: list[str],
         spec = s.get("spec_compliance")
         qt = quality_total(s.get("code_quality"))
         is_expert = judge in EXPERT_JUDGES
+        is_self = judge == model
         if isinstance(spec, (int, float)):
-            all_specs.append(spec)
-            (expert_specs if is_expert else peer_specs).append(spec)
+            if is_self:
+                self_spec = spec
+            else:
+                all_specs.append(spec)
+                (expert_specs if is_expert else peer_specs).append(spec)
         if qt is not None:
-            all_quals.append(qt)
-            (expert_quals if is_expert else peer_quals).append(qt)
+            if is_self:
+                self_qual = qt
+            else:
+                all_quals.append(qt)
+                (expert_quals if is_expert else peer_quals).append(qt)
+        # Verdict/hard_fail aggregation: include self too — these are
+        # categorical, not medians, so self contributes to the modal
+        # verdict without pulling a numeric average.
         if s.get("verdict"):
             verdicts.append(s["verdict"])
         if s.get("hard_fail"):
@@ -183,6 +201,8 @@ def split_judge_scores(judges: list[str],
         "peer_quals": peer_quals,
         "all_specs": all_specs,
         "all_quals": all_quals,
+        "self_spec": self_spec,
+        "self_qual": self_qual,
         "verdicts": verdicts,
         "hard_fails": hard_fails,
     }
@@ -283,12 +303,14 @@ def render_per_implementation(impl_models: list[str], judges: list[str],
         lines.append("|---|---|---|---|---|---|---|")
         for judge in judges:
             s = scores_by_judge.get(judge, {}).get(model)
-            tier = "expert" if judge in EXPERT_JUDGES else "peer"
+            if judge == model:
+                tier = "self"
+            elif judge in EXPERT_JUDGES:
+                tier = "expert"
+            else:
+                tier = "peer"
             if s is None:
-                if judge == model:
-                    lines.append(f"| {judge} | {tier} | (self — skipped) | — | — | — | — |")
-                else:
-                    lines.append(f"| {judge} | {tier} | (no scores file) | — | — | — | — |")
+                lines.append(f"| {judge} | {tier} | (no scores file) | — | — | — | — |")
                 continue
             qt = quality_total(s.get("code_quality"))
             note = s.get("one_line_summary", "").replace("|", "\\|")
@@ -375,34 +397,62 @@ def render_inter_judge_agreement(impl_models: list[str], judges: list[str],
 
 def render_self_bias_check(impl_models: list[str], judges: list[str],
                            scores_by_judge: dict) -> list[str]:
-    """For each impl, did peer judges score it lower than experts did?"""
-    lines = ["## Self-bias check (peer vs expert deltas)", ""]
-    if not EXPERT_JUDGES:
+    """How much each model overrates its own work vs peer consensus.
+
+    Δ = self_score − peer_median. Positive = the model scored its own
+    code higher than peers did. Useful as a per-model bias signal and as
+    a sanity check that peer-blind judging is meaningfully harder than
+    self-judging would be.
+    """
+    lines = ["## Self-bias check", ""]
+    has_self_data = any(
+        split_judge_scores(judges, scores_by_judge, m)["self_spec"] is not None
+        or split_judge_scores(judges, scores_by_judge, m)["self_qual"] is not None
+        for m in impl_models
+    )
+    if not has_self_data:
         lines.append(
-            "No expert judges configured in `bench/config.json`. Add a slug "
-            "to `expert_judges` to enable the peer-vs-expert delta. With "
-            "peers only, the scoreboard above still works — but you lose "
-            "this self-bias check."
+            "No self-judgments found. Self-judging is enabled in "
+            "`start_judgments.py` (every judge scores every impl, "
+            "including its own); if this section is empty, judges may "
+            "have skipped self-rows or scores files are missing."
         )
         lines.append("")
         return lines
-    lines.append("If a peer model systematically grades competitors harshly "
-                 "(or generously), that shows up here. `delta = peer_med − expert_med`. "
-                 "Negative = peers scored harder than experts on that impl.")
+
+    lines.append(
+        "Δ = `self − peer median`. Positive = the model scored its own "
+        "code higher than peers did (overrating itself). Self-judgments "
+        "are excluded from the headline scoreboard above so the medians "
+        "there are not self-inflated."
+    )
     lines.append("")
-    lines.append("| Impl | Expert spec med | Peer spec med | Δ spec | Expert qual med | Peer qual med | Δ qual |")
+    if EXPERT_JUDGES:
+        peer_label = "Peer (excl. self) med"
+    else:
+        peer_label = "Peer med"
+    lines.append(
+        f"| Impl | Self spec | {peer_label} spec | Δ spec | "
+        f"Self qual | {peer_label} qual | Δ qual |"
+    )
     lines.append("|---|---|---|---|---|---|---|")
     for model in impl_models:
         sp = split_judge_scores(judges, scores_by_judge, model)
-        e_spec = compute_median(sp["expert_specs"])
-        p_spec = compute_median(sp["peer_specs"])
-        e_qual = compute_median(sp["expert_quals"])
-        p_qual = compute_median(sp["peer_quals"])
-        d_spec = (p_spec - e_spec) if (e_spec is not None and p_spec is not None) else None
-        d_qual = (p_qual - e_qual) if (e_qual is not None and p_qual is not None) else None
+        s_spec = sp["self_spec"]
+        s_qual = sp["self_qual"]
+        # Use peer median as the comparator (peers, excluding self and
+        # excluding experts). If experts are configured, swap to the
+        # all-non-self median for a wider sample — but currently
+        # bench/config has no expert judges so `peer_specs` already is
+        # "everyone except self".
+        comp_spec = compute_median(sp["peer_specs"])
+        comp_qual = compute_median(sp["peer_quals"])
+        d_spec = (s_spec - comp_spec) if (s_spec is not None and comp_spec is not None) else None
+        d_qual = (s_qual - comp_qual) if (s_qual is not None and comp_qual is not None) else None
         lines.append(
-            f"| {model} | {fmt_int(e_spec)} | {fmt_int(p_spec)} | {fmt_int(d_spec)} | "
-            f"{fmt_int(e_qual)} | {fmt_int(p_qual)} | {fmt_int(d_qual)} |"
+            f"| {model} | {fmt_int(s_spec)} | {fmt_int(comp_spec)} | "
+            f"{fmt_int(d_spec)} | {fmt_int(s_qual)} | "
+            f"{fmt_int(comp_qual)} | {fmt_int(d_qual)} |"
         )
     lines.append("")
     return lines

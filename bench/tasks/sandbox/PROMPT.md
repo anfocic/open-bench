@@ -33,7 +33,11 @@ A single file `sandbox.py` at the repo root that:
 
 ## What to do when finished
 
-1. Run any quick smoke tests you wrote (e.g. `python sandbox.py "echo hi"`).
+1. Run these two smoke checks and confirm both work:
+   - `python sandbox.py -- echo hi` → exit 0, output matches the format
+     example in SPEC.md exactly (`exit=0`, then `--- stdout ---`, then
+     `hi`, then `--- stderr ---`).
+   - `python sandbox.py --timeout 2 -- sleep 30` → exit 124, no traceback.
 2. Print the final `sandbox.py` contents to confirm.
 3. State: "Done. Implementation in sandbox.py."
 
