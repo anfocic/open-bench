@@ -10,6 +10,7 @@ import { repoRoot } from '../lib/paths';
 import { fmtCost, fmtNum, fmtDate } from '../lib/format';
 import { findChampion, uniqueModelCount, totalCost } from '../lib/scoreboard';
 import { readJsonOptional } from '../lib/io';
+import { pageSeo } from '../lib/seo';
 
 const entries = await getCollection('rounds');
 const rounds = entries.sort((a, b) => b.id.localeCompare(a.id)).map(e => e.data);
@@ -23,9 +24,10 @@ const modelCount = latestRound ? uniqueModelCount(latestRound.samples) : 0;
 const latestCost = latestRound ? totalCost(latestRound.samples) : 0;
 const totalSamples = rounds.reduce((sum, r) => sum + r.samples.length, 0);
 const totalSpend = rounds.reduce((sum, r) => sum + totalCost(r.samples), 0);
+const seo = pageSeo('home', '/');
 ---
 
-<BaseLayout title="open-bench — weekly LLM coding battle royale" description="Every week, every major coding LLM gets the same blank repo and the same SPEC.md. Hidden tests run first — the gate. Then the models judge each other. Cost and wall-clock are tracked. Loser is eliminated.">
+<BaseLayout seo={seo}>
   <Header />
 
   <Masthead title="open-bench" subtitle={`Every week, every major coding LLM gets the same blank repo and the same SPEC.md. Hidden tests run first &mdash; the gate. Then the models judge each other. Cost and wall-clock are tracked. Loser is eliminated.`}>

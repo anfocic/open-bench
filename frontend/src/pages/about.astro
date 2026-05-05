@@ -5,13 +5,15 @@ import Footer from '../components/Footer.astro';
 import { repoRoot } from '../lib/paths';
 import { readOptional } from '../lib/io';
 import { renderMarkdown } from '../lib/markdown';
+import { pageSeo } from '../lib/seo';
 
 const aboutPath = repoRoot + '/ABOUT.md';
 const content = readOptional(aboutPath) ?? '# About\n\nPage not found.';
 const html = renderMarkdown(content);
+const seo = pageSeo('about', '/about');
 ---
 
-<BaseLayout title="open-bench — About" description="How the open-bench harness works.">
+<BaseLayout seo={seo}>
   <Header subtitle="about" />
   <article class="prose" set:html={html} />
   <Footer />
