@@ -34,7 +34,7 @@ function isActive(href: string): boolean {
         const prefix = a.dataset.nav!;
         const active = prefix === '/' ? (path === '/' || path === '/index.html') : path.startsWith(prefix);
         a.classList.toggle('active', active);
-        a.setAttribute('aria-current', active ? 'page' : 'false');
+        if (active) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
       });
     }
     updateActiveNav();

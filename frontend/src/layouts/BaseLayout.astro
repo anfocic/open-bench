@@ -25,6 +25,7 @@ const site = 'https://openbenchmark.dev';
   <meta property="og:url" content={site + Astro.url.pathname}>
   <meta property="og:image" content={ogImage ? site + ogImage : site + '/og-default.png'}>
   <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href={site + Astro.url.pathname}>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <ClientRouter />
   <script is:inline>

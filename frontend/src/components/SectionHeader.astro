@@ -9,4 +9,4 @@ const { id, title, subtitle } = Astro.props;
 ---
 
 <h2 id={id}>{title}</h2>
-{subtitle && <p class="muted section-subtitle">{subtitle}</p>}
+{subtitle && <p class="muted section-subtitle" set:html={subtitle} />}

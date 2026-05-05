@@ -1,7 +1,9 @@
 export function fmtSec(sec: number | null): string {
   if (sec === null || sec === undefined) return '—';
-  const m = Math.floor(sec / 60);
-  const s = Math.round(sec % 60);
+  if (sec < 0) return '—';
+  const total = Math.round(sec);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   if (m === 0) return `${s}s`;
   return `${m}m${s}s`;
 }

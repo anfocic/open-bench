@@ -32,7 +32,7 @@ const champ = findChampion(round.scoreboard);
 const champEntry = round.scoreboard.find(e => e.impl === champ.impl);
 const modelCount = uniqueModelCount(round.samples);
 const roundCost = totalCost(round.samples);
-const allPassed = round.samples.every(s => s.testExitCode === 0);
+const allPassed = round.samples.length > 0 && round.samples.every(s => s.testExitCode === 0);
 ---
 
 <BaseLayout

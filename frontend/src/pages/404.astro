@@ -14,7 +14,7 @@ const latestRound = rounds[0];
 
 <BaseLayout title="open-bench — 404" description="Page not found.">
   <Header subtitle="404" />
-  <Masthead title="404" subtitle={`no such round, page, or path. ${latestRound ? `try <a href="/round/${latestRound.date}">round ${latestRound.date}</a> or <a href="/">home</a>.` : ''}`} />
+  <Masthead title="404" subtitle={latestRound ? `no such round, page, or path. try <a href="/round/${latestRound.date}">round ${latestRound.date}</a> or <a href="/">home</a>.` : 'no such round, page, or path.'} />
   {rounds.length > 0 && (
     <section>
       <h2>rounds</h2>

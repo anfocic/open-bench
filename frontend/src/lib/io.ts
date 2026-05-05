@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 export function readOptional(p: string): string | null {
@@ -11,7 +11,7 @@ export function readOptional(p: string): string | null {
 
 export function listDirs(dir: string): string[] {
   try {
-    return readdirSync(dir).filter(d => !d.startsWith('.'));
+    return readdirSync(dir).filter(d => !d.startsWith('.') && statSync(resolve(dir, d)).isDirectory());
   } catch {
     return [];
   }

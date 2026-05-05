@@ -133,7 +133,8 @@ function parsePerImplDetail(section: string): PerImplDetail[] {
       for (const line of tableLines.slice(2)) {
         const cols = parseTableRow(line);
         if (cols.length < 7) continue;
-        const tier = cols[1] as 'self' | 'peer' | 'expert';
+        const tierVals = ['self', 'peer', 'expert'] as const;
+        const tier = tierVals.includes(cols[1] as typeof tierVals[number]) ? (cols[1] as 'self' | 'peer' | 'expert') : 'peer';
         scores.push({
           judge: cols[0],
           tier,
@@ -166,7 +167,7 @@ export function parseNum(s: string): number | null {
 }
 
 export function parsePrice(s: string): number | null {
-  const cleaned = s.trim().replace(/^\$/, '');
+  const cleaned = s.trim().replace(/^\$/, '').replace(/,/g, '');
   if (!cleaned || cleaned === '—') return null;
   const n = Number(cleaned);
   return isNaN(n) ? null : n;
