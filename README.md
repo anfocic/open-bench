@@ -8,7 +8,7 @@ Each week, every model in the lineup gets the same spec and builds the same app,
 - **Peer review** — every model blind-grades every submission against a rubric. Self-judgments are tracked separately as a bias check.
 - **Cost & speed** — wall-clock, tokens, dollars per run.
 
-After the introductory rounds, the lowest combined score gets **eliminated each week** until one model is left standing. Same prompt, no cross-pollination, public scoreboard.
+From round 2 onward, the lowest combined score gets **eliminated each week** until one model is left standing. Same prompt, no cross-pollination, public scoreboard.
 
 The bet: this measures whether a model can sustain a real codebase over weeks of feature growth — not just one-shot a clever solution.
 
@@ -25,7 +25,7 @@ Recursive joke: the first benchmark task is implementing `sandbox.py` itself.
 - **Open-weight watchers** comparing the new wave (DeepSeek, Kimi, MiniMax, Qwen, GLM, MiMo) head-to-head on the same task.
 - **Anyone who wants a fork-and-go harness** for running their own n-way comparison — see [Forking](#forking-for-your-own-n-way-comparison) below.
 
-## Lineup (round 3)
+## Lineup (round 1)
 
 | short | slug |
 |---|---|
@@ -37,11 +37,11 @@ Recursive joke: the first benchmark task is implementing `sandbox.py` itself.
 | qwen | `opencode-go/qwen3.6-plus` |
 | glm | `opencode-go/glm-5.1` |
 
-All seven race in round 3. From round 4 onward, the lowest combined score (spec/10 + quality/20, with hidden-test failures auto-last) is eliminated each week. Eliminated models stay in the archive; tombstones land in [`results/eliminated.md`](results/eliminated.md) (created on first elimination).
+All seven race in round 1. From round 2 onward, the lowest combined score (spec/10 + quality/20, with hidden-test failures auto-last) is eliminated each week. Eliminated models stay in the archive; tombstones land in [`results/eliminated.md`](results/eliminated.md) (created on first elimination).
 
 ## Latest round
 
-Round 3 is in flight at the time of this writing — see [`results/reviews/`](results/reviews/) for the most recent finalized review.
+See [`results/reviews/`](results/reviews/) for the most recent finalized review. Each review file is named `sandbox-<date>.md` — the latest one is the canonical scoreboard.
 
 ## How it works
 
@@ -101,7 +101,7 @@ Labels become `builds/<label>/` dirs. Add a new task with `bench/scripts/new-tas
 
 ### Forking caveats (read before swapping the task)
 
-Round 1's task is single-file Python (`sandbox.py`) and the harness reflects that today:
+The current task is single-file Python (`sandbox.py`) and the harness reflects that today:
 
 - The output filename `sandbox.py` is hardcoded across `capture-run.sh`, `start-run.sh`, `perf-bench.py`, and `start_judgments.py` (~11 refs). For a same-shaped task (one Python file, different name), a sed-replace across those four files is enough.
 - Multi-file projects, non-Python stacks, or anything that doesn't run via `python3 -m pytest` need deeper edits — `capture-run.sh`'s test invocation and `perf-bench.py`'s LOC counter both assume single-file Python.
