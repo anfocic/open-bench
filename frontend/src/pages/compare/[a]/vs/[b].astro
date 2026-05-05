@@ -21,10 +21,10 @@ export async function getStaticPaths() {
 const { a, b } = Astro.props;
 const entries = await getCollection('rounds');
 const rounds = entries.map(e => e.data);
-const cmp = compareModels(a, b, rounds);
+const standings = computeStandings(rounds);
+const cmp = compareModels(a, b, rounds, standings);
 if (!cmp) return Astro.redirect('/404');
 
-const standings = computeStandings(rounds);
 const aRank = standings.findIndex(s => s.impl === a) + 1;
 const bRank = standings.findIndex(s => s.impl === b) + 1;
 
@@ -127,8 +127,8 @@ const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.dat
                 <td class={`num ${row.winner === 'a' ? 'win' : ''}`}>{aLabel}</td>
                 <td class={`num ${row.winner === 'b' ? 'win' : ''}`}>{bLabel}</td>
                 <td>{w}</td>
-                <td class="num">{dScore === null ? '—' : (dScore > 0 ? '+' : '') + fmtNum(dScore, 1)}</td>
-                <td class="num">{dCost === null ? '—' : (dCost > 0 ? '+' : '') + fmtCost(Math.abs(dCost)).replace('$', dCost < 0 ? '-$' : '$')}</td>
+                <td class="num">{dScore === null ? '—' : (dScore > 0 ? '+' : dScore < 0 ? '-' : '') + fmtNum(Math.abs(dScore), 1)}</td>
+                <td class="num">{dCost === null ? '—' : (dCost > 0 ? '+' : dCost < 0 ? '-' : '') + fmtCost(Math.abs(dCost))}</td>
               </tr>
             );
           })}

@@ -1,5 +1,6 @@
 ---
 import '../styles/globals.css';
+import { seoSite } from '../lib/seo';
 
 export interface Props {
   title: string;
@@ -8,7 +9,7 @@ export interface Props {
 }
 
 const { title, description, canonicalPath } = Astro.props;
-const canonical = `https://openbenchmark.dev${canonicalPath}`;
+const canonical = `${seoSite.url}${canonicalPath}`;
 ---
 
 <!doctype html>
