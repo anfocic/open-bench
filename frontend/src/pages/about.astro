@@ -2,17 +2,182 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import Masthead from '../components/Masthead.astro';
+import { getCollection } from 'astro:content';
+import { resolve } from 'node:path';
 import { repoRoot } from '../lib/paths';
-import { readOptional } from '../lib/io';
+import { readOptional, readJsonOptional } from '../lib/io';
 import { renderMarkdown } from '../lib/markdown';
+import { fmtCost, fmtNum } from '../lib/format';
+import { totalCost } from '../lib/scoreboard';
 
-const aboutPath = repoRoot + '/ABOUT.md';
-const content = readOptional(aboutPath) ?? '# About\n\nPage not found.';
-const html = renderMarkdown(content);
+interface Config {
+  implementers: string[];
+  expert_judges?: string[];
+  harness?: string;
+  slugs: Record<string, string>;
+}
+
+const entries = await getCollection('rounds');
+const rounds = entries.sort((a, b) => b.id.localeCompare(a.id)).map(e => e.data);
+
+const configPath = resolve(repoRoot, 'bench/config.json');
+const config = readJsonOptional<Config>(configPath) ?? { implementers: [], expert_judges: [], slugs: {} };
+const expertJudges = config.expert_judges ?? [];
+
+const totalSamples = rounds.reduce((s, r) => s + r.samples.length, 0);
+const totalSpend = rounds.reduce((s, r) => s + totalCost(r.samples), 0);
+const totalPasses = rounds.reduce(
+  (s, r) => s + r.samples.filter(x => x.testExitCode === 0).length,
+  0,
+);
+const passRate = totalSamples ? (totalPasses / totalSamples) * 100 : 0;
+const totalJudges = expertJudges.length + config.implementers.length;
+
+const aboutPath = resolve(repoRoot, 'ABOUT.md');
+const raw = readOptional(aboutPath) ?? '';
+// Drop the H1 (we have a masthead) and the existing "Lineup" / "How it works" headers
+// since the structured sections above replace them. Keep the run / forking / layout / limitations prose.
+const stripped = raw
+  .replace(/^# About open-bench[\s\S]*?(?=\n## )/, '')
+  .replace(/## What's in this repo[\s\S]*?(?=\n## )/, '')
+  .replace(/## Who this is for[\s\S]*?(?=\n## )/, '')
+  .replace(/## How it works[\s\S]*?(?=\n## )/, '')
+  .trim();
+const html = renderMarkdown(stripped);
+
+const steps = [
+  { n: 1, title: 'spec', body: 'Drop SPEC.md, PROMPT.md, and a hidden test suite into bench/tasks/<task>/. task.json sets entrypoint, language, test invocation.' },
+  { n: 2, title: 'implement', body: 'Each model gets an isolated git worktree and an opencode session. Same SPEC.md, same wall-clock budget, no cross-talk.' },
+  { n: 3, title: 'gate', body: 'Hidden pytest battery runs against each output. Objective pass/fail before any judge sees the code.' },
+  { n: 4, title: 'judge', body: 'Every model judges every implementation (blinded labels). Self-bias measured separately, excluded from headline median.' },
+  { n: 5, title: 'aggregate', body: 'Peer-median scoreboard, judge ranking, self-bias delta, inter-judge agreement, hidden-test pass-rate.' },
+];
 ---
 
-<BaseLayout title="open-bench — About" description="How the open-bench harness works.">
+<BaseLayout title="open-bench — about" description="How the open-bench harness works: pipeline, lineup, methodology, limitations.">
   <Header subtitle="about" />
+
+  <Masthead
+    title="about"
+    subtitle="A weekly head-to-head between every major coding LLM. Same blank repo, same SPEC.md, same hidden tests. Models judge each other. Cost and wall-clock tracked. Loser eliminated."
+  >
+    <div class="masthead-meta">
+      <span><strong>{rounds.length}</strong> rounds</span>
+      <span><strong>{config.implementers.length}</strong> implementers</span>
+      <span><strong>{totalJudges}</strong> judges</span>
+      <span><strong>{totalSamples}</strong> samples</span>
+      <span><strong>{fmtCost(totalSpend)}</strong> spend</span>
+      <span><strong>{fmtNum(passRate, 0)}%</strong> hidden-test pass</span>
+    </div>
+  </Masthead>
+
+  <section>
+    <h2>pipeline</h2>
+    <p class="section-subtitle muted">One task in, one ranked review out.</p>
+    <ol class="pipeline">
+      {steps.map(s => (
+        <li class="pipe-step">
+          <div class="pipe-num">{s.n}</div>
+          <div class="pipe-body">
+            <div class="pipe-title">{s.title}</div>
+            <p>{s.body}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <section>
+    <h2>lineup</h2>
+    <p class="section-subtitle muted">From <code>bench/config.json</code>. Every implementer is also a peer judge.</p>
+    <h3>implementers</h3>
+    <div class="lineup-list">
+      {config.implementers.map(impl => (
+        <div class="row">
+          <span class="name">{impl}</span>
+          <span class="slug">{config.slugs[impl] ?? '—'}</span>
+        </div>
+      ))}
+    </div>
+    {expertJudges.length > 0 && (
+      <>
+        <h3>expert judges</h3>
+        <div class="lineup-list">
+          {expertJudges.map(j => (
+            <div class="row">
+              <span class="name">{j}</span>
+              <span class="slug">{config.slugs[j] ?? 'manual'}</span>
+            </div>
+          ))}
+        </div>
+      </>
+    )}
+    {expertJudges.length === 0 && (
+      <p class="muted">No expert judges configured this round; peer-only.</p>
+    )}
+  </section>
+
   <article class="prose" set:html={html} />
+
   <Footer />
 </BaseLayout>
+
+<style>
+  .pipeline {
+    list-style: none;
+    margin: 18px 0 8px;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .pipe-step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    padding: 12px 14px;
+    border: 1px dashed var(--rule);
+    background: var(--bg-elev, transparent);
+    align-items: start;
+  }
+  .pipe-step + .pipe-step { position: relative; }
+  .pipe-step + .pipe-step::before {
+    content: '↓';
+    position: absolute;
+    top: -14px;
+    left: 22px;
+    color: var(--accent);
+    font-weight: 700;
+    line-height: 1;
+  }
+  .pipe-num {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 18px;
+    min-width: 24px;
+  }
+  .pipe-num::before { content: '['; color: var(--dim); font-weight: 400; }
+  .pipe-num::after { content: ']'; color: var(--dim); font-weight: 400; }
+  .pipe-title {
+    font-weight: 700;
+    color: var(--fg-bright);
+    text-transform: lowercase;
+    letter-spacing: 0.02em;
+  }
+  .pipe-body p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 15.6px;
+    line-height: 1.5;
+  }
+  @media (min-width: 900px) {
+    .pipeline { grid-template-columns: repeat(5, 1fr); gap: 12px; }
+    .pipe-step { grid-template-columns: 1fr; gap: 6px; }
+    .pipe-step + .pipe-step::before {
+      content: '→';
+      top: 50%;
+      left: -16px;
+      transform: translateY(-50%);
+    }
+  }
+</style>
