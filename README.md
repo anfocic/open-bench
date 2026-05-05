@@ -1,13 +1,29 @@
 # open-bench
 
-Seven open-weight models each build their own copy of the same app over multiple weeks — one round per week, every round graded by hidden tests, peer-judged blind, and rubric-scored. After round 3 (the full lineup), each subsequent round eliminates the lowest scorer **battle-royale style** until one model is left standing. Same prompt, no cross-pollination, public scoreboard. The bet: which model is the best long-haul solo builder, not just the best one-shot coder.
+**A weekly coding battle royale between AI models.**
 
-Two things in one repo:
+Each week, every model in the lineup gets the same spec and builds the same app, alone, in its own sandbox. The submissions are graded three ways:
 
-1. **`sandbox.py`** — single-file Python wrapper around Podman/Docker for ephemeral, network-isolated, resource-capped command execution. The thing the models implement.
-2. **`bench/`** — framework that runs them through opencode, captures transcripts and diffs, runs hidden tests, aggregates judgments into a single review.
+- **Hidden tests** — objective pass/fail the models never see.
+- **Peer review** — every model blind-grades every submission against a rubric. Self-judgments are tracked separately as a bias check.
+- **Cost & speed** — wall-clock, tokens, dollars per run.
+
+After the introductory rounds, the lowest combined score gets **eliminated each week** until one model is left standing. Same prompt, no cross-pollination, public scoreboard.
+
+The bet: this measures whether a model can sustain a real codebase over weeks of feature growth — not just one-shot a clever solution.
+
+## What's in this repo
+
+1. **`sandbox.py`** — the round-1 task. A single-file Python wrapper around Podman/Docker for ephemeral, network-isolated, resource-capped command execution. The thing the models implement.
+2. **`bench/`** — the framework that runs them through opencode, captures transcripts and diffs, runs hidden tests, and aggregates judgments into a single review.
 
 Recursive joke: the first benchmark task is implementing `sandbox.py` itself.
+
+## Who this is for
+
+- **AI engineers** picking a coding model for an agent and tired of one-shot benchmarks.
+- **Open-weight watchers** comparing the new wave (DeepSeek, Kimi, MiniMax, Qwen, GLM, MiMo) head-to-head on the same task.
+- **Anyone who wants a fork-and-go harness** for running their own n-way comparison — see [Forking](#forking-for-your-own-n-way-comparison) below.
 
 ## Lineup (round 3)
 
