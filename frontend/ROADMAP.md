@@ -6,7 +6,7 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done, `[-]` skipped.
 
 ## P1 — high leverage, ship soon
 
-- [ ] **Glossary / scoring legend** — `/scoring` page defining `specPeer`, `qualityPeer`, peer vs expert, hardFail, ELO base/K, podium. Wire `<abbr>`/`<dfn>` or `title=` tooltips on column headers across the leaderboard, scoreboard, and compare tables so terms are explained where they're read, not just on `/about`.
+- [~] **Glossary / scoring legend** — column-header tooltips shipped (central `glossary.ts` + `<Term>` component, applied to leaderboard, scoreboard, compare, model history). Still pending: a dedicated `/scoring` page that walks through the rubric end-to-end for visitors who want the full story instead of one-line tooltips.
 - [ ] **Reproduce-it walkthrough** — prominent CTA (`/reproduce` page or top of `/about`) with the minimal "clone, run X, get the same scores" recipe. The whole pitch is open methods; the site never invites verification.
 
 ## P2 — polish, ship next
