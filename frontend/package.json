@@ -7,17 +7,17 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "test": "node --experimental-strip-types --test src/lib/parse-review.test.ts",
+    "test": "node --experimental-strip-types --test src/lib/*.test.ts",
     "og": "node scripts/gen-og.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",
     "@resvg/resvg-js": "^2.6.2",
     "astro": "^6.2.2",
-    "gray-matter": "^4.0.3",
     "markdown-it": "^14.1.0",
     "satori": "^0.26.0",
-    "shiki": "^4.0.2"
+    "shiki": "^4.0.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@fontsource/inter": "^5.2.8",
