@@ -1,13 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
 
 const sections = [
   {
     id: 'what',
     title: 'what',
-    body: `<p><strong>open-bench</strong> is a benchmark harness for coding LLMs. It drops a task spec into a fresh repo, drives every model in the lineup through a real agent loop, runs a hidden test suite as the objective gate, has the models score each other, and commits the full artifact set — transcripts, diffs, judge rubrics, scores — to the repository. One round, one ranked review.</p><p>The flagship format running on top of it is <a href="/model-royale">Model Royale</a>: a weekly elimination tournament between every major LLM I can get a key for. The harness is general; the tournament is one thing you can run on it.</p>`,
+    body: `<p><strong>open-bench</strong> is a benchmark harness for coding LLMs. It drops a task spec into a fresh repo, drives every model in the lineup through a real agent loop, runs a hidden test suite as the objective gate, has the models score each other, and commits the full artifact set — transcripts, diffs, judge rubrics, scores — to the repository. One round, one ranked review.</p><p>The flagship format on top of it is <a href="/model-royale">Model Royale</a>: a weekly elimination tournament between every major LLM I can get a key for. The harness is general; the tournament is one thing you can run on it.</p>`,
   },
   {
     id: 'why',
@@ -17,7 +16,6 @@ const sections = [
   {
     id: 'how',
     title: 'how',
-    body: '',
     steps: [
       'Every model in the lineup gets the same task and an isolated git worktree.',
       'Each writes its implementation through opencode under a fixed wall-clock budget.',
@@ -29,9 +27,8 @@ const sections = [
   {
     id: 'principles',
     title: 'principles',
-    body: '',
     principles: [
-      ['objective gate', 'Hidden tests run before any judge sees the code. No subjective vibe-check inflating a non-functional output.'],
+      ['objective gate', 'Hidden tests run before any judge sees the code. No vibe-check inflating a non-functional output.'],
       ['peer scoring', 'Models judge each other under blinded labels. Self-bias is measured, then excluded from the headline median.'],
       ['cost & wall-clock', 'Tracked through the harness. Cheapest-and-correct wins ties; slow-and-correct loses them.'],
       ['reproducible', 'Every transcript, diff, rubric and score is committed. Re-run a round, audit a judgment, fork the lineup.'],
@@ -40,7 +37,6 @@ const sections = [
   {
     id: 'more',
     title: 'more',
-    body: '',
     links: [
       { href: 'https://github.com/anfocic/open-bench/blob/main/ABOUT.md', label: 'ABOUT.md', note: 'full methodology, scoring math, task config' },
       { href: 'https://github.com/anfocic/open-bench/tree/main/bench/scripts', label: 'bench/scripts', note: 'harness internals' },
@@ -62,21 +58,32 @@ const sections = [
     {sections.map(s => (
       <a href={`#${s.id}`} data-toc={s.id}>{s.title}</a>
     ))}
+    <span class="about-progress" aria-hidden="true">
+      <span class="about-progress-num" data-progress-num>1</span>
+      <span class="muted"> / {sections.length}</span>
+    </span>
   </nav>
 
-  <main class="about-deck">
-    {sections.map(s => (
-      <section id={s.id} class="about-section" data-section={s.id}>
+  <main class="about-deck" data-deck>
+    {sections.map((s, i) => (
+      <section
+        id={s.id}
+        class="about-section"
+        data-section={s.id}
+        data-index={i}
+        data-active={i === 0 ? 'true' : undefined}
+        aria-hidden={i === 0 ? 'false' : 'true'}
+      >
         <div class="about-inner">
-          <h2>{s.title}</h2>
+          <h2><span class="about-h-num">[{String(i + 1).padStart(2, '0')}]</span> {s.title}</h2>
 
           {s.body && <div class="about-body" set:html={s.body} />}
 
           {s.steps && (
             <ol class="about-steps">
-              {s.steps.map((step, i) => (
+              {s.steps.map((step, j) => (
                 <li>
-                  <span class="step-num">{i + 1}</span>
+                  <span class="step-num">{j + 1}</span>
                   <span class="step-body">{step}</span>
                 </li>
               ))}
@@ -109,28 +116,28 @@ const sections = [
     ))}
   </main>
 
-  <Footer />
+  <div class="about-hint muted" aria-hidden="true">
+    <span>scroll · arrows · swipe</span>
+  </div>
 </BaseLayout>
 
 <style is:global>
-  html.about-snap {
-    scroll-snap-type: y proximity;
-    scroll-padding-top: 56px;
-    scroll-behavior: smooth;
+  html.about-deck-on, html.about-deck-on body {
+    overflow: hidden;
+    overscroll-behavior: none;
+    height: 100%;
   }
+  html.about-deck-on body { touch-action: none; }
 </style>
 
 <style>
   .about-toc {
-    position: sticky;
-    top: 0;
-    z-index: 10;
     display: flex;
     gap: 16px;
     flex-wrap: wrap;
+    align-items: baseline;
     padding: 10px 0;
     margin-top: 4px;
-    background: var(--bg);
     border-bottom: 1px dashed var(--rule);
     font-size: 14.4px;
   }
@@ -146,33 +153,50 @@ const sections = [
     font-weight: 700;
   }
   .about-toc a.active::before { color: var(--accent); }
+  .about-progress {
+    margin-left: auto;
+    font-size: 14.4px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .about-progress-num { color: var(--accent); font-weight: 700; }
 
   .about-deck {
-    margin-top: 0;
+    position: relative;
+    height: calc(100vh - 130px);
+    overflow: hidden;
   }
   .about-section {
-    min-height: calc(100vh - 100px);
+    position: absolute;
+    inset: 0;
     display: flex;
     align-items: center;
-    scroll-snap-align: start;
-    scroll-margin-top: 56px;
     padding: 24px 0;
-    border-bottom: 1px dashed var(--rule);
-    view-transition-name: var(--vt, none);
+    opacity: 0;
+    pointer-events: none;
   }
-  .about-section:last-child { border-bottom: none; }
+  .about-section[data-active] {
+    opacity: 1;
+    pointer-events: auto;
+    view-transition-name: deck;
+  }
 
   .about-inner {
     width: 100%;
     max-width: 70ch;
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
   }
   .about-section h2 {
-    font-size: 22px;
-    margin: 0 0 14px;
+    font-size: 28px;
+    margin: 0 0 18px;
     color: var(--fg-bright);
     text-transform: lowercase;
+    letter-spacing: -0.01em;
   }
-  .about-section h2::before { content: '## '; color: var(--accent); }
+  .about-h-num { color: var(--accent); font-weight: 700; font-size: 16px; margin-right: 8px; }
   .about-body p { margin: 12px 0; line-height: 1.6; font-size: 16.2px; }
   .about-body strong { color: var(--fg-bright); }
   .about-body a { color: var(--accent); }
@@ -187,11 +211,7 @@ const sections = [
     font-style: normal;
   }
 
-  .about-steps {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
+  .about-steps { list-style: none; margin: 0; padding: 0; }
   .about-steps li {
     display: grid;
     grid-template-columns: 36px 1fr;
@@ -206,11 +226,7 @@ const sections = [
   .step-num::before { content: '['; color: var(--dim); font-weight: 400; }
   .step-num::after { content: ']'; color: var(--dim); font-weight: 400; }
 
-  .about-principles {
-    margin: 0;
-    display: grid;
-    gap: 0;
-  }
+  .about-principles { margin: 0; display: grid; gap: 0; }
   .about-principles > div {
     display: grid;
     grid-template-columns: 170px 1fr;
@@ -231,11 +247,7 @@ const sections = [
     line-height: 1.55;
   }
 
-  .about-links {
-    margin: 0;
-    padding-left: 0;
-    list-style: none;
-  }
+  .about-links { margin: 0; padding-left: 0; list-style: none; }
   .about-links li {
     padding: 8px 0;
     border-bottom: 1px dashed var(--rule);
@@ -245,14 +257,54 @@ const sections = [
   .about-links li::before { content: '> '; color: var(--dim); }
   .about-links a { color: var(--accent); }
 
-  @media (max-width: 600px) {
-    .about-principles > div { grid-template-columns: 1fr; gap: 4px; }
-    .about-section h2 { font-size: 18px; }
+  .about-hint {
+    position: fixed;
+    bottom: 14px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 13.2px;
+    pointer-events: none;
+    letter-spacing: 0.06em;
   }
 
+  @media (max-width: 600px) {
+    .about-principles > div { grid-template-columns: 1fr; gap: 4px; }
+    .about-section h2 { font-size: 22px; }
+    .about-deck { height: calc(100vh - 110px); }
+  }
+
+  /* View transitions: slide horizontally between sections.
+     Direction is controlled by the .deck-back class on <html>. */
   ::view-transition-old(root),
   ::view-transition-new(root) {
-    animation-duration: 280ms;
+    animation: none;
+  }
+
+  @keyframes deck-out-left {
+    to { transform: translateX(-30%); opacity: 0; }
+  }
+  @keyframes deck-in-right {
+    from { transform: translateX(30%); opacity: 0; }
+  }
+  @keyframes deck-out-right {
+    to { transform: translateX(30%); opacity: 0; }
+  }
+  @keyframes deck-in-left {
+    from { transform: translateX(-30%); opacity: 0; }
+  }
+
+  html:not(.deck-back) ::view-transition-old(deck) {
+    animation: deck-out-left 320ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+  html:not(.deck-back) ::view-transition-new(deck) {
+    animation: deck-in-right 320ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+  html.deck-back ::view-transition-old(deck) {
+    animation: deck-out-right 320ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+  html.deck-back ::view-transition-new(deck) {
+    animation: deck-in-left 320ms cubic-bezier(0.4, 0, 0.2, 1) both;
   }
 </style>
 
@@ -263,65 +315,172 @@ const sections = [
     else fn();
   }
 
+  type Cleanup = () => void;
+  let cleanup: Cleanup | null = null;
+
   function setupAboutDeck() {
+    cleanup?.();
+    cleanup = null;
+
     const onAbout = location.pathname.startsWith('/about');
-    document.documentElement.classList.toggle('about-snap', onAbout);
+    document.documentElement.classList.toggle('about-deck-on', onAbout);
     if (!onAbout) return;
 
     const tocLinks = [...document.querySelectorAll<HTMLAnchorElement>('.about-toc a[data-toc]')];
     const sections = [...document.querySelectorAll<HTMLElement>('.about-section[data-section]')];
+    const progress = document.querySelector<HTMLElement>('[data-progress-num]');
     if (!tocLinks.length || !sections.length) return;
 
-    const linkById = new Map<string, HTMLAnchorElement>();
-    tocLinks.forEach(l => linkById.set(l.dataset.toc!, l));
+    let currentIdx = 0;
+    const initialHash = location.hash.slice(1);
+    const initialIdx = sections.findIndex(s => s.dataset.section === initialHash);
+    if (initialIdx > 0) {
+      sections[0].removeAttribute('data-active');
+      sections[0].setAttribute('aria-hidden', 'true');
+      sections[initialIdx].setAttribute('data-active', 'true');
+      sections[initialIdx].setAttribute('aria-hidden', 'false');
+      currentIdx = initialIdx;
+    }
 
-    function setActive(id: string) {
+    function setActive(idx: number) {
+      const id = sections[idx].dataset.section!;
       tocLinks.forEach(l => {
         const on = l.dataset.toc === id;
         l.classList.toggle('active', on);
-        if (on) l.setAttribute('aria-current', 'true'); else l.removeAttribute('aria-current');
+        if (on) l.setAttribute('aria-current', 'true');
+        else l.removeAttribute('aria-current');
       });
+      if (progress) progress.textContent = String(idx + 1);
       if (location.hash.slice(1) !== id) {
         history.replaceState(null, '', '#' + id);
       }
     }
 
-    const io = new IntersectionObserver(
-      entries => {
-        // pick the most-visible entry, not just any intersecting one
-        let best: IntersectionObserverEntry | null = null;
-        for (const e of entries) {
-          if (!e.isIntersecting) continue;
-          if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
-        }
-        if (best) setActive((best.target as HTMLElement).dataset.section!);
-      },
-      { rootMargin: '-35% 0px -55% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] },
-    );
-    sections.forEach(s => io.observe(s));
+    setActive(currentIdx);
 
-    tocLinks.forEach(a => {
-      a.addEventListener('click', e => {
-        const id = a.dataset.toc!;
-        const target = document.getElementById(id);
-        if (!target) return;
-        e.preventDefault();
-        withViewTransition(() => {
-          target.scrollIntoView({ block: 'start' });
-          setActive(id);
-        });
-      });
-    });
+    let busy = false;
 
-    // Initial active state from hash, else first section
-    const initial = location.hash.slice(1);
-    if (initial && linkById.has(initial)) {
-      setActive(initial);
-    } else {
-      setActive(sections[0].dataset.section!);
+    function goTo(nextIdx: number) {
+      if (busy) return;
+      if (nextIdx < 0 || nextIdx >= sections.length || nextIdx === currentIdx) return;
+      const back = nextIdx < currentIdx;
+      busy = true;
+      document.documentElement.classList.toggle('deck-back', back);
+
+      const apply = () => {
+        sections[currentIdx].removeAttribute('data-active');
+        sections[currentIdx].setAttribute('aria-hidden', 'true');
+        sections[nextIdx].setAttribute('data-active', 'true');
+        sections[nextIdx].setAttribute('aria-hidden', 'false');
+        const inner = sections[nextIdx].querySelector<HTMLElement>('.about-inner');
+        if (inner) inner.scrollTop = 0;
+        currentIdx = nextIdx;
+        setActive(nextIdx);
+      };
+
+      const doc = document as any;
+      if (doc.startViewTransition) {
+        const t = doc.startViewTransition(apply);
+        t.finished.finally(() => { busy = false; });
+      } else {
+        apply();
+        setTimeout(() => { busy = false; }, 50);
+      }
     }
+
+    // Wheel: route to next/prev. preventDefault since body overflow hidden
+    // already blocks page scroll, but trackpads still send wheel events.
+    let wheelLock = 0;
+    function onWheel(e: WheelEvent) {
+      // ignore scroll inside the inner content if it has overflow
+      const inner = sections[currentIdx].querySelector<HTMLElement>('.about-inner');
+      if (inner && inner.scrollHeight > inner.clientHeight) {
+        const atTop = inner.scrollTop <= 0;
+        const atBottom = inner.scrollTop + inner.clientHeight >= inner.scrollHeight - 1;
+        if (e.deltaY > 0 && !atBottom) return;
+        if (e.deltaY < 0 && !atTop) return;
+      }
+      e.preventDefault();
+      const now = Date.now();
+      if (now - wheelLock < 700) return;
+      if (Math.abs(e.deltaY) < 8) return;
+      wheelLock = now;
+      goTo(currentIdx + (e.deltaY > 0 ? 1 : -1));
+    }
+    window.addEventListener('wheel', onWheel, { passive: false });
+
+    function onKey(e: KeyboardEvent) {
+      if (e.target && (e.target as HTMLElement).matches('input, textarea, [contenteditable]')) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        goTo(currentIdx + 1);
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        goTo(currentIdx - 1);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        goTo(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        goTo(sections.length - 1);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+
+    let touchY: number | null = null;
+    let touchX: number | null = null;
+    function onTouchStart(e: TouchEvent) {
+      const t = e.touches[0];
+      touchY = t.clientY;
+      touchX = t.clientX;
+    }
+    function onTouchEnd(e: TouchEvent) {
+      if (touchY === null || touchX === null) return;
+      const t = e.changedTouches[0];
+      const dy = t.clientY - touchY;
+      const dx = t.clientX - touchX;
+      touchY = touchX = null;
+      const adx = Math.abs(dx);
+      const ady = Math.abs(dy);
+      if (Math.max(adx, ady) < 40) return;
+      if (ady > adx) {
+        // vertical swipe — up = forward, down = back
+        goTo(currentIdx + (dy < 0 ? 1 : -1));
+      } else {
+        // horizontal swipe — left = forward, right = back
+        goTo(currentIdx + (dx < 0 ? 1 : -1));
+      }
+    }
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    function onTocClick(this: HTMLAnchorElement, e: Event) {
+      e.preventDefault();
+      const id = this.dataset.toc!;
+      const idx = sections.findIndex(s => s.dataset.section === id);
+      if (idx >= 0) goTo(idx);
+    }
+    tocLinks.forEach(a => a.addEventListener('click', onTocClick));
+
+    function onHash() {
+      const id = location.hash.slice(1);
+      const idx = sections.findIndex(s => s.dataset.section === id);
+      if (idx >= 0 && idx !== currentIdx) goTo(idx);
+    }
+    window.addEventListener('hashchange', onHash);
+
+    cleanup = () => {
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('hashchange', onHash);
+      tocLinks.forEach(a => a.removeEventListener('click', onTocClick));
+      document.documentElement.classList.remove('about-deck-on', 'deck-back');
+    };
   }
 
   setupAboutDeck();
   document.addEventListener('astro:after-swap', setupAboutDeck);
+  document.addEventListener('astro:before-preparation', () => { cleanup?.(); cleanup = null; });
 </script>
