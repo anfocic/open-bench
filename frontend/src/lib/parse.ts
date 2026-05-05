@@ -1,121 +1,120 @@
-import type { ScoreboardEntry, SelfBiasEntry, JudgeRankingEntry, AgreementEntry, JudgeScore, PerImplDetail, CostEfficiencyEntry, JudgingCostEntry } from '../data/types';
+import type { MetaJson, Run, ScoreboardEntry, SelfBiasEntry, JudgeRankingEntry, AgreementEntry, JudgeScore, PerImplDetail, CostEfficiencyEntry, JudgingCostEntry } from '../data/types';
+
+// --- parseMeta ---
+
+export function parseMeta(json: unknown): Run | null {
+  if (!json || typeof json !== 'object') return null;
+  const m = json as Record<string, unknown>;
+  if (typeof m.model !== 'string' || typeof m.slug !== 'string') return null;
+
+  const slug = m.slug as string;
+  const dateMatch = slug.match(/(\d{4}-\d{2}-\d{2})/);
+  const date = dateMatch ? dateMatch[1] : '';
+  const sampleMatch = slug.match(/-r(\d+)$/);
+  const sample = sampleMatch ? parseInt(sampleMatch[1], 10) : 1;
+
+  return {
+    model: m.model as string,
+    round: date,
+    sample,
+    wallSec: typeof m.model_wall_clock_seconds === 'number' ? m.model_wall_clock_seconds : null,
+    costUsd: typeof m.cost_usd === 'number' ? m.cost_usd : null,
+    tokensTotal: typeof m.tokens_total === 'number' ? m.tokens_total : null,
+    inputTokens: typeof m.input_tokens === 'number' ? m.input_tokens : null,
+    outputTokens: typeof m.output_tokens === 'number' ? m.output_tokens : null,
+    cacheReadTokens: typeof m.cache_read_tokens === 'number' ? m.cache_read_tokens : null,
+    loc: typeof m.sandbox_py_loc === 'number' ? m.sandbox_py_loc : null,
+    testExitCode: typeof m.test_exit_code === 'number' ? m.test_exit_code : null,
+    modelSlug: typeof m.model_slug === 'string' ? m.model_slug : null,
+  };
+}
+
+// --- parseReview ---
 
 function parseTableRow(line: string): string[] {
   return line.split('|').slice(1, -1).map(c => c.trim());
 }
 
-function parseScoreboard(section: string): ScoreboardEntry[] {
+function parseTableSection<T>(section: string, minCols: number, mapFn: (cols: string[]) => T | null): T[] {
   const lines = section.split('\n').filter(l => l.trim().startsWith('|'));
   if (lines.length < 3) return [];
-  const dataLines = lines.slice(2);
-  return dataLines.map(line => {
+  return lines.slice(2).map(line => {
     const cols = parseTableRow(line);
-    if (cols.length < 10) return null;
-    return {
-      impl: cols[0],
-      hardFail: cols[1] === 'pass',
-      specAll: parseNum(cols[2]),
-      specExpert: parseNum(cols[3]),
-      specPeer: parseNum(cols[4]),
-      qualityAll: parseNum(cols[5]),
-      qualityExpert: parseNum(cols[6]),
-      qualityPeer: parseNum(cols[7]),
-      tests: cols[8],
-      verdict: cols[9],
-    };
-  }).filter((e): e is ScoreboardEntry => e !== null);
+    if (cols.length < minCols) return null;
+    return mapFn(cols);
+  }).filter((e): e is T => e !== null);
+}
+
+function parseScoreboard(section: string): ScoreboardEntry[] {
+  return parseTableSection(section, 10, cols => ({
+    impl: cols[0],
+    hardFail: cols[1] === 'pass',
+    specAll: parseNum(cols[2]),
+    specExpert: parseNum(cols[3]),
+    specPeer: parseNum(cols[4]),
+    qualityAll: parseNum(cols[5]),
+    qualityExpert: parseNum(cols[6]),
+    qualityPeer: parseNum(cols[7]),
+    tests: cols[8],
+    verdict: cols[9],
+  }));
 }
 
 function parseJudgeRanking(section: string): JudgeRankingEntry[] {
-  const lines = section.split('\n').filter(l => l.trim().startsWith('|'));
-  if (lines.length < 3) return [];
-  const dataLines = lines.slice(2);
-  return dataLines.map(line => {
-    const cols = parseTableRow(line);
-    if (cols.length < 4) return null;
-    return {
-      judge: cols[0],
-      first: cols[1] || '',
-      second: cols[2] || '',
-      third: cols[3] || '',
-    };
-  }).filter((e): e is JudgeRankingEntry => e !== null);
+  return parseTableSection(section, 4, cols => ({
+    judge: cols[0],
+    first: cols[1] || '',
+    second: cols[2] || '',
+    third: cols[3] || '',
+  }));
 }
 
 function parseSelfBias(section: string): SelfBiasEntry[] {
-  const lines = section.split('\n').filter(l => l.trim().startsWith('|'));
-  if (lines.length < 3) return [];
-  const dataLines = lines.slice(2);
-  return dataLines.map(line => {
-    const cols = parseTableRow(line);
-    if (cols.length < 7) return null;
-    return {
-      impl: cols[0],
-      selfSpec: parseNum(cols[1]),
-      peerMedSpec: parseNum(cols[2]),
-      deltaSpec: parseNum(cols[3]),
-      selfQual: parseNum(cols[4]),
-      peerMedQual: parseNum(cols[5]),
-      deltaQual: parseNum(cols[6]),
-    };
-  }).filter((e): e is SelfBiasEntry => e !== null);
+  return parseTableSection(section, 7, cols => ({
+    impl: cols[0],
+    selfSpec: parseNum(cols[1]),
+    peerMedSpec: parseNum(cols[2]),
+    deltaSpec: parseNum(cols[3]),
+    selfQual: parseNum(cols[4]),
+    peerMedQual: parseNum(cols[5]),
+    deltaQual: parseNum(cols[6]),
+  }));
 }
 
 function parseAgreement(section: string): AgreementEntry[] {
-  const lines = section.split('\n').filter(l => l.trim().startsWith('|'));
-  if (lines.length < 3) return [];
-  const dataLines = lines.slice(2);
-  return dataLines.map(line => {
-    const cols = parseTableRow(line);
-    if (cols.length < 6) return null;
-    return {
-      impl: cols[0],
-      minSpec: parseNum(cols[1]),
-      maxSpec: parseNum(cols[2]),
-      range: parseNum(cols[3]),
-      stdev: parseNum(cols[4]),
-      judges: cols[5],
-    };
-  }).filter((e): e is AgreementEntry => e !== null);
+  return parseTableSection(section, 6, cols => ({
+    impl: cols[0],
+    minSpec: parseNum(cols[1]),
+    maxSpec: parseNum(cols[2]),
+    range: parseNum(cols[3]),
+    stdev: parseNum(cols[4]),
+    judges: cols[5],
+  }));
 }
 
 function parseCostEfficiency(section: string): CostEfficiencyEntry[] {
-  const lines = section.split('\n').filter(l => l.trim().startsWith('|'));
-  if (lines.length < 3) return [];
-  const dataLines = lines.slice(2);
-  return dataLines.map(line => {
-    const cols = parseTableRow(line);
-    if (cols.length < 8) return null;
-    return {
-      impl: cols[0],
-      modelSlug: cols[1],
-      loc: parseNum(cols[2]),
-      wallClock: cols[3],
-      tokens: parseNum(cols[4]),
-      costUsd: parsePrice(cols[5]),
-      testsPassed: cols[6],
-      costPerTest: cols[7],
-    };
-  }).filter((e): e is CostEfficiencyEntry => e !== null);
+  return parseTableSection(section, 8, cols => ({
+    impl: cols[0],
+    modelSlug: cols[1],
+    loc: parseNum(cols[2]),
+    wallClock: cols[3],
+    tokens: parseNum(cols[4]),
+    costUsd: parsePrice(cols[5]),
+    testsPassed: cols[6],
+    costPerTest: cols[7],
+  }));
 }
 
 function parseJudgingCost(section: string): JudgingCostEntry[] {
-  const lines = section.split('\n').filter(l => l.trim().startsWith('|'));
-  if (lines.length < 3) return [];
-  const dataLines = lines.slice(2);
-  return dataLines.map(line => {
-    const cols = parseTableRow(line);
-    if (cols.length < 7) return null;
-    return {
-      judge: cols[0],
-      tier: cols[1],
-      harness: cols[2],
-      model: cols[3],
-      wallClock: cols[4],
-      tokens: cols[5],
-      costUsd: cols[6],
-    };
-  }).filter((e): e is JudgingCostEntry => e !== null);
+  return parseTableSection(section, 7, cols => ({
+    judge: cols[0],
+    tier: cols[1],
+    harness: cols[2],
+    model: cols[3],
+    wallClock: cols[4],
+    tokens: cols[5],
+    costUsd: cols[6],
+  }));
 }
 
 function parsePerImplDetail(section: string): PerImplDetail[] {
@@ -159,14 +158,14 @@ function parsePerImplDetail(section: string): PerImplDetail[] {
   return results;
 }
 
-function parseNum(s: string): number | null {
+export function parseNum(s: string): number | null {
   const cleaned = s.trim().replace(/^—+$/, '').replace(/,/g, '');
   if (!cleaned || cleaned === '—' || cleaned === '' || cleaned === '–') return null;
   const n = Number(cleaned);
   return isNaN(n) ? null : n;
 }
 
-function parsePrice(s: string): number | null {
+export function parsePrice(s: string): number | null {
   const cleaned = s.trim().replace(/^\$/, '');
   if (!cleaned || cleaned === '—') return null;
   const n = Number(cleaned);
@@ -226,7 +225,7 @@ export function parseReview(markdown: string): ParsedReview {
     if (sectionPresent(markdown, heading) && (result[key] as unknown[]).length === 0) {
       throw new Error(
         `parseReview: section "## ${heading}" present but parser produced 0 rows. ` +
-        `Aggregator format likely drifted — update parse-review.ts.`
+        `Aggregator format likely drifted — update parse.ts.`
       );
     }
   }

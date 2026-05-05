@@ -2,18 +2,21 @@
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import Header from '../../../components/Header.astro';
 import Footer from '../../../components/Footer.astro';
-import { loadRounds } from '../../../data/rounds';
-import { pickCanonicalRun, type RunArtifacts } from '../../../data/runs';
+import Masthead from '../../../components/Masthead.astro';
+import BackToTop from '../../../components/BackToTop.astro';
+import { getCollection } from 'astro:content';
+import { pickCanonicalRun, type RunArtifacts } from '../../../lib/runs';
 import { highlight } from '../../../lib/highlight';
-import { fmtCost, fmtSec, fmtTok, fmtDate } from '../../../lib/format';
-import MarkdownIt from 'markdown-it';
+import { fmtCost, fmtSec, fmtTok, fmtDate, passFailIcon, passFailClass } from '../../../lib/format';
+import { renderMarkdown } from '../../../lib/markdown';
 
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const rounds = loadRounds();
+  const entries = await getCollection('rounds');
   const out: Array<{ params: { date: string; impl: string }; props: { artifacts: RunArtifacts; date: string; impl: string; runPathHint: string | null; allImpls: string[] } }> = [];
-  for (const r of rounds) {
+  for (const entry of entries) {
+    const r = entry.data;
     const collected = new Map<string, { artifacts: RunArtifacts; runPathHint: string | null }>();
     for (const detail of r.perImplDetail) {
       if (collected.has(detail.impl)) continue;
@@ -41,9 +44,7 @@ const meta = artifacts.meta;
 const sandboxHtml = artifacts.sandboxPy ? await highlight(artifacts.sandboxPy, 'python') : null;
 const diffHtml = artifacts.diffPatch ? await highlight(artifacts.diffPatch, 'diff') : null;
 const testHtml = artifacts.testOutput ? await highlight(artifacts.testOutput, 'shellsession') : null;
-
-const md = new MarkdownIt({ html: false, linkify: true });
-const transcriptHtml = artifacts.transcript ? md.render(artifacts.transcript) : null;
+const transcriptHtml = artifacts.transcript ? renderMarkdown(artifacts.transcript) : null;
 
 const sandboxLineCount = artifacts.sandboxPy?.split('\n').length ?? 0;
 const transcriptByteSize = artifacts.transcript ? new TextEncoder().encode(artifacts.transcript).length : 0;
@@ -71,7 +72,6 @@ const transcriptByteSize = artifacts.transcript ? new TextEncoder().encode(artif
   </div>
 
   <script>
-    // Persist active section hash when switching models
     document.querySelectorAll<HTMLAnchorElement>('.model-tab').forEach(a => {
       a.addEventListener('click', () => {
         const hash = location.hash;
@@ -80,13 +80,7 @@ const transcriptByteSize = artifacts.transcript ? new TextEncoder().encode(artif
     });
   </script>
 
-  <section class="masthead">
-    <h1 class="masthead-title">{impl}</h1>
-    <div class="muted" style="font-size: 14.4px">{artifacts.runPath}</div>
-    {meta?.modelSlug && (
-      <div style="margin-top:4px;font-size: 14.4px"><span class="muted">model:</span> <code>{meta.modelSlug}</code></div>
-    )}
-  </section>
+  <Masthead title={impl} subtitle={`<span class="muted" style="font-size:var(--font-sm)">${artifacts.runPath}</span>${meta?.modelSlug ? `<div style="margin-top:4px;font-size:var(--font-sm)"><span class="muted">model:</span> <code>${meta.modelSlug}</code></div>` : ''}`} />
 
   <div class="run-stats">
     <div class="run-stat"><div class="run-stat-label">wall</div><div class="run-stat-val">{fmtSec(meta?.wallSec ?? null)}</div></div>
@@ -96,78 +90,50 @@ const transcriptByteSize = artifacts.transcript ? new TextEncoder().encode(artif
     <div class="run-stat">
       <div class="run-stat-label">tests</div>
       <div class="run-stat-val">
-        {meta?.testExitCode === 0
-          ? <span class="win">passed</span>
-          : meta?.testExitCode != null ? <span class="fail">exit {meta.testExitCode}</span>
-          : '—'}
+        <span class:list={[passFailClass(meta?.testExitCode ?? null)]}>{passFailIcon(meta?.testExitCode ?? null)}</span>
       </div>
     </div>
   </div>
 
   <div class="tabs" role="tablist" aria-label="Run sections">
-    {sandboxHtml && <button class="tab" role="tab" data-tab="code" aria-selected="true">code</button>}
-    {diffHtml && <button class="tab" role="tab" data-tab="diff" aria-selected="false">diff</button>}
-    {testHtml && <button class="tab" role="tab" data-tab="tests" aria-selected="false">tests</button>}
-    {transcriptHtml && <button class="tab" role="tab" data-tab="transcript" aria-selected="false">transcript</button>}
+    {sandboxHtml && <button class="tab" role="tab" id="tab-code" data-tab="code" aria-selected="true" aria-controls="panel-code">code</button>}
+    {diffHtml && <button class="tab" role="tab" id="tab-diff" data-tab="diff" aria-selected="false" aria-controls="panel-diff">diff</button>}
+    {testHtml && <button class="tab" role="tab" id="tab-tests" data-tab="tests" aria-selected="false" aria-controls="panel-tests">tests</button>}
+    {transcriptHtml && <button class="tab" role="tab" id="tab-transcript" data-tab="transcript" aria-selected="false" aria-controls="panel-transcript">transcript</button>}
   </div>
 
   <div class="tab-panels">
     {sandboxHtml && (
-      <div class="tab-panel" data-panel="code">
-        <p class="muted" style="font-size:14.4px;margin:8px 0 10px">sandbox.py · {sandboxLineCount} lines</p>
+      <div class="tab-panel" role="tabpanel" id="panel-code" data-panel="code" aria-labelledby="tab-code">
+        <p class="muted section-subtitle">sandbox.py · {sandboxLineCount} lines</p>
         <div class="code-block" set:html={sandboxHtml} />
       </div>
     )}
     {diffHtml && (
-      <div class="tab-panel" data-panel="diff" hidden>
-        <p class="muted" style="font-size:14.4px;margin:8px 0 10px">diff.patch</p>
+      <div class="tab-panel" role="tabpanel" id="panel-diff" data-panel="diff" hidden aria-labelledby="tab-diff">
+        <p class="muted section-subtitle">diff.patch</p>
         <div class="code-block" set:html={diffHtml} />
       </div>
     )}
     {testHtml && (
-      <div class="tab-panel" data-panel="tests" hidden>
-        <p class="muted" style="font-size:14.4px;margin:8px 0 10px">pytest output (hidden tests)</p>
+      <div class="tab-panel" role="tabpanel" id="panel-tests" data-panel="tests" hidden aria-labelledby="tab-tests">
+        <p class="muted section-subtitle">pytest output (hidden tests)</p>
         <div class="code-block" set:html={testHtml} />
       </div>
     )}
     {transcriptHtml && (
-      <div class="tab-panel" data-panel="transcript" hidden>
-        <p class="muted" style="font-size:14.4px;margin:8px 0 10px">session transcript · {(transcriptByteSize / 1024).toFixed(0)}kb</p>
+      <div class="tab-panel" role="tabpanel" id="panel-transcript" data-panel="transcript" hidden aria-labelledby="tab-transcript">
+        <p class="muted section-subtitle">session transcript · {(transcriptByteSize / 1024).toFixed(0)}kb</p>
         <div class="prose transcript-prose" set:html={transcriptHtml} />
       </div>
     )}
   </div>
 
   <script>
-    const tabs = document.querySelectorAll<HTMLButtonElement>('.tab');
-    const panels = document.querySelectorAll<HTMLElement>('.tab-panel');
-    const validNames = [...panels].map(p => p.dataset.panel!);
-
-    function activate(name: string) {
-      tabs.forEach(t => {
-        const on = t.dataset.tab === name;
-        t.classList.toggle('active', on);
-        t.setAttribute('aria-selected', on ? 'true' : 'false');
-      });
-      panels.forEach(p => { p.hidden = p.dataset.panel !== name; });
-    }
-
-    function go(name: string, push: boolean) {
-      const target = validNames.includes(name) ? name : validNames[0];
-      const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
-      const apply = () => activate(target);
-      if (doc.startViewTransition) doc.startViewTransition(apply);
-      else apply();
-      if (push) history.replaceState(null, '', '#' + target);
-    }
-
-    const initial = location.hash.slice(1);
-    activate(validNames.includes(initial) ? initial : validNames[0]);
-
-    tabs.forEach(t => t.addEventListener('click', () => go(t.dataset.tab!, true)));
-    window.addEventListener('hashchange', () => go(location.hash.slice(1) || validNames[0], false));
+    import { initTabs } from '../../../scripts/tabs';
+    initTabs();
   </script>
 
-  <a href="#top" class="back-to-top" aria-label="Back to top">&uarr;</a>
+  <BackToTop />
   <Footer />
 </BaseLayout>

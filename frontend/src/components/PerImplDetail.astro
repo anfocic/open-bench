@@ -1,6 +1,7 @@
 ---
 import type { PerImplDetail } from '../data/types';
-import { fmtNum } from '../lib/format';
+import { fmtOr, passFailIcon, passFailClass } from '../lib/format';
+import DataTable from './DataTable.astro';
 
 export interface Props {
   entries: PerImplDetail[];
@@ -24,9 +25,9 @@ const { entries, date } = Astro.props;
           {detail.impl}
           <a href={`/round/${date}/${detail.impl}`} class="impl-view-run">view full run &rarr;</a>
         </h3>
-        <p class="muted" style="font-size: 14.4px;font-family:var(--mono);margin:4px 0 10px">{detail.runPath}</p>
+        <p class="muted section-subtitle" style="font-family:var(--mono)">{detail.runPath}</p>
         {detail.scores.length > 0 && (
-          <div class="table-wrap">
+          <DataTable>
             <table>
               <thead>
                 <tr>
@@ -44,27 +45,27 @@ const { entries, date } = Astro.props;
                   <tr>
                     <td class="model">{s.judge}</td>
                     <td class="num">{s.tier}</td>
-                    <td class={`num ${s.hardFail ? 'win' : 'fail'}`}>{s.hardFail ? 'pass' : 'fail'}</td>
-                    <td class="num">{s.spec !== null ? fmtNum(s.spec, 1) : '—'}</td>
-                    <td class="num">{s.quality !== null ? fmtNum(s.quality, 1) : '—'}</td>
+                    <td class={`num ${passFailClass(s.hardFail ? 0 : 1)}`}>{s.hardFail ? 'pass' : 'fail'}</td>
+                    <td class="num">{fmtOr(s.spec, 1)}</td>
+                    <td class="num">{fmtOr(s.quality, 1)}</td>
                     <td class="num">{s.verdict}</td>
-                    <td style="text-align:left;font-size: 14.4px;max-width:400px;white-space:normal">{s.note}</td>
+                    <td style="text-align:left;font-size:var(--font-sm);max-width:400px;white-space:normal">{s.note}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </DataTable>
         )}
         {detail.hiddenTests.length > 0 && (
           <div class="hidden-tests">
             <div class="hidden-tests-head">
-              <span style="font-size: 14.4px;color:var(--muted)">hidden tests</span>
+              <span style="font-size:var(--font-sm);color:var(--muted)">hidden tests</span>
               <span class={`pill ${allPass ? 'pill-green' : 'pill-red'}`}>{passed}/{total} passed</span>
             </div>
             <ul class="hidden-tests-list">
               {detail.hiddenTests.map(t => (
                 <li class={t.passed ? 'pass' : 'fail'}>
-                  <span class="hidden-tests-icon">{t.passed ? '✓' : '✗'}</span>
+                  <span class="hidden-tests-icon">{passFailIcon(t.passed ? 0 : 1)}</span>
                   <code>{t.name}</code>
                 </li>
               ))}

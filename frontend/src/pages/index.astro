@@ -2,42 +2,33 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { loadRounds } from '../data/rounds';
+import Masthead from '../components/Masthead.astro';
+import { getCollection } from 'astro:content';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { repoRoot } from '../lib/paths';
 import { fmtCost, fmtNum, fmtDate } from '../lib/format';
+import { findChampion, uniqueModelCount, totalCost } from '../lib/scoreboard';
+import { readJsonOptional } from '../lib/io';
 
-const rounds = loadRounds();
+const entries = await getCollection('rounds');
+const rounds = entries.sort((a, b) => b.id.localeCompare(a.id)).map(e => e.data);
 const latestRound = rounds[0];
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
-const configPath = resolve(__dirname, '../../../bench/config.json');
-let config: { implementers: string[]; slugs: Record<string, string> };
-try {
-  config = JSON.parse(readFileSync(configPath, 'utf-8'));
-} catch { config = { implementers: [], slugs: {} }; }
+const configPath = resolve(repoRoot, 'bench/config.json');
+const config = readJsonOptional<{ implementers: string[]; slugs: Record<string, string> }>(configPath) ?? { implementers: [], slugs: {} };
 
-const champ = latestRound?.scoreboard.reduce((best, e) => {
-  const score = (e.specPeer ?? 0) + (e.qualityPeer ?? 0);
-  return score > (best.score ?? 0) ? { impl: e.impl, score } : best;
-}, { impl: '—', score: 0 });
-const champEntry = latestRound?.scoreboard.find(e => e.impl === champ?.impl);
-const modelCount = latestRound ? new Set(latestRound.samples.map(s => s.model)).size : 0;
-const totalCost = latestRound ? latestRound.samples.reduce((sum, s) => sum + (s.costUsd ?? 0), 0) : 0;
+const champ = latestRound ? findChampion(latestRound.scoreboard) : { impl: '—', score: 0 };
+const champEntry = latestRound?.scoreboard.find(e => e.impl === champ.impl);
+const modelCount = latestRound ? uniqueModelCount(latestRound.samples) : 0;
+const latestCost = latestRound ? totalCost(latestRound.samples) : 0;
 const totalSamples = rounds.reduce((sum, r) => sum + r.samples.length, 0);
-const totalSpend = rounds.reduce((sum, r) => sum + r.samples.reduce((s, x) => s + (x.costUsd ?? 0), 0), 0);
+const totalSpend = rounds.reduce((sum, r) => sum + totalCost(r.samples), 0);
 ---
 
-<BaseLayout title="open-bench — weekly LLM coding battle royale" description="Every week, every major coding LLM builds the same app from the same spec, alone. Hidden tests + peer review decide the winner.">
+<BaseLayout title="open-bench — weekly LLM coding battle royale" description="Every week, every major coding LLM gets the same blank repo and the same SPEC.md. Hidden tests run first — the gate. Then the models judge each other. Cost and wall-clock are tracked. Loser is eliminated.">
   <Header />
 
-  <section class="masthead">
-    <h1 class="masthead-title">open-bench</h1>
-    <p class="masthead-lede">
-      Every week, every major coding LLM gets the same blank repo and the same SPEC.md.
-      Hidden tests run first &mdash; the gate. Then the models judge each other.
-      Cost and wall-clock are tracked. Loser is eliminated.
-    </p>
+  <Masthead title="open-bench" subtitle={`Every week, every major coding LLM gets the same blank repo and the same SPEC.md. Hidden tests run first &mdash; the gate. Then the models judge each other. Cost and wall-clock are tracked. Loser is eliminated.`}>
     <div class="masthead-meta">
       <span>{rounds.length} round{rounds.length === 1 ? '' : 's'}</span>
       <span>{config.implementers.length} models</span>
@@ -45,9 +36,9 @@ const totalSpend = rounds.reduce((sum, r) => sum + r.samples.reduce((s, x) => s 
       <span>{fmtCost(totalSpend)} spend</span>
       <span>last: {latestRound ? fmtDate(latestRound.date) : '&mdash;'}</span>
     </div>
-  </section>
+  </Masthead>
 
-  {latestRound && champ && champ.score > 0 && (
+  {latestRound && champ.score > 0 && (
     <section>
       <h2>latest round</h2>
       <div class="summary-line">
@@ -57,7 +48,7 @@ const totalSpend = rounds.reduce((sum, r) => sum + r.samples.reduce((s, x) => s 
         <span class="sep">|</span>
         spec {fmtNum(champEntry?.specPeer ?? 0, 1)}, quality {fmtNum(champEntry?.qualityPeer ?? 0, 1)}
         <span class="sep">|</span>
-        {modelCount} models, {fmtCost(totalCost)} total &rarr;
+        {modelCount} models, {fmtCost(latestCost)} total &rarr;
         <a href={`/round/${latestRound.date}`}>view round</a>
       </div>
     </section>
@@ -95,12 +86,9 @@ const totalSpend = rounds.reduce((sum, r) => sum + r.samples.reduce((s, x) => s 
     {rounds.length === 0 && <p class="muted">No rounds yet.</p>}
     <div class="archive-list">
       {rounds.map(r => {
-        const c = r.scoreboard.reduce((best, e) => {
-          const s = (e.specPeer ?? 0) + (e.qualityPeer ?? 0);
-          return s > (best.score ?? 0) ? { impl: e.impl, score: s } : best;
-        }, { impl: '—', score: 0 });
-        const mc = new Set(r.samples.map(s => s.model)).size;
-        const tc = r.samples.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
+        const c = findChampion(r.scoreboard);
+        const mc = uniqueModelCount(r.samples);
+        const tc = totalCost(r.samples);
         return (
           <a href={`/round/${r.date}`}>
             <div class="row">

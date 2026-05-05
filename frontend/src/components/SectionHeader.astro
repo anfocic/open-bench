@@ -1,0 +1,12 @@
+---
+export interface Props {
+  id: string;
+  title: string;
+  subtitle?: string;
+}
+
+const { id, title, subtitle } = Astro.props;
+---
+
+<h2 id={id}>{title}</h2>
+{subtitle && <p class="muted section-subtitle">{subtitle}</p>}

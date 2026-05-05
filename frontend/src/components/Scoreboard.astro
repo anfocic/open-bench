@@ -1,6 +1,8 @@
 ---
 import type { ScoreboardEntry } from '../data/types';
-import { fmtNum } from '../lib/format';
+import { fmtNum, fmtOr, passFailClass } from '../lib/format';
+import SectionHeader from './SectionHeader.astro';
+import DataTable from './DataTable.astro';
 
 export interface Props {
   entries: ScoreboardEntry[];
@@ -26,11 +28,8 @@ const sorted = [...entries].sort((a, b) => {
 
 {entries.length > 0 && (
   <section>
-    <h2 id="scoreboard">scoreboard</h2>
-    <p class="muted" style="font-size: 14.4px;margin:-6px 0 12px">
-      total = peer-judged spec /15 + quality /15. hidden-tests gate the verdict.
-    </p>
-    <div class="table-wrap">
+    <SectionHeader id="scoreboard" title="scoreboard" subtitle="total = peer-judged spec /15 + quality /15. hidden-tests gate the verdict." />
+    <DataTable>
       <table class="scoreboard-table">
         <thead>
           <tr>
@@ -54,9 +53,9 @@ const sorted = [...entries].sort((a, b) => {
                   {e.impl}
                 </td>
                 <td class="num"><strong>{fmtNum(total, 1)}</strong></td>
-                <td class="num">{e.specPeer !== null ? fmtNum(e.specPeer, 1) : '—'}</td>
-                <td class="num">{e.qualityPeer !== null ? fmtNum(e.qualityPeer, 1) : '—'}</td>
-                <td class="num"><span class={`pill ${e.hardFail ? 'pill-green' : 'pill-red'}`}>{e.hardFail ? 'pass' : 'fail'}</span></td>
+                <td class="num">{fmtOr(e.specPeer, 1)}</td>
+                <td class="num">{fmtOr(e.qualityPeer, 1)}</td>
+                <td class="num"><span class={passFailClass(e.hardFail ? 0 : 1, 'pill')}>{e.hardFail ? 'pass' : 'fail'}</span></td>
                 <td class="num">{e.tests}</td>
                 <td class="num"><span class={verdictClass(e.verdict)}>{e.verdict}</span></td>
               </tr>
@@ -64,6 +63,6 @@ const sorted = [...entries].sort((a, b) => {
           })}
         </tbody>
       </table>
-    </div>
+    </DataTable>
   </section>
 )}

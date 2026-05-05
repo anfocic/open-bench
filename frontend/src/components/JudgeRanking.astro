@@ -1,5 +1,6 @@
 ---
 import type { JudgeRankingEntry } from '../data/types';
+import DataTable from './DataTable.astro';
 
 export interface Props {
   entries: JudgeRankingEntry[];
@@ -11,7 +12,7 @@ const { entries } = Astro.props;
 {entries.length > 0 && (
   <section>
     <h2 id="judge-ranking">per-judge ranking</h2>
-    <div class="table-wrap">
+    <DataTable>
       <table>
         <thead>
           <tr>
@@ -32,6 +33,6 @@ const { entries } = Astro.props;
           ))}
         </tbody>
       </table>
-    </div>
+    </DataTable>
   </section>
 )}

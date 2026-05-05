@@ -1,6 +1,7 @@
 ---
 import type { Run } from '../data/types';
-import { fmtSec, fmtCost, fmtTok } from '../lib/format';
+import { fmtSec, fmtCost, fmtTok, passFailIcon, passFailClass } from '../lib/format';
+import DataTable from './DataTable.astro';
 
 export interface Props {
   runs: Run[];
@@ -8,7 +9,7 @@ export interface Props {
 
 const { runs } = Astro.props;
 
-function medByModel(runs: Run[]): { model: string; wallSec: number | null; costUsd: number | null; tokensTotal: number | null; loc: number | null; testExitCode: number | null; n: number }[] {
+function medByModel(runs: Run[]) {
   const groups = new Map<string, Run[]>();
   for (const r of runs) {
     if (!groups.has(r.model)) groups.set(r.model, []);
@@ -42,7 +43,7 @@ const medians = medByModel(runs);
       <button class="btn active" data-view="all">all samples · {runs.length}</button>
       <button class="btn" data-view="medians">median per model · {medians.length}</button>
     </div>
-    <div class="table-wrap">
+    <DataTable>
       <table id="runs-table">
         <thead>
           <tr>
@@ -72,7 +73,7 @@ const medians = medByModel(runs);
               <td class="num">{fmtCost(r.costUsd)}</td>
               <td class="num">{fmtTok(r.tokensTotal)}</td>
               <td class="num">{r.loc ?? '—'}</td>
-              <td class={`num ${r.testExitCode === 0 ? 'win' : r.testExitCode !== null ? 'fail' : ''}`} title={r.testExitCode !== null ? `exit ${r.testExitCode}` : ''}>{r.testExitCode === 0 ? '✓' : r.testExitCode !== null ? '✗' : '—'}</td>
+              <td class={`num ${passFailClass(r.testExitCode)}`} title={r.testExitCode !== null ? `exit ${r.testExitCode}` : ''}>{passFailIcon(r.testExitCode)}</td>
             </tr>
           ))}
           {medians.map((m, i) => (
@@ -84,18 +85,18 @@ const medians = medByModel(runs);
               data-loc={m.loc ?? ''}
               data-exit={m.testExitCode ?? ''}
               data-idx={i}>
-              <td class="model">{m.model} <span class="muted" style="font-size: 13.2px">(n={m.n})</span></td>
+              <td class="model">{m.model} <span class="muted" style="font-size:var(--font-xs)">(n={m.n})</span></td>
               <td class="num muted">&mdash;</td>
               <td class="num">{fmtSec(m.wallSec)}</td>
               <td class="num">{fmtCost(m.costUsd)}</td>
               <td class="num">{fmtTok(m.tokensTotal)}</td>
               <td class="num">{m.loc ?? '—'}</td>
-              <td class={`num ${m.testExitCode === 0 ? 'win' : m.testExitCode !== null ? 'fail' : ''}`} title={m.testExitCode !== null ? `exit ${m.testExitCode}` : ''}>{m.testExitCode === 0 ? '✓' : m.testExitCode !== null ? '✗' : '—'}</td>
+              <td class={`num ${passFailClass(m.testExitCode)}`} title={m.testExitCode !== null ? `exit ${m.testExitCode}` : ''}>{passFailIcon(m.testExitCode)}</td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </DataTable>
   </section>
 )}
 
