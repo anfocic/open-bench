@@ -1,0 +1,95 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import Masthead from '../components/Masthead.astro';
+import { getCollection } from 'astro:content';
+import { fmtDate } from '../lib/format';
+import { buildChangelog } from '../lib/changelog';
+import { pageSeo } from '../lib/seo';
+
+const entries = await getCollection('rounds');
+const rounds = entries.map(e => e.data);
+const log = buildChangelog(rounds).reverse();
+
+const seo = pageSeo('changelog', '/changelog');
+---
+
+<BaseLayout seo={seo}>
+  <Header subtitle="changelog" />
+  <Masthead title="methodology changelog" subtitle="What changed and when. Round-to-round comparability, made auditable. Lineup deltas auto-derived; spec/rubric edits pulled from each round's review markdown." />
+
+  <section>
+    {log.length === 0 ? (
+      <p class="muted">No rounds yet.</p>
+    ) : (
+      <ol class="changelog-timeline">
+        {log.map(e => (
+          <li>
+            <header class="cl-head">
+              <span class="cl-tag">round {e.roundNumber}</span>
+              <a class="cl-date" href={`/round/${e.date}`}>{fmtDate(e.date)}</a>
+            </header>
+
+            {e.roundNumber === 1 ? (
+              <p class="cl-baseline">Baseline. {e.lineup.length} models in the initial lineup: <span class="cl-models">{e.lineup.join(', ')}</span>.</p>
+            ) : (
+              <div class="cl-deltas">
+                {e.added.length > 0 && (
+                  <div class="cl-row">
+                    <span class="cl-label cl-added">+ added</span>
+                    <span class="cl-models">{e.added.join(', ')}</span>
+                  </div>
+                )}
+                {e.removed.length > 0 && (
+                  <div class="cl-row">
+                    <span class="cl-label cl-removed">− removed</span>
+                    <span class="cl-models">{e.removed.join(', ')}</span>
+                  </div>
+                )}
+                {e.added.length === 0 && e.removed.length === 0 && (
+                  <p class="cl-nochange muted">No lineup changes.</p>
+                )}
+              </div>
+            )}
+
+            {e.specChanges && (
+              <div class="cl-section">
+                <div class="cl-label">spec changes</div>
+                <p>{e.specChanges}</p>
+              </div>
+            )}
+
+            {e.recommendation && (
+              <div class="cl-section">
+                <div class="cl-label">recommendation</div>
+                <p>{e.recommendation}</p>
+              </div>
+            )}
+          </li>
+        ))}
+      </ol>
+    )}
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .changelog-timeline { list-style: none; padding: 0; margin: 24px 0 0; display: flex; flex-direction: column; gap: 32px; }
+  .changelog-timeline > li { border-left: 2px solid var(--rule); padding: 0 0 8px 20px; position: relative; }
+  .changelog-timeline > li::before { content: ''; position: absolute; left: -7px; top: 8px; width: 12px; height: 12px; background: var(--accent); border: 2px solid var(--bg); }
+  .cl-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 12px; }
+  .cl-tag { font-family: var(--mono); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+  .cl-date { font-family: var(--mono); color: var(--fg-bright); font-weight: 700; }
+  .cl-baseline { color: var(--muted); }
+  .cl-deltas { display: flex; flex-direction: column; gap: 6px; }
+  .cl-row { display: flex; gap: 12px; align-items: baseline; }
+  .cl-label { font-family: var(--mono); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); min-width: 100px; }
+  .cl-added { color: var(--green); }
+  .cl-removed { color: var(--red); }
+  .cl-models { font-family: var(--mono); }
+  .cl-nochange { font-style: italic; }
+  .cl-section { margin-top: 14px; }
+  .cl-section p { margin: 4px 0 0 0; }
+</style>

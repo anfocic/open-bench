@@ -91,6 +91,12 @@ export const seoPages = {
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'datasetSite'],
   },
+  changelog: {
+    title: 'Methodology changelog · open-bench',
+    description: 'What changed and when: spec edits, lineup additions and eliminations, rubric tweaks. Round-to-round comparability, made auditable.',
+    ogImage: '/og-default.png',
+    jsonLd: ['organization', 'collectionPage'],
+  },
   notesIndex: {
     title: 'Writeups · open-bench',
     description: 'Round retrospectives, model behaviour notes, and post-mortems from open-bench.',
