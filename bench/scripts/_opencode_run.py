@@ -51,11 +51,14 @@ def run(
     message: str,
     attachments: list[str | Path] | None = None,
     title: str | None = None,
+    log_path: str | Path | None = None,
 ) -> int:
     """Invoke `opencode run` non-interactively.
 
-    Returns the subprocess return code. Streams stdout/stderr live so
-    the user sees the model's output as it goes.
+    Returns the subprocess return code. With log_path=None (default),
+    streams stdout/stderr live to the inherited tty. With log_path set,
+    redirects both streams to that file — required when running multiple
+    sessions concurrently so output doesn't interleave into mush.
     """
     preflight()
 
@@ -75,4 +78,10 @@ def run(
         print("DRYRUN argv:", argv, file=sys.stderr)
         return 0
 
-    return subprocess.run(argv, check=False).returncode
+    if log_path is None:
+        return subprocess.run(argv, check=False).returncode
+
+    with open(log_path, "wb") as fh:
+        return subprocess.run(
+            argv, check=False, stdout=fh, stderr=subprocess.STDOUT
+        ).returncode
