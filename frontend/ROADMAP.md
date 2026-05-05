@@ -17,7 +17,6 @@ _(empty — all P1 items shipped; see Done section)_
 
 ## P3 — nice to have
 
-- [ ] **Compare view** — two impls or two rounds side-by-side. Power-user feature.
 - [ ] **Inline code diff viewer** — replace "GH link" with rendered diff per impl.
 - [ ] **Embed widget** — iframe-able latest scoreboard for blog posts.
 
@@ -42,5 +41,6 @@ _(empty — all P1 items shipped; see Done section)_
 - [x] **Per-model career page** — `/model/[impl]` with full round history, rank/ELO masthead.
 - [x] **Methodology changelog** — `/changelog` timeline. Auto-derives lineup deltas (+ added / − removed) between consecutive rounds. Pulls `specChanges` and `recommendation` from each round's review markdown when not still placeholder text.
 - [x] **Public dataset export** — `/dataset.json` (full structured) + `/dataset.csv` (one row per round×impl) + `/dataset` docs page with schema, license, citation. Backs the "open data" claim.
+- [x] **Compare view** — `/compare` matrix picker + `/compare/[a]/vs/[b]` head-to-head pages. Side-by-side ELO/wins/podium/avg/$/round/sparkline cards, summary, per-round table with score and cost deltas. Static-prerendered for all unordered impl pairs.
 - [x] **Charts** — pure-SVG `<Bars>` (scoreboard) + `<Scatter>` (cost-vs-quality, log x). Round-data wrappers `<RoundBars date>` / `<RoundScatter date>` plug into round tabs and are MDX-available in writeups. Zero JS.
 - [x] **Round retrospective / writeup system** — MDX content collection at `frontend/src/content/notes/`, `/notes/[slug]` permalinks, `<RoundScoreboard>` + `<Stat>` MDX components, per-note OG cards, RSS merged with rounds, BlogPosting JSON-LD, round page callout.
