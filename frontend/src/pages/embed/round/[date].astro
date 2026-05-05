@@ -1,0 +1,67 @@
+---
+import EmbedLayout from '../../../layouts/EmbedLayout.astro';
+import { getCollection } from 'astro:content';
+import { fmtNum, fmtDate } from '../../../lib/format';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const entries = await getCollection('rounds');
+  return entries.map(e => ({ params: { date: e.data.date }, props: { round: e.data } }));
+}
+
+const { round } = Astro.props;
+const sorted = [...round.scoreboard].sort((a, b) => {
+  const ta = (a.specPeer ?? 0) + (a.qualityPeer ?? 0);
+  const tb = (b.specPeer ?? 0) + (b.qualityPeer ?? 0);
+  return tb - ta;
+});
+---
+
+<EmbedLayout
+  title={`open-bench round ${round.date} (embed)`}
+  description={`Scoreboard for open-bench round ${round.date}.`}
+  canonicalPath={`/round/${round.date}`}
+>
+  <h1>open-bench <span class="muted">/ round {fmtDate(round.date)}</span></h1>
+  {sorted.length === 0 ? (
+    <p class="muted">No scoreboard available for this round.</p>
+  ) : (
+    <table class="embed-table">
+      <thead>
+        <tr>
+          <th class="num">#</th>
+          <th>model</th>
+          <th class="num">total</th>
+          <th class="num">spec</th>
+          <th class="num">qual</th>
+          <th>build</th>
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.map((e, i) => {
+          const total = (e.specPeer ?? 0) + (e.qualityPeer ?? 0);
+          return (
+            <tr>
+              <td class="num">{i + 1}</td>
+              <td>{e.impl}</td>
+              <td class="num"><strong>{fmtNum(total, 1)}</strong></td>
+              <td class="num">{fmtNum(e.specPeer, 1)}</td>
+              <td class="num">{fmtNum(e.qualityPeer, 1)}</td>
+              <td class={`build ${e.hardFail ? 'pass' : 'fail'}`}>{e.hardFail ? 'pass' : 'fail'}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  )}
+</EmbedLayout>
+
+<style>
+  .embed-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .embed-table th, .embed-table td { padding: 4px 8px; border-bottom: 1px solid var(--rule); }
+  .embed-table th { font-weight: 500; color: var(--muted); text-align: left; }
+  .embed-table .num { text-align: right; }
+  .embed-table .build.pass { color: var(--accent); }
+  .embed-table .build.fail { color: var(--muted); }
+</style>

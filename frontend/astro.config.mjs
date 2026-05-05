@@ -28,6 +28,7 @@ export default defineConfig({
     ogIntegration,
     mdx(),
     sitemap({
+      filter: (page) => !page.includes('/embed'),
       serialize(item) {
         const u = item.url;
         const roundDate = dateFromRoundUrl(u);

@@ -1,0 +1,67 @@
+---
+import '../styles/globals.css';
+
+export interface Props {
+  title: string;
+  description: string;
+  canonicalPath: string;
+}
+
+const { title, description, canonicalPath } = Astro.props;
+const canonical = `https://openbenchmark.dev${canonicalPath}`;
+---
+
+<!doctype html>
+<html lang="en" class="embed-html">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="canonical" href={canonical}>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <script is:inline>
+    (function(){
+      var p = new URLSearchParams(location.search);
+      var t = p.get('theme');
+      if (t === 'light' || t === 'dark') {
+        document.documentElement.setAttribute('data-theme', t);
+      } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+</head>
+<body class="embed-body">
+  <main class="embed-main">
+    <slot />
+  </main>
+  <footer class="embed-footer">
+    <a href={canonical} target="_blank" rel="noopener">open-bench</a>
+    <span class="sep">·</span>
+    <span class="muted">live data, updated weekly</span>
+  </footer>
+</body>
+</html>
+
+<style is:global>
+  .embed-html, .embed-body { background: var(--bg); margin: 0; padding: 0; }
+  .embed-body { padding: 12px 14px 8px; font-size: var(--font-sm); }
+  .embed-main { margin: 0; }
+  .embed-main h1 { font-size: 1.05rem; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .embed-main h1 .muted { font-weight: 400; }
+  .embed-footer {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--rule);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .embed-footer a { color: var(--accent); text-decoration: none; }
+  .embed-footer a:hover { text-decoration: underline; }
+  .embed-footer .sep { color: var(--rule); }
+</style>
