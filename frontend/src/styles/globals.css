@@ -670,6 +670,10 @@ tr.cheapest-row td.model::before { content: '$ '; color: var(--green); font-weig
 }
 .footer-base a { color: var(--accent); text-decoration: none; }
 .footer-base a:hover { text-decoration: underline; }
+.footer-icons { display: inline-flex; gap: 10px; align-items: center; margin-left: 4px; }
+.footer-icons a { color: var(--muted); display: inline-flex; align-items: center; }
+.footer-icons a:hover { color: var(--accent); text-decoration: none; }
+.footer-icons svg { display: block; }
 
 /* Hero card on /round/[date] — stripped of card chrome */
 .hero-card {
