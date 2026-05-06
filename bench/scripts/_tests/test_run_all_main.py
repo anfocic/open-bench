@@ -15,7 +15,7 @@ from unittest import mock
 
 from . import conftest  # noqa: F401
 
-import run_all  # noqa: E402
+from bench.scripts import run_all  # noqa: E402
 
 
 def _completed(rc: int) -> subprocess.CompletedProcess:

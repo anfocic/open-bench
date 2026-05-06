@@ -22,7 +22,7 @@ from pathlib import Path
 
 from . import conftest  # noqa: F401
 
-import aggregate_judges  # noqa: E402
+from bench.scripts import aggregate_judges  # noqa: E402
 
 REPO_ROOT = aggregate_judges.REPO_ROOT
 GOLDEN = Path(__file__).resolve().parent / "fixtures" / "golden_review-2026-05-05.md"

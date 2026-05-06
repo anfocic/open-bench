@@ -23,13 +23,10 @@ import sys
 import threading
 import time
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import _config  # noqa: E402
+from . import _config
+from .start_run import start_run
 
-from start_run import start_run
-
-SCRIPTS_DIR = pathlib.Path(__file__).resolve().parent
-REPO_ROOT = _config.REPO_ROOT
+REPO_ROOT = _config.repo_root()
 
 
 def _drive_one_implementer(task: str,
@@ -118,13 +115,15 @@ def main() -> int:
     print()
     print("==> judgment phase")
     rc_judge = subprocess.run(
-        [sys.executable, str(SCRIPTS_DIR / "start_judgments.py"), "--auto", args.task],
+        [sys.executable, "-m", "bench.scripts.start_judgments", "--auto", args.task],
+        cwd=REPO_ROOT,
     ).returncode
 
     print()
     print("==> aggregate phase")
     rc_agg = subprocess.run(
-        [sys.executable, str(SCRIPTS_DIR / "aggregate_judges.py"), args.task],
+        [sys.executable, "-m", "bench.scripts.aggregate_judges", args.task],
+        cwd=REPO_ROOT,
     ).returncode
 
     print()

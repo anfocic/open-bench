@@ -18,8 +18,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import _stats  # noqa: E402
+from . import _stats
 
 
 class OpencodeNotAvailable(Exception):

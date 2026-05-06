@@ -35,11 +35,10 @@ import sys
 import threading
 from typing import Any
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import _config  # noqa: E402
-import _task  # noqa: E402
+from . import _config
+from . import _task
 
-REPO_ROOT = _config.REPO_ROOT
+REPO_ROOT = _config.repo_root()
 
 
 def find_runs(task: str, entrypoint: str) -> list[dict[str, Any]]:
@@ -156,8 +155,7 @@ def _drive_one_judge(judge: str,
     the slug exists.
     """
     import time as _time
-    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-    import _opencode_run
+    from . import _opencode_run
 
     judge_dir = out_root / judge
     slug = cfg.slug_for(judge)
@@ -191,8 +189,7 @@ def auto_drive_judges(out_root: pathlib.Path,
 
     Returns 0 if every attempted judge exited cleanly, else the first
     non-zero return code so the caller can surface failure."""
-    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-    import _opencode_run  # local import: only loaded on --auto
+    from . import _opencode_run  # local import: only loaded on --auto
 
     try:
         _opencode_run.preflight()

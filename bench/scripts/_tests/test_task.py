@@ -13,7 +13,7 @@ from unittest import mock
 
 from . import conftest  # noqa: F401
 
-import _task  # noqa: E402
+from bench.scripts import _task  # noqa: E402
 
 
 class TestTaskLoad(unittest.TestCase):

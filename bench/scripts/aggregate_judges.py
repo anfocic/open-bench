@@ -22,24 +22,26 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import functools
 import json
 import pathlib
 import statistics
 import sys
 from typing import Any
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import _config  # noqa: E402
-import _pytest_parse  # noqa: E402
-import _stats  # noqa: E402
+from . import _config
+from . import _pytest_parse
+from . import _stats
 
-REPO_ROOT = _config.REPO_ROOT
+REPO_ROOT = _config.repo_root()
 
-# Loaded once at startup from bench/config.json. Both start_judgments.py
-# and this aggregator read from the same source so the expert/peer split
-# is consistent across the round.
-CFG = _config.load()
-EXPERT_JUDGES = set(CFG.expert_judges)
+
+@functools.lru_cache(maxsize=1)
+def _expert_judges() -> frozenset[str]:
+    """Lazy view of bench/config.json expert_judges. Same source as
+    start_judgments.py so the expert/peer split is consistent across the
+    round."""
+    return frozenset(_config.load().expert_judges)
 
 
 def latest_judgment_dir(task: str) -> pathlib.Path | None:
@@ -150,7 +152,7 @@ def split_judge_scores(judges: list[str],
             continue
         spec = s.get("spec_compliance")
         qt = quality_total(s.get("code_quality"))
-        is_expert = judge in EXPERT_JUDGES
+        is_expert = judge in _expert_judges()
         is_self = judge == model
         if isinstance(spec, (int, float)):
             if is_self:
@@ -280,7 +282,7 @@ def render_per_implementation(impl_models: list[str], judges: list[str],
             s = scores_by_judge.get(judge, {}).get(model)
             if judge == model:
                 tier = "self"
-            elif judge in EXPERT_JUDGES:
+            elif judge in _expert_judges():
                 tier = "expert"
             else:
                 tier = "peer"
@@ -402,7 +404,7 @@ def render_self_bias_check(impl_models: list[str], judges: list[str],
         "there are not self-inflated."
     )
     lines.append("")
-    if EXPERT_JUDGES:
+    if _expert_judges():
         peer_label = "Peer (excl. self) med"
     else:
         peer_label = "Peer med"
@@ -446,14 +448,14 @@ def render_judge_cost(judges: list[str], judgment_dir: pathlib.Path) -> list[str
     for judge in judges:
         meta_path = judgment_dir / judge / "judge_meta.json"
         if not meta_path.exists():
-            tier = "expert" if judge in EXPERT_JUDGES else "peer"
+            tier = "expert" if judge in _expert_judges() else "peer"
             lines.append(f"| {judge} | {tier} | — | — | — | — | — |")
             continue
         try:
             meta = json.loads(meta_path.read_text())
         except json.JSONDecodeError:
             meta = {}
-        tier = "expert" if judge in EXPERT_JUDGES else "peer"
+        tier = "expert" if judge in _expert_judges() else "peer"
         harness = meta.get("harness", "—")
         slug = meta.get("model_slug", "—")
         wc = meta.get("wall_clock_seconds")
@@ -519,8 +521,8 @@ def render_review(task: str,
     impl_models = sorted(runs_index.keys())
     judges = list(pairings.keys())
     date_stamp = judgment_dir.name[len(task) + 1:]
-    expert_judges = [j for j in judges if j in EXPERT_JUDGES]
-    peer_judges = [j for j in judges if j not in EXPERT_JUDGES]
+    expert_judges = [j for j in judges if j in _expert_judges()]
+    peer_judges = [j for j in judges if j not in _expert_judges()]
 
     # Count how many judges actually filed scores (rough completion check).
     judges_with_outputs = [

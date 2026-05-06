@@ -12,11 +12,9 @@ import json
 import pathlib
 import sys
 
-REPO_ROOT = pathlib.Path(
-    __import__("subprocess").check_output(
-        ["git", "rev-parse", "--show-toplevel"], text=True
-    ).strip()
-)
+from . import _config
+
+REPO_ROOT = _config.repo_root()
 
 
 PROMPT_TEMPLATE = """\

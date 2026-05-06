@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""perf-bench.py <task> <model> <n>
+"""perf_bench.py <task> <model> <n>
 
 Runs the same task N times against one model, captures only timing /
 cost / hidden-test signal per run, and writes an aggregate JSON +
@@ -35,13 +35,12 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).parent))
-import _opencode  # noqa: E402
-import _opencode_run  # noqa: E402
-import _config  # noqa: E402
-import _pytest_parse  # noqa: E402
-import _stats  # noqa: E402
-import _task  # noqa: E402
+from . import _opencode
+from . import _opencode_run
+from . import _config
+from . import _pytest_parse
+from . import _stats
+from . import _task
 
 
 def median_or_none(xs: list[float]) -> float | None:

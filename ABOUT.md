@@ -32,20 +32,20 @@ Judges run in parallel (cap with `JUDGE_CONCURRENCY` or the `--concurrency` flag
 Per-model perf (n=5 with median + stdev):
 
 ```bash
-bench/scripts/perf-bench.py sandbox kimi 5
+python3 -m bench.scripts.perf_bench sandbox kimi 5
 ```
 
 One implementer at a time:
 
 ```bash
-bench/scripts/start_run.py --auto sandbox kimi   # auto-drive
-bench/scripts/capture_run.py sandbox kimi
+python3 -m bench.scripts.start_run --auto sandbox kimi   # auto-drive
+python3 -m bench.scripts.capture_run sandbox kimi
 ```
 
 Multiple samples per model on the same date — set `RUN_STAMP` to disambiguate worktree/branch names:
 
 ```bash
-RUN_STAMP="$(date +%F)-r2" bench/scripts/start_run.py --auto sandbox kimi
+RUN_STAMP="$(date +%F)-r2" python3 -m bench.scripts.start_run --auto sandbox kimi
 ```
 
 Stdlib + pytest only on the local side; no requirements file.
@@ -69,7 +69,7 @@ Edit `bench/config.json`:
 }
 ```
 
-Labels become `builds/<label>/` dirs. Add a new task with `bench/scripts/new_task.py <name>`. Discover provider slugs with `opencode models <provider>`.
+Labels become `builds/<label>/` dirs. Add a new task with `python3 -m bench.scripts.new_task <name>`. Discover provider slugs with `opencode models <provider>`.
 
 ### Task configuration
 
@@ -90,7 +90,7 @@ If `task.json` is absent, the defaults reproduce round-1 behaviour (single-file 
 ```
 bench/
 ├── tasks/<task>/         # SPEC.md, PROMPT.md, hidden tests/, judge rubric
-├── scripts/              # start-run, capture-run, perf-bench, aggregate_judges
+├── scripts/              # start_run, capture_run, perf_bench, aggregate_judges
 └── config.json           # implementers, judges, harness, model slugs
 
 builds/                   # the apps themselves — one per model

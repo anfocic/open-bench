@@ -120,10 +120,10 @@ aggregator. Judges should not try to identify the model behind a label.
 
 ```
 # Auto-drive every judge with a slug in bench/config.json:
-bench/scripts/start_judgments.py --auto <task>
+python3 -m bench.scripts.start_judgments --auto <task>
 
 # Or build packets only and drive each judge yourself:
-bench/scripts/start_judgments.py <task>
+python3 -m bench.scripts.start_judgments <task>
 ```
 
 Either form:
@@ -152,7 +152,7 @@ and have them write to the sibling `output/` directory.
 ### Aggregate
 
 ```
-bench/scripts/aggregate_judges.py <task>
+python3 -m bench.scripts.aggregate_judges <task>
 ```
 
 Reads `pairings.json`, every judge's `*_scores.json`, and each run's

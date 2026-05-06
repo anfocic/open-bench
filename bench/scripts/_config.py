@@ -8,19 +8,24 @@ is one edit, not a grep across the repo.
 
 from __future__ import annotations
 
+import functools
 import json
 import pathlib
 import subprocess
 from typing import Any
 
 
-REPO_ROOT = pathlib.Path(
-    subprocess.check_output(
-        ["git", "rev-parse", "--show-toplevel"], text=True
-    ).strip()
-)
+@functools.lru_cache(maxsize=1)
+def repo_root() -> pathlib.Path:
+    return pathlib.Path(
+        subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"], text=True
+        ).strip()
+    )
 
-CONFIG_PATH = REPO_ROOT / "bench" / "config.json"
+
+def config_path() -> pathlib.Path:
+    return repo_root() / "bench" / "config.json"
 
 
 class Config:
@@ -32,14 +37,14 @@ class Config:
         self.slugs: dict[str, str] = {str(k): str(v) for k, v in slugs_raw.items()}
 
         if not self.implementers:
-            raise ValueError(f"{CONFIG_PATH}: implementers list is empty")
+            raise ValueError(f"{config_path()}: implementers list is empty")
         # expert_judges may be empty — that means peer-only judging, with
         # no peer-vs-expert delta available in the review. Allowed.
 
         overlap = set(self.implementers) & set(self.expert_judges)
         if overlap:
             raise ValueError(
-                f"{CONFIG_PATH}: {sorted(overlap)} appear in both implementers "
+                f"{config_path()}: {sorted(overlap)} appear in both implementers "
                 f"and expert_judges — a model cannot judge its own family"
             )
 
@@ -51,7 +56,7 @@ class Config:
         implementer label. Raises with a pointer to config.json when missing."""
         if name not in self.slugs:
             raise KeyError(
-                f"no slug for '{name}' in {CONFIG_PATH}. "
+                f"no slug for '{name}' in {config_path()}. "
                 f"Add it under the 'slugs' map, e.g.\n"
                 f'  "{name}": "opencode-go/<model-id>"'
             )
@@ -66,14 +71,15 @@ def load() -> Config:
     malformed JSON. Validation errors raised by Config (empty
     implementers, judge/implementer overlap) propagate as ValueError.
     """
-    if not CONFIG_PATH.exists():
+    cfg_path = config_path()
+    if not cfg_path.exists():
         raise FileNotFoundError(
-            f"{CONFIG_PATH} not found. Create it with at minimum:\n"
+            f"{cfg_path} not found. Create it with at minimum:\n"
             f'  {{"implementers": ["..."], "expert_judges": ["..."]}}'
         )
-    with open(CONFIG_PATH) as f:
+    with open(cfg_path) as f:
         try:
             data = json.load(f)
         except json.JSONDecodeError as e:
-            raise SystemExit(f"malformed JSON in {CONFIG_PATH}: {e}")
+            raise SystemExit(f"malformed JSON in {cfg_path}: {e}")
     return Config(data)

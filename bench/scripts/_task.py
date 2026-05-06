@@ -12,9 +12,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-import _config  # noqa: E402 — same directory
+from . import _config
 
-REPO_ROOT = _config.REPO_ROOT
+REPO_ROOT = _config.repo_root()
 
 DEFAULTS: dict[str, Any] = {
     "entrypoint": "sandbox.py",
