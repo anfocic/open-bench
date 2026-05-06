@@ -82,6 +82,12 @@ def compute_median(values: list[float]) -> float | None:
     return _stats.median(values)
 
 
+def _is_score(x: Any) -> bool:
+    """Return True if x is a numeric score. Excludes bool: a judge writing
+    `"spec_compliance": true` is a malformed score, not a 1."""
+    return isinstance(x, (int, float)) and not isinstance(x, bool)
+
+
 def fmt_int(v: float | int | None) -> str:
     if v is None:
         return "—"
@@ -96,7 +102,7 @@ def quality_total(q: dict[str, Any] | None) -> int | None:
     if not q:
         return None
     keys = ("clarity", "conciseness", "error_handling", "comments")
-    parts = [q.get(k) for k in keys if isinstance(q.get(k), (int, float))]
+    parts = [q.get(k) for k in keys if _is_score(q.get(k))]
     if len(parts) != 4:
         return None
     return sum(parts)
@@ -156,7 +162,7 @@ def split_judge_scores(judges: list[str],
         qt = quality_total(s.get("code_quality"))
         is_expert = judge in _expert_judges()
         is_self = judge == model
-        if isinstance(spec, (int, float)):
+        if _is_score(spec):
             if is_self:
                 self_spec = spec
             else:
@@ -251,7 +257,7 @@ def render_per_judge_ranking(impl_models: list[str], judges: list[str],
             if s is None:
                 continue
             spec = s.get("spec_compliance")
-            if isinstance(spec, (int, float)):
+            if _is_score(spec):
                 ranked.append((spec, model))
         ranked.sort(key=lambda x: (-x[0], x[1]))
         cols = []
@@ -329,7 +335,7 @@ def render_inter_judge_agreement(impl_models: list[str], judges: list[str],
             if s is None:
                 continue
             spec = s.get("spec_compliance")
-            if isinstance(spec, (int, float)):
+            if _is_score(spec):
                 scores.append((judge, float(spec)))
         if len(scores) < 2:
             lines.append(f"| {model} | — | — | — | — | "
@@ -354,7 +360,7 @@ def render_inter_judge_agreement(impl_models: list[str], judges: list[str],
             if s is None:
                 continue
             spec = s.get("spec_compliance")
-            if isinstance(spec, (int, float)):
+            if _is_score(spec):
                 candidates.append((spec, model))
         candidates.sort(key=lambda x: (-x[0], x[1]))
         best_per_judge[judge] = candidates[0][1] if candidates else None
@@ -635,7 +641,10 @@ def main() -> int:
         log.error("%s missing", judgment_meta_file)
         return 1
     judgment_meta = json.loads(judgment_meta_file.read_text())
-    date_stamp = judgment_meta["date_stamp"]
+    date_stamp = judgment_meta.get("date_stamp")
+    if not date_stamp:
+        log.error("%s missing 'date_stamp' field", judgment_meta_file)
+        return 1
 
     log.info("aggregating from %s", judgment_dir.relative_to(REPO_ROOT))
     log.info("  judges: %s", ", ".join(pairings.keys()))

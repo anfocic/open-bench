@@ -14,8 +14,6 @@ from typing import Any
 
 from . import _config
 
-REPO_ROOT = _config.repo_root()
-
 DEFAULTS: dict[str, Any] = {
     "entrypoint": "sandbox.py",
     "language": "python",
@@ -31,7 +29,7 @@ def load(task: str) -> dict[str, Any]:
     Missing keys fall back to DEFAULTS so that omitting the file entirely
     reproduces current round-1 behaviour.
     """
-    path = REPO_ROOT / "bench" / "tasks" / task / "task.json"
+    path = _config.repo_root() / "bench" / "tasks" / task / "task.json"
     if path.exists():
         with open(path) as f:
             try:

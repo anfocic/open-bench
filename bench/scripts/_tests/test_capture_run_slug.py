@@ -48,7 +48,7 @@ class TestCaptureRunReadsMeta(unittest.TestCase):
             (run_dir / "meta.json").write_text(json.dumps(meta))
 
             with mock.patch.object(cr, "REPO_ROOT", tmp), \
-                 mock.patch.object(cr._task, "REPO_ROOT", tmp), \
+                 mock.patch.object(cr._task._config, "repo_root", lambda: tmp), \
                  mock.patch.object(cr, "find_run_dir", return_value=run_dir), \
                  mock.patch.object(cr, "determine_base_branch",
                                   side_effect=RuntimeError("__stop_capture__")):
@@ -69,7 +69,7 @@ class TestCaptureRunReadsMeta(unittest.TestCase):
             run_dir.mkdir(parents=True)
             # No meta.json present.
             with mock.patch.object(cr, "REPO_ROOT", tmp), \
-                 mock.patch.object(cr._task, "REPO_ROOT", tmp), \
+                 mock.patch.object(cr._task._config, "repo_root", lambda: tmp), \
                  mock.patch.object(cr, "find_run_dir", return_value=run_dir):
                 rc = cr.capture("sandbox", "alpha")
             self.assertEqual(rc, 1)

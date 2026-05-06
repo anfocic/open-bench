@@ -19,7 +19,7 @@ from bench.scripts import _task  # noqa: E402
 class TestTaskLoad(unittest.TestCase):
     def test_returns_defaults_when_file_absent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            with mock.patch.object(_task, "REPO_ROOT", Path(tmp)):
+            with mock.patch.object(_task._config, "repo_root", lambda: Path(tmp)):
                 merged = _task.load("ghost-task")
         self.assertEqual(merged["entrypoint"], "sandbox.py")
         self.assertEqual(merged["language"], "python")
@@ -39,7 +39,7 @@ class TestTaskLoad(unittest.TestCase):
                 "language": "rust",
                 "loc_method": "wc_l",
             }))
-            with mock.patch.object(_task, "REPO_ROOT", Path(tmp)):
+            with mock.patch.object(_task._config, "repo_root", lambda: Path(tmp)):
                 merged = _task.load("rust-task")
         self.assertEqual(merged["entrypoint"], "main.rs")
         self.assertEqual(merged["language"], "rust")
@@ -53,7 +53,7 @@ class TestTaskLoad(unittest.TestCase):
             tasks_dir.mkdir(parents=True)
             bad = tasks_dir / "task.json"
             bad.write_text("{not valid json")
-            with mock.patch.object(_task, "REPO_ROOT", Path(tmp)):
+            with mock.patch.object(_task._config, "repo_root", lambda: Path(tmp)):
                 with self.assertRaises(SystemExit) as ctx:
                     _task.load("broken")
             msg = str(ctx.exception)

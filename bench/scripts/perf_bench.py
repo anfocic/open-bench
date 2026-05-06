@@ -60,112 +60,116 @@ def run_once(
     model_slug: str,
     repo_root: Path,
 ) -> dict[str, Any]:
-    """Single run: fresh tmp dir, opencode, capture meta + tests."""
+    """Single run: fresh tmp dir, opencode, capture meta + tests.
+
+    The work dir is removed in `finally` so timeouts and exceptions can't
+    leak it into /tmp.
+    """
     entrypoint = task_cfg["entrypoint"]
     run_id = uuid.uuid4().hex[:8]
     work = Path(tempfile.mkdtemp(prefix=f"perf-bench-{run_id}-"))
 
-    prompt = task_dir / "PROMPT.md"
-    spec = task_dir / "SPEC.md"
-    shutil.copy2(prompt, work / "PROMPT.md")
-    shutil.copy2(spec, work / "SPEC.md")
-    subprocess.run(["git", "init", "-q"], cwd=work, check=True)
-    subprocess.run(["git", "add", "PROMPT.md", "SPEC.md"], cwd=work, check=True)
-    subprocess.run(
-        ["git", "-c", "user.email=perf@bench", "-c", "user.name=perf", "commit", "-q", "-m", "init"],
-        cwd=work, check=True,
-    )
+    try:
+        prompt = task_dir / "PROMPT.md"
+        spec = task_dir / "SPEC.md"
+        shutil.copy2(prompt, work / "PROMPT.md")
+        shutil.copy2(spec, work / "SPEC.md")
+        subprocess.run(["git", "init", "-q"], cwd=work, check=True)
+        subprocess.run(["git", "add", "PROMPT.md", "SPEC.md"], cwd=work, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=perf@bench", "-c", "user.name=perf", "commit", "-q", "-m", "init"],
+            cwd=work, check=True,
+        )
 
-    started = time.time()
-    started_iso = dt.datetime.fromtimestamp(started, dt.timezone.utc).isoformat(timespec="seconds")
+        started = time.time()
+        started_iso = dt.datetime.fromtimestamp(started, dt.timezone.utc).isoformat(timespec="seconds")
 
-    rc = _opencode_run.run(
-        directory=work,
-        model=model_slug,
-        message=(
-            f"Read PROMPT.md and SPEC.md at the worktree root, then implement "
-            f"{entrypoint} per the spec. Stop when {entrypoint} exists at the worktree "
-            f"root and your own quick smoke check passes."
-        ),
-    )
+        rc = _opencode_run.run(
+            directory=work,
+            model=model_slug,
+            message=(
+                f"Read PROMPT.md and SPEC.md at the worktree root, then implement "
+                f"{entrypoint} per the spec. Stop when {entrypoint} exists at the worktree "
+                f"root and your own quick smoke check passes."
+            ),
+        )
 
-    ended = time.time()
-    ended_iso = dt.datetime.fromtimestamp(ended, dt.timezone.utc).isoformat(timespec="seconds")
-    envelope_seconds = round(ended - started, 1)
+        ended = time.time()
+        ended_iso = dt.datetime.fromtimestamp(ended, dt.timezone.utc).isoformat(timespec="seconds")
+        envelope_seconds = round(ended - started, 1)
 
-    impl = work / entrypoint
-    if not impl.exists():
-        shutil.rmtree(work, ignore_errors=True)
+        impl = work / entrypoint
+        if not impl.exists():
+            return {
+                "ok": False,
+                "reason": f"{entrypoint} missing",
+                "opencode_rc": rc,
+                "envelope_seconds": envelope_seconds,
+                "started": started_iso,
+                "ended": ended_iso,
+            }
+
+        # session lookup + meta — opencode session list is project-scoped to
+        # cwd, so we shell out from the work dir to see sessions for this run.
+        session_id = None
+        summary: dict[str, Any] = {}
+        try:
+            out = subprocess.check_output(
+                ["opencode", "session", "list", "--format", "json"],
+                cwd=work, text=True, stderr=subprocess.DEVNULL,
+            )
+            sessions = json.loads(out)
+            target = str(work.resolve())
+            candidates = [
+                s for s in sessions
+                if s.get("directory") and str(Path(s["directory"]).resolve()) == target
+            ]
+            if candidates:
+                candidates.sort(key=lambda s: s.get("updated", 0), reverse=True)
+                session_id = candidates[0]["id"]
+                export = _opencode.export_session(session_id)
+                if export:
+                    summary = _opencode.summarize(export)
+        except (subprocess.CalledProcessError, json.JSONDecodeError):
+            pass
+
+        # hidden tests
+        tests_src = task_dir / "tests"
+        test_dst = work / "_eval_tests"
+        shutil.copytree(tests_src, test_dst)
+        proc = subprocess.run(
+            [sys.executable, "-m", "pytest", str(test_dst), "-q"],
+            cwd=work,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        test_exit = proc.returncode
+        test_stdout = proc.stdout
+
+        parsed = _pytest_parse.parse_pytest_output(test_stdout)
+        passed = parsed["passed"]
+        failed = parsed["failed"]
+
+        impl_loc = _task.loc_count(impl, task_cfg["loc_method"])
+        impl_content = impl.read_text(errors="replace")
+
         return {
-            "ok": False,
-            "reason": f"{entrypoint} missing",
-            "opencode_rc": rc,
-            "envelope_seconds": envelope_seconds,
+            "ok": True,
             "started": started_iso,
             "ended": ended_iso,
+            "envelope_seconds": envelope_seconds,
+            "opencode_rc": rc,
+            "session_id": session_id,
+            "test_exit": test_exit,
+            "tests_passed": passed,
+            "tests_failed": failed,
+            "impl_loc": impl_loc,
+            "impl_content": impl_content,
+            **summary,
         }
-
-    # session lookup + meta — opencode session list is project-scoped to
-    # cwd, so we shell out from the work dir to see sessions for this run.
-    session_id = None
-    summary: dict[str, Any] = {}
-    try:
-        out = subprocess.check_output(
-            ["opencode", "session", "list", "--format", "json"],
-            cwd=work, text=True, stderr=subprocess.DEVNULL,
-        )
-        sessions = json.loads(out)
-        target = str(work.resolve())
-        candidates = [
-            s for s in sessions
-            if s.get("directory") and str(Path(s["directory"]).resolve()) == target
-        ]
-        if candidates:
-            candidates.sort(key=lambda s: s.get("updated", 0), reverse=True)
-            session_id = candidates[0]["id"]
-            export = _opencode.export_session(session_id)
-            if export:
-                summary = _opencode.summarize(export)
-    except (subprocess.CalledProcessError, json.JSONDecodeError):
-        pass
-
-    # hidden tests
-    tests_src = task_dir / "tests"
-    test_dst = work / "_eval_tests"
-    shutil.copytree(tests_src, test_dst)
-    proc = subprocess.run(
-        [sys.executable, "-m", "pytest", str(test_dst), "-q"],
-        cwd=work,
-        capture_output=True,
-        text=True,
-        timeout=300,
-    )
-    test_exit = proc.returncode
-    test_stdout = proc.stdout
-
-    parsed = _pytest_parse.parse_pytest_output(test_stdout)
-    passed = parsed["passed"]
-    failed = parsed["failed"]
-
-    impl_loc = _task.loc_count(impl, task_cfg["loc_method"])
-    impl_content = impl.read_text(errors="replace")
-
-    shutil.rmtree(work, ignore_errors=True)
-
-    return {
-        "ok": True,
-        "started": started_iso,
-        "ended": ended_iso,
-        "envelope_seconds": envelope_seconds,
-        "opencode_rc": rc,
-        "session_id": session_id,
-        "test_exit": test_exit,
-        "tests_passed": passed,
-        "tests_failed": failed,
-        "impl_loc": impl_loc,
-        "impl_content": impl_content,
-        **summary,
-    }
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
 
 
 def main() -> int:
@@ -180,7 +184,7 @@ def main() -> int:
     args = ap.parse_args()
     _logging.setup_logging(quiet=args.quiet, verbose=args.verbose)
 
-    repo_root = Path(__file__).resolve().parent.parent.parent
+    repo_root = _config.repo_root()
     task_dir = repo_root / "bench" / "tasks" / args.task
     if not task_dir.is_dir():
         log.error("no task at %s", task_dir)
@@ -269,7 +273,7 @@ def main() -> int:
         "tests": {
             "passed_per_run": test_pass,
             "failed_per_run": test_fail,
-            "all_pass": all(f == 0 for f in test_fail),
+            "all_pass": len(ok) > 0 and all(f == 0 for f in test_fail),
         },
     }
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2))
