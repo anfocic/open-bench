@@ -13,8 +13,14 @@ import re
 from typing import Any
 
 
+# SGR (color), cursor position (G/H/F), and erase-line (K). Conservative:
+# matches what pytest actually emits, not the full ANSI grammar.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[mGKHF]")
+
+# Optional `[gwN]` prefix tolerates pytest-xdist worker tags.
 _PER_TEST_RE = re.compile(
-    r"^(?P<path>_eval_tests/[^:]+)::(?P<name>[\w\[\]\-]+)\s+"
+    r"^(?:\[gw\d+\]\s+)?"
+    r"(?P<path>_eval_tests/[^:]+)::(?P<name>[\w\[\]\-]+)\s+"
     r"(?P<verdict>PASSED|FAILED|SKIPPED|ERROR)",
     re.MULTILINE,
 )
@@ -32,8 +38,10 @@ def parse_pytest_output(text: str) -> dict[str, Any]:
     Counters default to 0 when their label is absent. `per_test` is
     populated only from `-v`-style per-test lines (`-q` doesn't emit
     them); callers that need per-test verdicts must run pytest with
-    `-v`.
+    `-v`. Strips ANSI color codes up front so colored input parses the
+    same as plain.
     """
+    text = _ANSI_RE.sub("", text)
     border_lines = [
         line for line in text.splitlines()
         if line.startswith("=")
