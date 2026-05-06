@@ -1,6 +1,6 @@
 """Non-interactive `opencode run` wrapper.
 
-Used by --auto flows in start-run.sh and start_judgments.py. Builds an
+Used by --auto flows in start_run.py and start_judgments.py. Builds an
 argv list for `opencode run` and inherits stdout/stderr so the user
 sees the session live.
 

@@ -1,4 +1,4 @@
-"""opencode session helpers for capture-run.sh.
+"""opencode session helpers for capture_run.py.
 
 opencode stores every session it has ever run; `opencode session list
 --format json` exposes them with their working directory. Given a

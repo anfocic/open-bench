@@ -18,10 +18,13 @@ bench/
 │   ├── SPEC.md         frozen task spec
 │   ├── rubric.md       scoring sheet (filled in per run)
 │   └── tests/          HIDDEN — copied into worktree only at capture time
-└── scripts/
-    ├── new-task.sh
-    ├── start-run.sh
-    └── capture-run.sh
+└── scripts/                # python -m bench.scripts.<name>
+    ├── new_task.py
+    ├── start_run.py
+    ├── capture_run.py
+    ├── run_all.py
+    ├── start_judgments.py
+    └── aggregate_judges.py
 
 # Run artifacts live under builds/ and results/ at the repo root:
 #   builds/<model>/sandbox.py                     current code (latest round)
@@ -43,11 +46,11 @@ For each model under test:
 ### Auto-drive (recommended)
 
 ```
-bench/scripts/start-run.sh --auto <task> <model>
+python3 -m bench.scripts.start_run --auto <task> <model>
 ```
 
 `--auto` calls `opencode run` non-interactively against the worktree using
-the slug from `bench/config.json`, then chains to `capture-run.sh` on
+the slug from `bench/config.json`, then chains to `capture_run.py` on
 success. Uses `--dangerously-skip-permissions`; trust the task content
 before running. On a non-zero opencode exit the worktree is preserved for
 inspection and capture is skipped.
@@ -56,7 +59,7 @@ inspection and capture is skipped.
 
 1. **Start a run** (creates an isolated worktree with PROMPT.md + SPEC.md):
    ```
-   bench/scripts/start-run.sh <task> <model>
+   python3 -m bench.scripts.start_run <task> <model>
    ```
 
 2. **Open opencode in the worktree**, set the model, paste `PROMPT.md`:
@@ -69,7 +72,7 @@ inspection and capture is skipped.
 
 3. **Capture artifacts**:
    ```
-   bench/scripts/capture-run.sh <task> <model>
+   python3 -m bench.scripts.capture_run <task> <model>
    ```
    This:
    - finds the opencode session whose working dir matches the worktree
@@ -164,7 +167,7 @@ Reads `pairings.json`, every judge's `*_scores.json`, and each run's
 ## Adding a new task
 
 ```
-bench/scripts/new-task.sh <task-name>
+python3 -m bench.scripts.new_task <task-name>
 ```
 
 Then edit:
@@ -215,7 +218,7 @@ opencode's provider config as OpenAI-compatible providers. Steps:
    - DeepSeek: e.g. `deepseek-chat`, `deepseek-reasoner`
    - MiniMax: e.g. `MiniMax-M2`, `abab7-chat-preview`
 
-**Cost / token capture is automatic.** `capture-run.sh` calls
+**Cost / token capture is automatic.** `capture_run.py` calls
 `opencode export <session>` and sums per-message cost + tokens into
 `meta.json` (fields: `input_tokens`, `output_tokens`, `tokens_total`,
 `cost_usd`, `model_slug`, `model_wall_clock_seconds`). No dashboard
@@ -244,7 +247,7 @@ numbers are comparable.
 
 ### Recording the model slug per run
 
-The `<model>` argument to `start-run.sh` is your **short label** (`kimi`,
+The `<model>` argument to `start_run.py` is your **short label** (`kimi`,
 `deepseek`, `minimax`) — used in directory names and review tables. The
 **actual model slug** (e.g. `opencode-go/kimi-k2.6`) is the value set
 under `slugs` in `bench/config.json` and is also pulled out of the
@@ -253,7 +256,7 @@ review knows which exact build was tested.
 
 ## Transcript capture
 
-`capture-run.sh` finds the opencode session whose working directory
+`capture_run.py` finds the opencode session whose working directory
 matches the worktree, exports it as JSON, archives that JSON as
 `<run-dir>/opencode_session.json`, and renders a markdown
 `transcript.md` from it.
