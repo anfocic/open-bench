@@ -21,6 +21,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+from . import _logging
+
+log = _logging.get_logger(__name__)
+
 
 class OpencodeNotAvailable(Exception):
     pass
@@ -75,7 +79,7 @@ def run(
     argv.append(message)
 
     if os.environ.get("OPENCODE_RUN_DRYRUN") == "1":
-        print("DRYRUN argv:", argv, file=sys.stderr)
+        log.debug("DRYRUN argv: %s", argv)
         return 0
 
     if log_path is None:

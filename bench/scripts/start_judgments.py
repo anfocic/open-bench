@@ -35,7 +35,10 @@ import threading
 from typing import Any
 
 from . import _config
+from . import _logging
 from . import _task
+
+log = _logging.get_logger(__name__)
 
 REPO_ROOT = _config.repo_root()
 
@@ -69,22 +72,22 @@ def find_runs(task: str, entrypoint: str) -> list[dict[str, Any]]:
             try:
                 meta = json.loads(meta_path.read_text())
             except json.JSONDecodeError:
-                print(f"  warn: {meta_path.relative_to(REPO_ROOT)} not valid JSON "
-                      f"— skipping", file=sys.stderr)
+                log.warning("%s not valid JSON — skipping",
+                            meta_path.relative_to(REPO_ROOT))
                 continue
             if meta.get("task") != task:
                 continue
 
             impl = run_entry / entrypoint
             if not impl.exists():
-                print(f"  warn: {run_entry.relative_to(REPO_ROOT)} has no "
-                      f"{entrypoint} — skipping", file=sys.stderr)
+                log.warning("%s has no %s — skipping",
+                            run_entry.relative_to(REPO_ROOT), entrypoint)
                 continue
 
             date_stamp = meta.get("date_stamp")
             if not date_stamp:
-                print(f"  warn: {meta_path.relative_to(REPO_ROOT)} missing "
-                      f"'date_stamp' — skipping", file=sys.stderr)
+                log.warning("%s missing 'date_stamp' — skipping",
+                            meta_path.relative_to(REPO_ROOT))
                 continue
 
             existing = by_model.get(run_model)
@@ -203,7 +206,7 @@ def auto_drive_judges(out_root: pathlib.Path,
     try:
         _opencode_run.preflight()
     except _opencode_run.OpencodeNotAvailable as e:
-        print(f"  --auto skipped: {e}", file=sys.stderr)
+        log.warning("--auto skipped: %s", e)
         return 1
 
     message = (
@@ -217,8 +220,8 @@ def auto_drive_judges(out_root: pathlib.Path,
     drivable: list[str] = []
     for judge in judges:
         if judge not in cfg.slugs:
-            print(f"  --auto: skipping '{judge}' (no slug in config — "
-                  f"drive manually)", file=sys.stderr)
+            log.info("--auto: skipping '%s' (no slug in config — drive "
+                     "manually)", judge)
             continue
         drivable.append(judge)
 
@@ -230,20 +233,20 @@ def auto_drive_judges(out_root: pathlib.Path,
         for judge in drivable:
             judge_dir = out_root / judge
             slug = cfg.slug_for(judge)
-            print(f"\n▶ --auto: driving {judge} ({slug}) against "
-                  f"{judge_dir.relative_to(REPO_ROOT)}")
+            log.info("--auto: driving %s (%s) against %s",
+                     judge, slug, judge_dir.relative_to(REPO_ROOT))
             _, rc, _elapsed = _drive_one_judge(
                 judge, out_root, cfg, message, log_path=None
             )
             if rc != 0:
-                print(f"✗ {judge} exited {rc}", file=sys.stderr)
+                log.error("%s exited %d", judge, rc)
                 overall_rc = overall_rc or rc
         return overall_rc
 
     import concurrent.futures as _cf
 
-    print(f"\n▶ --auto: dispatching {len(drivable)} judge(s) "
-          f"(concurrency={concurrency})")
+    log.info("--auto: dispatching %d judge(s) (concurrency=%d)",
+             len(drivable), concurrency)
 
     results: list[tuple[str, int, float]] = []
     results_lock = threading.Lock()
@@ -260,26 +263,28 @@ def auto_drive_judges(out_root: pathlib.Path,
         for fut in _cf.as_completed(futures):
             judge, rc, elapsed = fut.result()
             log_rel = log_paths[judge].relative_to(REPO_ROOT)
-            mark = "✓" if rc == 0 else "✗"
-            extra = "" if rc == 0 else f" exit {rc}"
-            print(f"  {mark} {judge} ({elapsed:.0f}s){extra} — {log_rel}")
+            if rc == 0:
+                log.info("ok: %s (%.0fs) — %s", judge, elapsed, log_rel)
+            else:
+                log.error("fail: %s (%.0fs) exit %d — %s",
+                          judge, elapsed, rc, log_rel)
             with results_lock:
                 results.append((judge, rc, elapsed))
 
     failed = [(j, rc) for j, rc, _ in results if rc != 0]
     passed = len(results) - len(failed)
-    print(f"\n  {passed} pass, {len(failed)} fail")
+    log.info("%d pass, %d fail", passed, len(failed))
 
     for judge, rc in failed:
-        log = log_paths[judge]
-        print(f"\n--- tail {log.relative_to(REPO_ROOT)} (exit {rc}) ---",
-              file=sys.stderr)
+        log_path = log_paths[judge]
+        log.error("--- tail %s (exit %d) ---",
+                  log_path.relative_to(REPO_ROOT), rc)
         try:
-            lines = log.read_text(errors="replace").splitlines()
+            lines = log_path.read_text(errors="replace").splitlines()
             for ln in lines[-40:]:
                 print(ln, file=sys.stderr)
         except OSError as e:
-            print(f"  (could not read log: {e})", file=sys.stderr)
+            log.error("could not read log: %s", e)
 
     return failed[0][1] if failed else 0
 
@@ -294,7 +299,12 @@ def main() -> int:
     p.add_argument("--concurrency", type=int, default=None,
                    help="parallel judges under --auto "
                         "(default: $JUDGE_CONCURRENCY or 3)")
+    p.add_argument("--quiet", "-q", action="store_true",
+                   help="warnings + errors only")
+    p.add_argument("--verbose", "-v", action="store_true",
+                   help="debug output")
     args = p.parse_args()
+    _logging.setup_logging(quiet=args.quiet, verbose=args.verbose)
 
     if args.concurrency is not None:
         concurrency = args.concurrency
@@ -302,17 +312,16 @@ def main() -> int:
         env = os.environ.get("JUDGE_CONCURRENCY")
         concurrency = int(env) if env else 3
     if concurrency < 1:
-        print(f"error: --concurrency must be >= 1, got {concurrency}",
-              file=sys.stderr)
+        log.error("--concurrency must be >= 1, got %d", concurrency)
         return 2
 
     task_dir = REPO_ROOT / "bench" / "tasks" / args.task
     if not task_dir.is_dir():
-        print(f"error: no task at {task_dir}", file=sys.stderr)
+        log.error("no task at %s", task_dir)
         return 1
     for required in ("JUDGE_PROMPT.md", "JUDGE_RUBRIC.md", "SPEC.md", "PROMPT.md"):
         if not (task_dir / required).exists():
-            print(f"error: task missing {required}", file=sys.stderr)
+            log.error("task missing %s", required)
             return 1
 
     cfg = _config.load()
@@ -321,12 +330,12 @@ def main() -> int:
 
     impls = find_runs(args.task, entrypoint)
     if not impls:
-        print(f"error: no completed runs for task '{args.task}' under "
-              f"<model>/{args.task}-*/ at repo root", file=sys.stderr)
+        log.error("no completed runs for task '%s' under "
+                  "<model>/%s-*/ at repo root", args.task, args.task)
         return 1
     if len(impls) < 2:
-        print(f"error: need at least 2 implementations to judge, found {len(impls)}",
-              file=sys.stderr)
+        log.error("need at least 2 implementations to judge, found %d",
+                  len(impls))
         return 1
 
     # Soft-validate against config: warn if an on-disk model is missing
@@ -334,19 +343,19 @@ def main() -> int:
     on_disk = {impl["model"] for impl in impls}
     unconfigured = on_disk - set(cfg.implementers)
     if unconfigured:
-        print(f"  warn: {sorted(unconfigured)} not in bench/config.json "
-              f"implementers — including anyway", file=sys.stderr)
+        log.warning("%s not in bench/config.json implementers — including "
+                    "anyway", sorted(unconfigured))
 
-    print(f"found {len(impls)} implementation(s):")
+    log.info("found %d implementation(s):", len(impls))
     for impl in impls:
-        print(f"  {impl['model']:12s}  {impl['run_dir'].name}")
+        log.info("  %-12s %s", impl['model'], impl['run_dir'].name)
 
     rng = random.Random(args.seed)
     date_stamp = dt.date.today().isoformat()
     out_root = REPO_ROOT / "results" / "judgments" / f"{args.task}-{date_stamp}"
     if out_root.exists():
-        print(f"error: {out_root} already exists — remove it or pick a fresh date",
-              file=sys.stderr)
+        log.error("%s already exists — remove it or pick a fresh date",
+                  out_root)
         return 1
     out_root.mkdir(parents=True)
 
@@ -369,8 +378,9 @@ def main() -> int:
 
         judge_dir = out_root / judge
         write_packet(task_dir, judge_dir, impls, mapping, entrypoint)
-        print(f"  packet ready: {judge_dir.relative_to(REPO_ROOT)}  "
-              f"({len(targets)} impl{'s' if len(targets) != 1 else ''})")
+        log.info("packet ready: %s (%d impl%s)",
+                 judge_dir.relative_to(REPO_ROOT),
+                 len(targets), 's' if len(targets) != 1 else '')
 
     (out_root / "pairings.json").write_text(
         json.dumps(pairings, indent=2, sort_keys=True) + "\n"
@@ -402,8 +412,7 @@ def main() -> int:
         json.dumps(judgment_meta, indent=2, sort_keys=True) + "\n"
     )
 
-    print()
-    print(f"✓ judgment phase set up at {out_root.relative_to(REPO_ROOT)}")
+    log.info("judgment phase set up at %s", out_root.relative_to(REPO_ROOT))
 
     if args.auto:
         rc = auto_drive_judges(out_root, judges, cfg, concurrency=concurrency)
@@ -412,11 +421,13 @@ def main() -> int:
             print()
             print("manual judges remaining (no slug in config):")
             for j in manual:
-                print(f"  • {j}: {out_root.relative_to(REPO_ROOT)}/{j}/packet/")
+                print(f"  - {j}: {out_root.relative_to(REPO_ROOT)}/{j}/packet/")
         print()
-        print(f"aggregate when done:  bench/scripts/aggregate_judges.py {args.task}")
+        print(f"aggregate when done:  python3 -m bench.scripts.aggregate_judges {args.task}")
         return rc
 
+    # Multi-line operator instructions — kept as print so it renders as
+    # a UX block regardless of log level.
     print()
     print("next steps:")
     print(f"  1. for each judge in {judges}, open its harness and read")
@@ -424,7 +435,7 @@ def main() -> int:
     print(f"     then write filled rubrics + scores.json to <judge>/output/")
     print(f"  2. for any judge with a slug in bench/config.json, you can rerun")
     print(f"     this script with --auto to drive it through opencode")
-    print(f"  3. aggregate:  bench/scripts/aggregate_judges.py {args.task}")
+    print(f"  3. aggregate:  python3 -m bench.scripts.aggregate_judges {args.task}")
     return 0
 
 

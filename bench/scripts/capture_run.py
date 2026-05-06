@@ -23,8 +23,11 @@ from typing import Any
 
 from . import _config
 from . import _git
+from . import _logging
 from . import _opencode
 from . import _task
+
+log = _logging.get_logger(__name__)
 
 REPO_ROOT = _config.repo_root()
 _run_git = _git.run_git
@@ -79,32 +82,31 @@ def capture(task: str, model: str) -> int:
 
     run_dir = find_run_dir(model_dir, task)
     if run_dir is None:
-        print(f"error: no run dir for {task}-* under {model_dir}/", file=sys.stderr)
-        print("       did you call start_run.py first?", file=sys.stderr)
+        log.error("no run dir for %s-* under %s/ — did you call start_run first?",
+                  task, model_dir)
         return 1
 
     meta_path = run_dir / "meta.json"
     if not meta_path.exists():
-        print(f"error: {meta_path} missing — start_run.py was not used to create "
-              f"this run dir, or it predates the meta.json stamp", file=sys.stderr)
+        log.error("%s missing — start_run was not used to create this run dir, "
+                  "or it predates the meta.json stamp", meta_path)
         return 1
     run_meta = json.loads(meta_path.read_text())
     slug = run_meta["slug"]
     worktree_dir = pathlib.Path(run_meta["worktree"])
     if not worktree_dir.is_dir():
-        print(f"error: worktree not found at {worktree_dir}", file=sys.stderr)
+        log.error("worktree not found at %s", worktree_dir)
         return 1
 
     impl_path = worktree_dir / entrypoint
     if not impl_path.exists():
         if os.environ.get("ALLOW_EMPTY_IMPL") != "1":
-            print(f"error: {impl_path} is missing", file=sys.stderr)
-            print("       the model has not produced an implementation yet", file=sys.stderr)
-            print("       did you run the opencode session in the worktree?", file=sys.stderr)
-            print("       if you intended an empty run (e.g. dry-run validation),", file=sys.stderr)
-            print("       set ALLOW_EMPTY_IMPL=1 and re-run.", file=sys.stderr)
+            log.error(
+                "%s is missing — the model has not produced an implementation. "
+                "Did you run the opencode session in the worktree? "
+                "Set ALLOW_EMPTY_IMPL=1 to capture an empty run.", impl_path)
             return 1
-        print(f"  note: {entrypoint} missing; ALLOW_EMPTY_IMPL=1, continuing", file=sys.stderr)
+        log.warning("%s missing; ALLOW_EMPTY_IMPL=1, continuing", entrypoint)
 
     started_at = run_meta.get("started_at", "unknown")
     ended_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -182,7 +184,7 @@ def capture(task: str, model: str) -> int:
 
     tests_src = task_dir / "tests"
     if not tests_src.is_dir():
-        print(f"error: no tests dir at {tests_src}", file=sys.stderr)
+        log.error("no tests dir at %s", tests_src)
         shutil.rmtree(eval_dir, ignore_errors=True)
         return 1
 
@@ -217,17 +219,16 @@ def capture(task: str, model: str) -> int:
                     worktree_transcript = worktree_dir / "transcript.md"
                     if not worktree_transcript.exists():
                         transcript_path.write_text(_opencode.render_transcript(session))
-                    print(f"  ✓ opencode session captured: {session_id}", file=sys.stderr)
-                    print(f"    cost ${summary['cost_usd']:.4f}, "
-                          f"{summary['tokens_total']} tokens, "
-                          f"model {summary['model_slug']}", file=sys.stderr)
+                    log.info("opencode session captured: %s "
+                             "(cost $%.4f, %s tokens, model %s)",
+                             session_id, summary['cost_usd'],
+                             summary['tokens_total'], summary['model_slug'])
             else:
-                print("  note: no opencode session found for worktree — "
-                      "falling back to transcript.md", file=sys.stderr)
+                log.info("no opencode session found for worktree — "
+                         "falling back to transcript.md")
     except (subprocess.CalledProcessError, OSError, json.JSONDecodeError,
             _opencode.OpencodeNotAvailable) as e:
-        print(f"  warn: opencode capture failed ({e}); skipping auto-capture",
-              file=sys.stderr)
+        log.warning("opencode capture failed (%s); skipping auto-capture", e)
 
     worktree_transcript = worktree_dir / "transcript.md"
     if worktree_transcript.exists():
@@ -292,8 +293,10 @@ def capture(task: str, model: str) -> int:
     meta_path.write_text(json.dumps(existing_meta, indent=2) + "\n")
 
     test_status = "all passed" if test_exit == 0 else f"exit {test_exit}"
+    # Multi-line operator summary — kept as print so it renders as a UX
+    # block regardless of log level.
     print()
-    print("✓ captured")
+    print("captured")
     print(f"  run dir:     {run_dir}")
     print(f"  test exit:   {test_exit}  ({test_status})")
     print(f"  {entrypoint}:  {loc} LOC")
@@ -314,7 +317,12 @@ def main() -> int:
     p = argparse.ArgumentParser(description="Capture artifacts from a finished run.")
     p.add_argument("task", help="task name under bench/tasks/")
     p.add_argument("model", help="model short name (e.g. kimi, deepseek)")
+    p.add_argument("--quiet", "-q", action="store_true",
+                   help="warnings + errors only")
+    p.add_argument("--verbose", "-v", action="store_true",
+                   help="debug output")
     args = p.parse_args()
+    _logging.setup_logging(quiet=args.quiet, verbose=args.verbose)
     return capture(args.task, args.model)
 
 

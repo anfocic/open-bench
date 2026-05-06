@@ -13,6 +13,9 @@ import pathlib
 import sys
 
 from . import _config
+from . import _logging
+
+log = _logging.get_logger(__name__)
 
 REPO_ROOT = _config.repo_root()
 
@@ -192,11 +195,16 @@ TASK_JSON_TEMPLATE = {
 def main() -> int:
     p = argparse.ArgumentParser(description="Scaffold a new bench task.")
     p.add_argument("name", help="task name (directory under bench/tasks/)")
+    p.add_argument("--quiet", "-q", action="store_true",
+                   help="warnings + errors only")
+    p.add_argument("--verbose", "-v", action="store_true",
+                   help="debug output")
     args = p.parse_args()
+    _logging.setup_logging(quiet=args.quiet, verbose=args.verbose)
 
     task_dir = REPO_ROOT / "bench" / "tasks" / args.name
     if task_dir.exists():
-        print(f"error: {task_dir} already exists", file=sys.stderr)
+        log.error("%s already exists", task_dir)
         return 1
 
     tests_dir = task_dir / "tests"
@@ -211,8 +219,9 @@ def main() -> int:
     (tests_dir / "conftest.py").write_text(CONFTEST_TEMPLATE)
     (tests_dir / "test_placeholder.py").write_text(PLACEHOLDER_TEST_TEMPLATE)
 
-    print()
-    print(f"✓ scaffolded {task_dir}")
+    log.info("scaffolded %s", task_dir)
+    # Multi-line operator instructions — kept as print so it renders as
+    # a UX block regardless of log level.
     print()
     print("next: edit")
     print(f"  - {task_dir}/PROMPT.md")
