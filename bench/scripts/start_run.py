@@ -21,13 +21,12 @@ import shutil
 import sys
 import threading
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import _config  # noqa: E402
-import _git  # noqa: E402
-import _opencode_run  # noqa: E402
-import _task  # noqa: E402
+from . import _config
+from . import _git
+from . import _opencode_run
+from . import _task
 
-REPO_ROOT = _config.REPO_ROOT
+REPO_ROOT = _config.repo_root()
 _run_git = _git.run_git
 
 
@@ -158,7 +157,7 @@ def start_run(task: str, model: str, auto: bool = False,
     print()
     print("▶ --auto: chaining to capture_run.py")
 
-    from capture_run import capture
+    from .capture_run import capture
     return capture(task, model)
 
 

@@ -13,9 +13,9 @@ from unittest import mock
 
 from . import conftest  # noqa: F401
 
-import _git  # noqa: E402
-import capture_run  # noqa: E402
-import start_run  # noqa: E402
+from bench.scripts import _git  # noqa: E402
+from bench.scripts import capture_run  # noqa: E402
+from bench.scripts import start_run  # noqa: E402
 
 
 def _completed(rc: int, stdout: str = "", stderr: str = "") -> subprocess.CompletedProcess:
@@ -26,11 +26,11 @@ def _completed(rc: int, stdout: str = "", stderr: str = "") -> subprocess.Comple
 
 class TestRunGit(unittest.TestCase):
     def test_happy_path_returns_stdout(self) -> None:
-        with mock.patch("_git.subprocess.run", return_value=_completed(0, "main\n")):
+        with mock.patch("bench.scripts._git.subprocess.run", return_value=_completed(0, "main\n")):
             self.assertEqual(_git.run_git("symbolic-ref", "HEAD"), "main\n")
 
     def test_nonzero_rc_with_check_raises(self) -> None:
-        with mock.patch("_git.subprocess.run",
+        with mock.patch("bench.scripts._git.subprocess.run",
                         return_value=_completed(1, "", "fatal: not a repo\n")):
             with self.assertRaises(RuntimeError) as ctx:
                 _git.run_git("status", check=True)
@@ -38,7 +38,7 @@ class TestRunGit(unittest.TestCase):
             self.assertIn("not a repo", str(ctx.exception))
 
     def test_nonzero_rc_with_check_false_returns_stdout(self) -> None:
-        with mock.patch("_git.subprocess.run",
+        with mock.patch("bench.scripts._git.subprocess.run",
                         return_value=_completed(1, "partial output", "warning")):
             self.assertEqual(
                 _git.run_git("status", check=False),
@@ -46,7 +46,7 @@ class TestRunGit(unittest.TestCase):
             )
 
     def test_passes_cwd_and_subprocess_kwargs(self) -> None:
-        with mock.patch("_git.subprocess.run",
+        with mock.patch("bench.scripts._git.subprocess.run",
                         return_value=_completed(0, "")) as run_mock:
             _git.run_git("status", cwd="/tmp/some/path")
             kwargs = run_mock.call_args.kwargs

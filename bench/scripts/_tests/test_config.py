@@ -1,11 +1,7 @@
 """Pin behavior of _config.Config and _config.load.
 
 Validation invariants tested directly via Config(dict). File-based load()
-is exercised by monkeypatching CONFIG_PATH at a tempfile.
-
-Malformed-JSON behavior is intentionally NOT pinned here — currently the
-script crashes with json.JSONDecodeError. PR2 wraps that in a friendly
-SystemExit; the test pinning that fix lands with the fix.
+is exercised by monkeypatching _config.config_path at a tempfile.
 """
 
 from __future__ import annotations
@@ -18,7 +14,7 @@ from unittest import mock
 
 from . import conftest  # noqa: F401
 
-import _config  # noqa: E402
+from bench.scripts import _config  # noqa: E402
 
 
 class TestConfigConstructor(unittest.TestCase):
@@ -91,7 +87,7 @@ class TestConfigLoad(unittest.TestCase):
             json.dump({"implementers": ["x"], "slugs": {"x": "p/x"}}, f)
             tmp_path = pathlib.Path(f.name)
         try:
-            with mock.patch.object(_config, "CONFIG_PATH", tmp_path):
+            with mock.patch.object(_config, "config_path", lambda: tmp_path):
                 cfg = _config.load()
             self.assertEqual(cfg.implementers, ["x"])
             self.assertEqual(cfg.slug_for("x"), "p/x")
@@ -102,7 +98,7 @@ class TestConfigLoad(unittest.TestCase):
         ghost = pathlib.Path(tempfile.gettempdir()) / "definitely-not-a-real-config-file.json"
         if ghost.exists():
             ghost.unlink()
-        with mock.patch.object(_config, "CONFIG_PATH", ghost):
+        with mock.patch.object(_config, "config_path", lambda: ghost):
             with self.assertRaises(FileNotFoundError) as ctx:
                 _config.load()
             self.assertIn("not found", str(ctx.exception))
@@ -112,7 +108,7 @@ class TestConfigLoad(unittest.TestCase):
             f.write("{not valid json")
             tmp_path = pathlib.Path(f.name)
         try:
-            with mock.patch.object(_config, "CONFIG_PATH", tmp_path):
+            with mock.patch.object(_config, "config_path", lambda: tmp_path):
                 with self.assertRaises(SystemExit) as ctx:
                     _config.load()
             msg = str(ctx.exception)

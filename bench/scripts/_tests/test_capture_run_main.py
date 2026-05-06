@@ -14,7 +14,7 @@ from unittest import mock
 
 from . import conftest  # noqa: F401
 
-import capture_run  # noqa: E402
+from bench.scripts import capture_run  # noqa: E402
 
 
 class TestCaptureMainParseArgs(unittest.TestCase):

@@ -21,13 +21,12 @@ import subprocess
 import sys
 from typing import Any
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import _config  # noqa: E402
-import _git  # noqa: E402
-import _opencode  # noqa: E402
-import _task  # noqa: E402
+from . import _config
+from . import _git
+from . import _opencode
+from . import _task
 
-REPO_ROOT = _config.REPO_ROOT
+REPO_ROOT = _config.repo_root()
 _run_git = _git.run_git
 
 

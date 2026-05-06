@@ -15,8 +15,8 @@ from pathlib import Path
 
 from . import conftest  # noqa: F401
 
-import _pytest_parse  # noqa: E402
-import aggregate_judges  # noqa: E402
+from bench.scripts import _pytest_parse  # noqa: E402
+from bench.scripts import aggregate_judges  # noqa: E402
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 

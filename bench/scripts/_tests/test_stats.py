@@ -7,29 +7,20 @@ The shared module covers:
 - _stats.mode              most-frequent item over a stream
 - _stats.mode_of_counts    argmax over a pre-aggregated count map
 
-Wrappers in aggregate_judges (compute_median) and perf-bench
+Wrappers in aggregate_judges (compute_median) and perf_bench
 (median_or_none, stdev_or_none) are kept thin for back-compat; they're
 verified to delegate correctly so callers see no behavior change.
-
-perf-bench.py has a hyphen in its name, so it loads via importlib.
 """
 
 from __future__ import annotations
 
-import importlib.util
 import unittest
-from pathlib import Path
 
 from . import conftest  # noqa: F401
 
-import _stats  # noqa: E402
-import aggregate_judges  # noqa: E402
-
-_PB_PATH = Path(__file__).resolve().parent.parent / "perf-bench.py"
-_pb_spec = importlib.util.spec_from_file_location("perf_bench", _PB_PATH)
-assert _pb_spec is not None and _pb_spec.loader is not None
-perf_bench = importlib.util.module_from_spec(_pb_spec)
-_pb_spec.loader.exec_module(perf_bench)
+from bench.scripts import _stats  # noqa: E402
+from bench.scripts import aggregate_judges  # noqa: E402
+from bench.scripts import perf_bench  # noqa: E402
 
 
 class TestStatsMedian(unittest.TestCase):
