@@ -150,7 +150,7 @@ def write_packet(
 
 # Prototype for the same parallelization pattern (ThreadPoolExecutor +
 # per-target log file + as_completed summary) that the implementer phase
-# in run-all.sh will eventually adopt. Keep it as a local helper for now —
+# in run_all.py will eventually adopt. Keep it as a local helper for now —
 # one call site, premature to hoist into a shared module.
 def _drive_one_judge(judge: str,
                      out_root: pathlib.Path,
