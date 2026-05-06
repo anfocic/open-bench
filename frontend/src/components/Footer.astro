@@ -1,5 +1,5 @@
 ---
-import { navLinks } from '../data/nav';
+const year = new Date().getFullYear();
 ---
 <footer class="site-footer">
   <div class="footer-grid">
@@ -8,34 +8,38 @@ import { navLinks } from '../data/nav';
       <p class="footer-tag">A weekly LLM coding battle royale. Open source, open data, open methods.</p>
     </div>
     <div class="footer-col">
-      <div class="footer-heading">project</div>
-      {navLinks.map(link => (
-        <a href={link.href} target={link.external ? '_blank' : undefined} rel={link.external ? 'noopener' : undefined}>{link.label === 'task' ? 'task spec' : link.label}</a>
-      ))}
-    </div>
-    <div class="footer-col">
-      <div class="footer-heading">data</div>
-      <a href="/round">all rounds</a>
+      <div class="footer-heading">browse</div>
+      <a href="/round">rounds</a>
       <a href="/leaderboard">leaderboard</a>
       <a href="/notes">writeups</a>
-      <a href="/task/sandbox">spec &amp; rubric</a>
-      <a href="/dataset">dataset</a>
       <a href="/changelog">changelog</a>
-      <a href="https://github.com/anfocic/open-bench/tree/main/builds" target="_blank" rel="noopener">raw artifacts</a>
-      <a href="/feed.xml">rss feed</a>
+      <a href="/model-royale">model royale</a>
+      <a href="/about">about</a>
     </div>
     <div class="footer-col">
-      <div class="footer-heading">stack</div>
-      <div class="footer-meta">harness <code>opencode</code></div>
-      <div class="footer-meta">site <code>astro</code></div>
-      <div class="footer-meta">host <code>cloudflare</code></div>
+      <div class="footer-heading">grab</div>
+      <a href="/dataset">dataset (json/csv)</a>
+      <a href="/embed">embed widgets</a>
+      <a href="https://github.com/anfocic/open-bench/tree/main/builds" target="_blank" rel="noopener">raw artifacts</a>
     </div>
   </div>
   <div class="footer-base">
-    <span>2026</span>
+    <span>{year}</span>
     <span>·</span>
     <span>MIT</span>
     <span>·</span>
     <span>made by <a href="https://fole.dev" target="_blank" rel="noopener">fole.dev</a></span>
+    <span class="footer-icons">
+      <a href="https://github.com/anfocic/open-bench" target="_blank" rel="noopener" aria-label="GitHub repository">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.27-1.69-1.27-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.34.96.1-.74.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.18 1.18.92-.26 1.91-.39 2.89-.39.98 0 1.97.13 2.89.39 2.21-1.49 3.18-1.18 3.18-1.18.62 1.58.23 2.75.11 3.04.74.81 1.18 1.84 1.18 3.1 0 4.42-2.69 5.4-5.25 5.68.41.36.78 1.06.78 2.14 0 1.55-.01 2.8-.01 3.18 0 .31.21.67.8.56C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/>
+        </svg>
+      </a>
+      <a href="/feed.xml" aria-label="RSS feed">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <path d="M4 4v3.5C13.08 7.5 16.5 10.92 16.5 20H20C20 9.07 14.93 4 4 4zm0 6v3.5c3.59 0 6.5 2.91 6.5 6.5H14c0-5.51-4.49-10-10-10zm2.5 7a2 2 0 100 4 2 2 0 000-4z"/>
+        </svg>
+      </a>
+    </span>
   </div>
 </footer>
