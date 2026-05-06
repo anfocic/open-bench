@@ -97,6 +97,10 @@ inspection and capture is skipped.
 All entry points accept `--quiet` (warnings only) and `--verbose` (debug
 + timestamps). Default emits one-line status to stderr.
 
+Dev deps: `pip install -r requirements-dev.txt` (currently just
+`hypothesis` for the property tests under `bench/scripts/_tests/`).
+Then `python -m pytest bench/scripts/_tests`.
+
 ## Judgment phase
 
 After all implementations are captured, every implementation is scored by
