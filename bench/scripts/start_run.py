@@ -79,7 +79,10 @@ def start_run(task: str, model: str, auto: bool = False,
         log.warning("'%s' not in bench/config.json implementers — proceeding "
                     "anyway; add it to config if intentional", model)
 
-    date_stamp = os.environ.get("RUN_STAMP", dt.date.today().isoformat())
+    date_stamp = os.environ.get(
+        "RUN_STAMP",
+        dt.datetime.now(dt.timezone.utc).date().isoformat(),
+    )
     slug = f"{task}-{model}-{date_stamp}"
     branch = f"eval/{slug}"
     worktree_dir = (REPO_ROOT / ".." / f"eval-{slug}").resolve()
@@ -87,7 +90,12 @@ def start_run(task: str, model: str, auto: bool = False,
     lock_ctx = worktree_lock if worktree_lock is not None else contextlib.nullcontext()
     with lock_ctx:
         existing = _run_git("worktree", "list", "--porcelain", cwd=REPO_ROOT, check=False)
-        if f"worktree {worktree_dir}" in existing:
+        existing_paths = {
+            line[len("worktree "):]
+            for line in existing.splitlines()
+            if line.startswith("worktree ")
+        }
+        if str(worktree_dir) in existing_paths:
             log.error("worktree already exists at %s — remove with: "
                       "git worktree remove %s", worktree_dir, worktree_dir)
             return 1

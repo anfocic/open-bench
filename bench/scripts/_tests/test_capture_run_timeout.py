@@ -57,7 +57,7 @@ class TestCaptureRunTimeout(unittest.TestCase):
                 return real_run(*args, **kwargs)
 
             with mock.patch.object(cr, "REPO_ROOT", tmp), \
-                 mock.patch.object(cr._task, "REPO_ROOT", tmp), \
+                 mock.patch.object(cr._task._config, "repo_root", lambda: tmp), \
                  mock.patch.object(cr, "find_run_dir", return_value=run_dir), \
                  mock.patch.object(cr, "_run_git", return_value=""), \
                  mock.patch.object(cr, "determine_base_branch", return_value="main"), \

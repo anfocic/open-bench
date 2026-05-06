@@ -116,7 +116,12 @@ def capture(task: str, model: str) -> int:
     base_branch = determine_base_branch(REPO_ROOT)
     base = _run_git("merge-base", "HEAD", base_branch, cwd=worktree_dir, check=False).strip()
     if not base:
-        base = _run_git("rev-parse", base_branch, cwd=REPO_ROOT).strip()
+        try:
+            base = _run_git("rev-parse", base_branch, cwd=REPO_ROOT).strip()
+        except RuntimeError as e:
+            log.error("could not resolve base branch '%s' (merge-base + "
+                      "rev-parse both failed): %s", base_branch, e)
+            return 1
 
     diff_lines: list[str] = []
 
@@ -322,7 +327,8 @@ def capture(task: str, model: str) -> int:
     print(f"  - meta.json")
     print()
     print(f"next: review with results/reviews/TEMPLATE.md → "
-          f"results/reviews/{task}-{dt.date.today().isoformat()}.md")
+          f"results/reviews/{task}-"
+          f"{dt.datetime.now(dt.timezone.utc).date().isoformat()}.md")
     return 0
 
 

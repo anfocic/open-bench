@@ -131,7 +131,6 @@ def write_packet(
         if src.exists():
             shutil.copy2(src, packet / fname)
 
-    label_to_model = {label: model for model, label in mapping.items()}
     suffix = pathlib.Path(entrypoint).suffix
     for impl in impls:
         if impl["model"] not in mapping:
@@ -140,7 +139,7 @@ def write_packet(
         shutil.copy2(impl["impl_path"], impl_dir / f"{label}{suffix}")
 
     # Per-judge cover note: which labels exist, no model→label leak.
-    labels = sorted(label_to_model.keys())
+    labels = sorted(mapping.values())
     cover = packet / "README.md"
     cover.write_text(
         f"# Judgment packet\n\n"
@@ -351,7 +350,7 @@ def main() -> int:
         log.info("  %-12s %s", impl['model'], impl['run_dir'].name)
 
     rng = random.Random(args.seed)
-    date_stamp = dt.date.today().isoformat()
+    date_stamp = dt.datetime.now(dt.timezone.utc).date().isoformat()
     out_root = REPO_ROOT / "results" / "judgments" / f"{args.task}-{date_stamp}"
     if out_root.exists():
         log.error("%s already exists — remove it or pick a fresh date",

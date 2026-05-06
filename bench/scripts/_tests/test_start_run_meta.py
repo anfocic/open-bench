@@ -52,7 +52,7 @@ class TestStartRunMeta(unittest.TestCase):
                 return ""
 
             with mock.patch.object(sr, "REPO_ROOT", tmp), \
-                 mock.patch.object(sr._task, "REPO_ROOT", tmp), \
+                 mock.patch.object(sr._task._config, "repo_root", lambda: tmp), \
                  mock.patch.object(sr._config, "load", return_value=FakeCfg()), \
                  mock.patch.object(sr, "_run_git", side_effect=fake_git), \
                  mock.patch.object(sr, "determine_base_branch", return_value="main"), \
