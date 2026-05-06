@@ -190,14 +190,27 @@ def capture(task: str, model: str) -> int:
 
     shutil.copytree(tests_src, eval_dir, dirs_exist_ok=True)
 
-    proc = subprocess.run(
-        test_invocation,
-        cwd=str(worktree_dir),
-        capture_output=True,
-        text=True,
-    )
-    test_exit = proc.returncode
-    (run_dir / "test-output.txt").write_text(proc.stdout + "\n--- stderr ---\n" + proc.stderr)
+    test_timeout = int(os.environ.get("CAPTURE_TEST_TIMEOUT", "300"))
+    try:
+        proc = subprocess.run(
+            test_invocation,
+            cwd=str(worktree_dir),
+            capture_output=True,
+            text=True,
+            timeout=test_timeout,
+        )
+        test_exit = proc.returncode
+        test_stdout = proc.stdout
+        test_stderr = proc.stderr
+    except subprocess.TimeoutExpired as e:
+        log.error("hidden tests timed out after %ds — recording exit 124. "
+                  "Override with CAPTURE_TEST_TIMEOUT=<seconds>.", test_timeout)
+        test_exit = 124  # convention: command timed out
+        test_stdout = (e.stdout.decode(errors="replace") if isinstance(e.stdout, bytes)
+                       else (e.stdout or ""))
+        test_stderr = (e.stderr.decode(errors="replace") if isinstance(e.stderr, bytes)
+                       else (e.stderr or ""))
+    (run_dir / "test-output.txt").write_text(test_stdout + "\n--- stderr ---\n" + test_stderr)
 
     shutil.rmtree(eval_dir, ignore_errors=True)
 
