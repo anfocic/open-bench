@@ -266,14 +266,14 @@ def render_per_judge_ranking(impl_models: list[str], judges: list[str],
 
 def render_per_implementation(impl_models: list[str], judges: list[str],
                               scores_by_judge: dict[str, Any],
-                              runs_index: dict[str, str],
+                              runs_index: dict[str, dict[str, Any]],
                               test_results: dict[str, Any]) -> list[str]:
     """One section per impl with every judge's row + objective tests."""
     lines = ["## Per-implementation detail", ""]
     for model in impl_models:
         lines.append(f"### {model}")
         lines.append("")
-        run_dir = runs_index.get(model, "—")
+        run_dir = runs_index.get(model, {}).get("path", "—")
         lines.append(f"Run: `{run_dir}`")
         lines.append("")
         lines.append("| Judge | Tier | Hard-fail | Spec /10 | Quality /20 | Verdict | Note |")
@@ -473,7 +473,8 @@ def render_judge_cost(judges: list[str], judgment_dir: pathlib.Path) -> list[str
     return lines
 
 
-def render_cost_efficiency(impl_models: list[str], runs_index: dict[str, str],
+def render_cost_efficiency(impl_models: list[str],
+                           runs_index: dict[str, dict[str, Any]],
                            test_results: dict[str, Any]) -> list[str]:
     """Cost / wall-clock / cost-per-passing-test, pulled from each run's meta.json."""
     lines = ["## Cost & efficiency", ""]
@@ -488,7 +489,7 @@ def render_cost_efficiency(impl_models: list[str], runs_index: dict[str, str],
     lines.append("| Impl | Model slug | LOC | Wall-clock (model) | Tokens | Cost USD | Tests passed | Cost / passing test |")
     lines.append("|---|---|---|---|---|---|---|---|")
     for model in impl_models:
-        meta = load_run_meta(runs_index.get(model, ""))
+        meta = load_run_meta(runs_index.get(model, {}).get("path", ""))
         slug = meta.get("model_slug", "—")
         loc = get_impl_loc(meta)
         wc_seconds = meta.get("model_wall_clock_seconds")
@@ -513,14 +514,14 @@ def render_cost_efficiency(impl_models: list[str], runs_index: dict[str, str],
 
 
 def render_review(task: str,
+                  date_stamp: str,
                   judgment_dir: pathlib.Path,
                   pairings: dict[str, dict[str, str]],
-                  runs_index: dict[str, str],
+                  runs_index: dict[str, dict[str, Any]],
                   scores_by_judge: dict[str, dict[str, dict[str, Any] | None]],
                   test_results: dict[str, dict[str, Any]]) -> str:
     impl_models = sorted(runs_index.keys())
     judges = list(pairings.keys())
-    date_stamp = judgment_dir.name[len(task) + 1:]
     expert_judges = [j for j in judges if j in _expert_judges()]
     peer_judges = [j for j in judges if j not in _expert_judges()]
 
@@ -623,6 +624,13 @@ def main() -> int:
         return 1
     runs_index = json.loads(runs_index_file.read_text())
 
+    judgment_meta_file = judgment_dir / "judgment_meta.json"
+    if not judgment_meta_file.exists():
+        print(f"error: {judgment_meta_file} missing", file=sys.stderr)
+        return 1
+    judgment_meta = json.loads(judgment_meta_file.read_text())
+    date_stamp = judgment_meta["date_stamp"]
+
     print(f"aggregating from {judgment_dir.relative_to(REPO_ROOT)}")
     print(f"  judges: {', '.join(pairings.keys())}")
     print(f"  impls:  {', '.join(runs_index.keys())}")
@@ -634,7 +642,8 @@ def main() -> int:
 
     # Hidden test results from each model's run dir (objective)
     test_results: dict[str, dict] = {}
-    for model, rel_run in runs_index.items():
+    for model, entry in runs_index.items():
+        rel_run = entry["path"]
         run_dir = REPO_ROOT / rel_run
         out = run_dir / "test-output.txt"
         if not out.exists():
@@ -647,6 +656,7 @@ def main() -> int:
 
     review_md = render_review(
         task=args.task,
+        date_stamp=date_stamp,
         judgment_dir=judgment_dir,
         pairings=pairings,
         runs_index=runs_index,
@@ -654,7 +664,6 @@ def main() -> int:
         test_results=test_results,
     )
 
-    date_stamp = judgment_dir.name[len(args.task) + 1:]
     review_path = REPO_ROOT / "results" / "reviews" / f"{args.task}-{date_stamp}.md"
     review_path.parent.mkdir(parents=True, exist_ok=True)
     review_path.write_text(review_md)
