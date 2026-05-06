@@ -39,6 +39,20 @@ bench/
 #   results/judgments/<task>-<date>/              judge packets (gitignored)
 ```
 
+## Install
+
+```
+git clone https://github.com/anfocic/open-bench
+cd open-bench
+pip install -e ".[dev]"
+```
+
+After install, seven CLIs land on PATH: `bench-new-task`,
+`bench-start-run`, `bench-capture-run`, `bench-run-all`,
+`bench-judgments`, `bench-aggregate`, `bench-perf`. Each takes the
+same arguments as `python3 -m bench.scripts.<name>`, which still works
+without an install.
+
 ## Run protocol
 
 For each model under test:
@@ -97,9 +111,8 @@ inspection and capture is skipped.
 All entry points accept `--quiet` (warnings only) and `--verbose` (debug
 + timestamps). Default emits one-line status to stderr.
 
-Dev deps: `pip install -r requirements-dev.txt` (currently just
-`hypothesis` for the property tests under `bench/scripts/_tests/`).
-Then `python -m pytest bench/scripts/_tests`.
+Tests: `pip install -e ".[dev]"` (pulls in `pytest` + `hypothesis`),
+then `python -m pytest bench/scripts/_tests`.
 
 ## Judgment phase
 
