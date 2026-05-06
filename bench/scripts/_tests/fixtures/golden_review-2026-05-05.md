@@ -1,0 +1,292 @@
+# Review: sandbox (2026-05-05)
+
+Multi-judge blind review of 7 implementations. Each implementation was scored by 0 expert judges (—) and the 7 peer models that didn't produce it. Judges saw only the code + spec, not the hidden test results — those come from each run's `test-output.txt` and are shown separately as objective signal.
+
+Judgment dir: `results/judgments/sandbox-2026-05-05/`
+
+## Scoreboard
+
+Three medians shown so reader can compare expert vs peer consensus. Hidden test results are objective (pulled from each run's `test-output.txt`) and shown alongside for triangulation.
+
+| Impl | Hard-fail | Spec — all | Spec — expert | Spec — peer | Quality — all | Quality — expert | Quality — peer | Tests | Verdict (mode) |
+|---|---|---|---|---|---|---|---|---|---|
+| deepseek | pass | 10 | — | 10 | 14 | — | 14 | 9/9 | ship-with-cleanup |
+| deepseek-flash | pass | 9.5 | — | 9.5 | 16 | — | 16 | 9/9 | ship-with-cleanup |
+| glm | pass | 9.5 | — | 9.5 | 18 | — | 18 | 9/9 | ship-with-cleanup |
+| kimi | pass | 8 | — | 8 | 16 | — | 16 | 9/9 | ship-with-cleanup |
+| mimo | pass | 7 | — | 7 | 16 | — | 16 | 9/9 | rewrite |
+| minimax | pass | 8 | — | 8 | 14 | — | 14 | 9/9 | rewrite |
+| qwen | pass | 8 | — | 8 | 15 | — | 15 | 9/9 | ship-with-cleanup |
+
+## Per-judge ranking by spec compliance
+
+How each judge ranked the implementations (highest spec score first). If a judge gave equal scores, ordering is alphabetical.
+
+| Judge | 1st | 2nd | 3rd |
+|---|---|---|---|
+| deepseek | deepseek (10) | deepseek-flash (10) | glm (10) |
+| deepseek-flash | deepseek (10) | deepseek-flash (10) | glm (10) |
+| glm | deepseek (10) | glm (10) | deepseek-flash (9) |
+| kimi | deepseek (10) | glm (9) | minimax (8) |
+| mimo | deepseek-flash (10) | glm (10) | deepseek (9) |
+| minimax | deepseek (10) | deepseek-flash (10) | glm (9) |
+| qwen | deepseek-flash (9) | deepseek (8) | kimi (8) |
+
+## Self-bias check
+
+Δ = `self − peer median`. Positive = the model scored its own code higher than peers did (overrating itself). Self-judgments are excluded from the headline scoreboard above so the medians there are not self-inflated.
+
+| Impl | Self spec | Peer med spec | Δ spec | Self qual | Peer med qual | Δ qual |
+|---|---|---|---|---|---|---|
+| deepseek | 10 | 10 | 0 | 16 | 14 | 2 |
+| deepseek-flash | 10 | 9.5 | 0.5 | 16 | 16 | 0 |
+| glm | 10 | 9.5 | 0.5 | 16 | 18 | -2 |
+| kimi | 7 | 8 | -1 | 14 | 16 | -2 |
+| mimo | 8 | 7 | 1 | 17 | 16 | 1 |
+| minimax | 7 | 8 | -1 | 16 | 14 | 2 |
+| qwen | 7 | 8 | -1 | 16 | 15 | 1 |
+
+## Inter-judge agreement
+
+Spec-score variance across judges per implementation. High range = judges disagreed on the same code. Worth investigating.
+
+| Impl | Min spec | Max spec | Range | Stdev | Judges who scored |
+|---|---|---|---|---|---|
+| deepseek | 8 | 10 | 2 | 0.79 | deepseek, deepseek-flash, glm, kimi, mimo, minimax, qwen |
+| deepseek-flash | 7 | 10 | 3 | 1.11 | deepseek, deepseek-flash, glm, kimi, mimo, minimax, qwen |
+| glm | 7 | 10 | 3 | 1.11 | deepseek, deepseek-flash, glm, kimi, mimo, minimax, qwen |
+| kimi | 7 | 9 | 2 | 0.69 | deepseek, deepseek-flash, glm, kimi, mimo, minimax, qwen |
+| mimo | 5 | 8 | 3 | 1.00 | deepseek, deepseek-flash, glm, kimi, mimo, minimax, qwen |
+| minimax | 6 | 8 | 2 | 0.79 | deepseek, deepseek-flash, glm, kimi, mimo, minimax, qwen |
+| qwen | 7 | 10 | 3 | 1.07 | deepseek, deepseek-flash, glm, kimi, mimo, minimax, qwen |
+
+**Best impl per judge:**
+
+- **deepseek** — chosen best by: deepseek, deepseek-flash, glm, kimi, minimax
+- **deepseek-flash** — chosen best by: mimo, qwen
+
+## Per-implementation detail
+
+### deepseek
+
+Run: `builds/deepseek/rounds/sandbox-2026-05-05-r3`
+
+| Judge | Tier | Hard-fail | Spec /10 | Quality /20 | Verdict | Note |
+|---|---|---|---|---|---|---|
+| deepseek | self | pass | 10 | 16 | ship-with-cleanup | Thorough timeout handling with cidfile-based container kill, but cidfile mech... |
+| deepseek-flash | peer | pass | 10 | 12 | rewrite | Functionally correct but severely over-engineered with cidfile/tempfile mecha... |
+| glm | peer | pass | 10 | 13 | ship-with-cleanup | Fully spec-compliant with correct character-based truncation, but over-engine... |
+| kimi | peer | pass | 10 | 14 | ship-with-cleanup | The most spec-accurate of the bunch, slightly over-engineered around timeout ... |
+| mimo | peer | pass | 9 | 15 | rewrite | Over-engineered cidfile cleanup for timeout handling; solid spec compliance b... |
+| minimax | peer | pass | 10 | — | ship-with-cleanup | Excellent implementation with proper timeout handling and container cleanup v... |
+| qwen | peer | pass | 8 | 16 | ship-with-cleanup | Robust CLI -- handling and good output format, but cidfile adds unnecessary c... |
+
+**Hidden test results** (objective):
+
+- `test_exit_code_nonzero` — PASSED
+- `test_network_bridge` — PASSED
+- `test_network_default_isolated` — PASSED
+- `test_no_host_shell_injection` — PASSED
+- `test_output_format` — PASSED
+- `test_simple_echo` — PASSED
+- `test_timeout` — PASSED
+- `test_truncation` — PASSED
+- `test_workspace_mount` — PASSED
+
+### deepseek-flash
+
+Run: `builds/deepseek-flash/rounds/sandbox-2026-05-05-r3`
+
+| Judge | Tier | Hard-fail | Spec /10 | Quality /20 | Verdict | Note |
+|---|---|---|---|---|---|---|
+| deepseek | peer | pass | 10 | 16 | ship-with-cleanup | Solid spec compliance with container kill on timeout, but UUID naming and con... |
+| deepseek-flash | self | pass | 10 | 16 | ship-with-cleanup | Fully spec-compliant but over-engineered with unnecessary --name/--kill conta... |
+| glm | peer | pass | 9 | 14 | ship-with-cleanup | Solid implementation with correct output format and good timeout handling, bu... |
+| kimi | peer | pass | 7 | 13 | ship-with-cleanup | Solid structure but repeats the common truncation and stdout-mutation mistake... |
+| mimo | peer | pass | 10 | 18 | ship-with-cleanup | Clean, correct implementation with full spec compliance; truncation loop is s... |
+| minimax | peer | pass | 10 | 17 | ship-with-cleanup | Excellent implementation. All spec requirements met with proper output format... |
+| qwen | peer | pass | 9 | 16 | ship-with-cleanup | Best output format handling of the batch; unnecessary uuid/container-name add... |
+
+**Hidden test results** (objective):
+
+- `test_exit_code_nonzero` — PASSED
+- `test_network_bridge` — PASSED
+- `test_network_default_isolated` — PASSED
+- `test_no_host_shell_injection` — PASSED
+- `test_output_format` — PASSED
+- `test_simple_echo` — PASSED
+- `test_timeout` — PASSED
+- `test_truncation` — PASSED
+- `test_workspace_mount` — PASSED
+
+### glm
+
+Run: `builds/glm/rounds/sandbox-2026-05-05-r3`
+
+| Judge | Tier | Hard-fail | Spec /10 | Quality /20 | Verdict | Note |
+|---|---|---|---|---|---|---|
+| deepseek | peer | pass | 10 | 19 | ship-with-cleanup | Flawless spec compliance with careful format construction and character-aware... |
+| deepseek-flash | peer | pass | 10 | 19 | ship-with-cleanup | Spec-compliant, clean, and well-balanced implementation with correct truncati... |
+| glm | self | pass | 10 | 16 | ship-with-cleanup | Clean, spec-compliant implementation with correct Unicode truncation and fait... |
+| kimi | peer | pass | 9 | 17 | ship-with-cleanup | Almost perfect: excellent truncation logic, clean structure, one small format... |
+| mimo | peer | pass | 10 | 19 | ship-with-cleanup | Best overall implementation: full spec compliance, correct output format, saf... |
+| minimax | peer | pass | 9 | 17 | ship-with-cleanup | Solid implementation with proper resource limits and correct output formattin... |
+| qwen | peer | pass | 7 | 17 | ship-with-cleanup | Good output format handling and clean structure, but missing -- separator sup... |
+
+**Hidden test results** (objective):
+
+- `test_exit_code_nonzero` — PASSED
+- `test_network_bridge` — PASSED
+- `test_network_default_isolated` — PASSED
+- `test_no_host_shell_injection` — PASSED
+- `test_output_format` — PASSED
+- `test_simple_echo` — PASSED
+- `test_timeout` — PASSED
+- `test_truncation` — PASSED
+- `test_workspace_mount` — PASSED
+
+### kimi
+
+Run: `builds/kimi/rounds/sandbox-2026-05-05-r3`
+
+| Judge | Tier | Hard-fail | Spec /10 | Quality /20 | Verdict | Note |
+|---|---|---|---|---|---|---|
+| deepseek | peer | pass | 9 | 16 | ship-with-cleanup | Solid argv handling and defaults, but stdout body formatting omits required n... |
+| deepseek-flash | peer | pass | 8 | 17 | ship-with-cleanup | Solid implementation with good timeout behaviour but two format/truncation is... |
+| glm | peer | pass | 8 | 14 | ship-with-cleanup | Compact with good timeout output capture, but missing newline before --- stde... |
+| kimi | self | pass | 7 | 14 | ship-with-cleanup | Concise and readable, but output formatting and truncation both have the same... |
+| mimo | peer | pass | 8 | 16 | rewrite | Minimal and clean but has output format bug on empty stdout and truncation th... |
+| minimax | peer | pass | 9 | 17 | ship-with-cleanup | Solid implementation with proper resource limits and truncation. One minor ou... |
+| qwen | peer | pass | 8 | 15 | ship-with-cleanup | Correct argv handling and resource caps, but output format breaks on non-newl... |
+
+**Hidden test results** (objective):
+
+- `test_exit_code_nonzero` — PASSED
+- `test_network_bridge` — PASSED
+- `test_network_default_isolated` — PASSED
+- `test_no_host_shell_injection` — PASSED
+- `test_output_format` — PASSED
+- `test_simple_echo` — PASSED
+- `test_timeout` — PASSED
+- `test_truncation` — PASSED
+- `test_workspace_mount` — PASSED
+
+### mimo
+
+Run: `builds/mimo/rounds/sandbox-2026-05-05-r3`
+
+| Judge | Tier | Hard-fail | Spec /10 | Quality /20 | Verdict | Note |
+|---|---|---|---|---|---|---|
+| deepseek | peer | pass | 8 | 16 | ship-with-cleanup | Clean structure but two spec misses: format blank-line on empty stdout, and '... |
+| deepseek-flash | peer | pass | 7 | 16 | rewrite | Core structure is OK but output format and truncation have real spec violatio... |
+| glm | peer | pass | 7 | 14 | ship-with-cleanup | Compact but flawed: f-string output format produces extra newlines, truncatio... |
+| kimi | peer | pass | 7 | 15 | ship-with-cleanup | Compact and readable, but output formatting is sloppy and truncation splits m... |
+| mimo | self | pass | 8 | 17 | rewrite | Concise and readable but has format bugs (extra blank line on empty stdout/st... |
+| minimax | peer | pass | 7 | 16 | rewrite | Good resource handling but output format adds unnecessary newlines, missing -... |
+| qwen | peer | pass | 5 | 16 | rewrite | Minimal and readable but has the most spec violations: output format bug, no ... |
+
+**Hidden test results** (objective):
+
+- `test_exit_code_nonzero` — PASSED
+- `test_network_bridge` — PASSED
+- `test_network_default_isolated` — PASSED
+- `test_no_host_shell_injection` — PASSED
+- `test_output_format` — PASSED
+- `test_simple_echo` — PASSED
+- `test_timeout` — PASSED
+- `test_truncation` — PASSED
+- `test_workspace_mount` — PASSED
+
+### minimax
+
+Run: `builds/minimax/rounds/sandbox-2026-05-05-r3`
+
+| Judge | Tier | Hard-fail | Spec /10 | Quality /20 | Verdict | Note |
+|---|---|---|---|---|---|---|
+| deepseek | peer | pass | 8 | 13 | ship-with-cleanup | Two fundamental bugs (output format and byte-vs-character truncation) plus a ... |
+| deepseek-flash | peer | pass | 8 | 15 | rewrite | Clean structure but two spec violations: missing \n after stdout body and cha... |
+| glm | peer | pass | 8 | 13 | ship-with-cleanup | Functional core with Popen-based timeout handling, but output format bug (mis... |
+| kimi | peer | pass | 8 | 14 | ship-with-cleanup | Clean argv-based invocation, but output formatting and byte-level truncation ... |
+| mimo | peer | pass | 7 | 14 | rewrite | Decent Popen-based approach with good timeout cleanup, but truncation is byte... |
+| minimax | self | pass | 7 | 16 | rewrite | Good structure but missing -- separator handling, char-based truncation can e... |
+| qwen | peer | pass | 6 | 15 | rewrite | Character-count truncation is a real bug; -- separator handling via argparse ... |
+
+**Hidden test results** (objective):
+
+- `test_exit_code_nonzero` — PASSED
+- `test_network_bridge` — PASSED
+- `test_network_default_isolated` — PASSED
+- `test_no_host_shell_injection` — PASSED
+- `test_output_format` — PASSED
+- `test_simple_echo` — PASSED
+- `test_timeout` — PASSED
+- `test_truncation` — PASSED
+- `test_workspace_mount` — PASSED
+
+### qwen
+
+Run: `builds/qwen/rounds/sandbox-2026-05-05-r3`
+
+| Judge | Tier | Hard-fail | Spec /10 | Quality /20 | Verdict | Note |
+|---|---|---|---|---|---|---|
+| deepseek | peer | pass | 10 | 16 | ship-with-cleanup | Clean, correct implementation; truncation approach and stderr trailing-newlin... |
+| deepseek-flash | peer | pass | 9 | 18 | ship-with-cleanup | Clean, well-structured implementation with correct param handling; truncation... |
+| glm | peer | pass | 8 | 14 | ship-with-cleanup | Well-structured but discards timeout output and exceeds the 50KB cap; stderr ... |
+| kimi | peer | pass | 7 | 13 | ship-with-cleanup | Well-factored but over-cleans stdout/stderr, and byte-wise truncation can cor... |
+| mimo | peer | pass | 8 | 15 | rewrite | Solid structure with good abspath handling, but output format bugs on empty b... |
+| minimax | peer | pass | 8 | — | rewrite | Good structure but output formatting uses rstrip losing data, truncation exce... |
+| qwen | self | pass | 7 | 16 | ship-with-cleanup | Cleanest code structure of the batch, but stderr stripping and head-truncatio... |
+
+**Hidden test results** (objective):
+
+- `test_exit_code_nonzero` — PASSED
+- `test_network_bridge` — PASSED
+- `test_network_default_isolated` — PASSED
+- `test_no_host_shell_injection` — PASSED
+- `test_output_format` — PASSED
+- `test_simple_echo` — PASSED
+- `test_timeout` — PASSED
+- `test_truncation` — PASSED
+- `test_workspace_mount` — PASSED
+
+## Cost & efficiency
+
+Per-implementation cost data, pulled from `builds/<model>/rounds/<task>-<date>/meta.json`. Hand-edit those files after capture to fill in input/output token splits and exact model slugs from each provider's dashboard.
+
+Wall-clock is *model-only* (sum of opencode turn durations from the session export), not the human-perceived envelope. Single-shot, expect ~25% run-to-run variance.
+
+| Impl | Model slug | LOC | Wall-clock (model) | Tokens | Cost USD | Tests passed | Cost / passing test |
+|---|---|---|---|---|---|---|---|
+| deepseek | `opencode-go/deepseek-v4-pro` | 140 | 5m59s | 298704 | $0.08 | 9 | $0.0091 |
+| deepseek-flash | `opencode-go/deepseek-v4-flash` | 115 | 6m18s | 472799 | $0.01 | 9 | $0.0014 |
+| glm | `opencode-go/glm-5.1` | 109 | 3m32s | 209353 | $0.14 | 9 | $0.0161 |
+| kimi | `opencode-go/kimi-k2.6` | 96 | 3m11s | 161090 | $0.02 | 9 | $0.0024 |
+| mimo | `opencode-go/mimo-v2.5-pro` | 87 | 1m23s | 209537 | $0.07 | 9 | $0.0079 |
+| minimax | `opencode-go/minimax-m2.5` | 100 | 0m28s | 196121 | $0.01 | 9 | $0.0015 |
+| qwen | `opencode-go/qwen3.6-plus` | 103 | 1m26s | 223908 | $0.04 | 9 | $0.0039 |
+
+## Judging cost & efficiency
+
+Per-judge wall-clock and cost. Hand-edit each `results/judgments/<task>-<date>/<judge>/judge_meta.json` to fill in tokens / cost / model slug from dashboards.
+
+| Judge | Tier | Harness | Model | Wall-clock | Tokens | Cost USD |
+|---|---|---|---|---|---|---|
+| deepseek | peer | — | — | — | — | — |
+| deepseek-flash | peer | — | — | — | — | — |
+| glm | peer | — | — | — | — | — |
+| kimi | peer | — | — | — | — | — |
+| mimo | peer | — | — | — | — | — |
+| minimax | peer | — | — | — | — | — |
+| qwen | peer | — | — | — | — | — |
+
+## Cross-model observations
+
+(human reviewer fills — patterns, surprises, where the spec was ambiguous, where judges disagreed sharply)
+
+## Recommendation
+
+(human reviewer fills — which implementation to use for the next round, or whether to rewrite from the best parts of each)
+
+## Spec changes suggested
+
+(human reviewer fills — edits to SPEC.md if reviewing surfaced ambiguities)

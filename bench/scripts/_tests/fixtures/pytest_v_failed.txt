@@ -1,0 +1,33 @@
+============================= test session starts ==============================
+platform linux -- Python 3.x.x, pytest-9.x.x, pluggy-1.x.x -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /tmp/run
+plugins:
+collecting ... collected 9 items
+
+_eval_tests/test_sandbox.py::test_simple_echo PASSED                     [ 11%]
+_eval_tests/test_sandbox.py::test_output_format FAILED                   [ 22%]
+_eval_tests/test_sandbox.py::test_exit_code_nonzero PASSED               [ 33%]
+_eval_tests/test_sandbox.py::test_timeout FAILED                         [ 44%]
+_eval_tests/test_sandbox.py::test_network_default_isolated FAILED        [ 55%]
+_eval_tests/test_sandbox.py::test_network_bridge SKIPPED                 [ 66%]
+_eval_tests/test_sandbox.py::test_workspace_mount PASSED                 [ 77%]
+_eval_tests/test_sandbox.py::test_truncation FAILED                      [ 88%]
+_eval_tests/test_sandbox.py::test_no_host_shell_injection PASSED         [100%]
+
+=================================== FAILURES ===================================
+________________________ test_output_format ___________________________________
+AssertionError: stdout did not match expected JSON shape
+________________________ test_timeout _________________________________________
+AssertionError: process did not exit within timeout
+________________________ test_network_default_isolated ________________________
+AssertionError: expected isolated network, got bridge
+________________________ test_truncation ______________________________________
+AssertionError: stdout was not truncated at limit
+
+=========================== short test summary info ============================
+FAILED _eval_tests/test_sandbox.py::test_output_format - AssertionError
+FAILED _eval_tests/test_sandbox.py::test_timeout - AssertionError
+FAILED _eval_tests/test_sandbox.py::test_network_default_isolated - AssertionError
+FAILED _eval_tests/test_sandbox.py::test_truncation - AssertionError
+================== 4 failed, 4 passed, 1 skipped in 2.34s ======================
