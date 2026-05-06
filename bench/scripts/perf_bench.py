@@ -38,9 +38,12 @@ from typing import Any
 from . import _opencode
 from . import _opencode_run
 from . import _config
+from . import _logging
 from . import _pytest_parse
 from . import _stats
 from . import _task
+
+log = _logging.get_logger(__name__)
 
 
 def median_or_none(xs: list[float]) -> float | None:
@@ -170,19 +173,24 @@ def main() -> int:
     ap.add_argument("task")
     ap.add_argument("model")
     ap.add_argument("n", type=int)
+    ap.add_argument("--quiet", "-q", action="store_true",
+                    help="warnings + errors only")
+    ap.add_argument("--verbose", "-v", action="store_true",
+                    help="debug output")
     args = ap.parse_args()
+    _logging.setup_logging(quiet=args.quiet, verbose=args.verbose)
 
     repo_root = Path(__file__).resolve().parent.parent.parent
     task_dir = repo_root / "bench" / "tasks" / args.task
     if not task_dir.is_dir():
-        print(f"error: no task at {task_dir}", file=sys.stderr)
+        log.error("no task at %s", task_dir)
         return 1
 
     cfg = _config.load()
     task_cfg = _task.load(args.task)
 
     if args.model not in cfg.slugs:
-        print(f"error: model '{args.model}' has no slug in bench/config.json", file=sys.stderr)
+        log.error("model '%s' has no slug in bench/config.json", args.model)
         return 1
     model_slug = cfg.slugs[args.model]
 
@@ -192,12 +200,12 @@ def main() -> int:
     out_dir = repo_root / "results" / "perf" / f"{args.task}-{args.model}-{date_stamp}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"==> perf-bench: {args.model} ({model_slug}) x {args.n}")
-    print(f"    out: {out_dir}")
+    log.info("==> perf-bench: %s (%s) x %d", args.model, model_slug, args.n)
+    log.info("    out: %s", out_dir)
 
     runs: list[dict] = []
     for i in range(1, args.n + 1):
-        print(f"\n--- run {i}/{args.n} ---")
+        log.info("--- run %d/%d ---", i, args.n)
         try:
             result = run_once(task_dir, task_cfg, model_slug, repo_root)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired,
@@ -208,10 +216,12 @@ def main() -> int:
         if result.get("ok"):
             wall = result.get("model_wall_clock_seconds")
             cost = result.get("cost_usd")
-            print(f"    wall(model)={wall}s envelope={result['envelope_seconds']}s "
-                  f"cost=${cost} tests={result['tests_passed']}/{result['tests_passed']+result['tests_failed']}")
+            log.info("wall(model)=%ss envelope=%ss cost=$%s tests=%d/%d",
+                     wall, result['envelope_seconds'], cost,
+                     result['tests_passed'],
+                     result['tests_passed'] + result['tests_failed'])
         else:
-            print(f"    FAILED: {result.get('reason')}")
+            log.error("FAILED: %s", result.get('reason'))
 
     # aggregate
     ok = [r for r in runs if r.get("ok")]
@@ -298,7 +308,7 @@ def main() -> int:
 
     (out_dir / "summary.md").write_text("\n".join(md))
 
-    print(f"\n==> wrote {out_dir}/summary.json and summary.md")
+    log.info("==> wrote %s/summary.json and summary.md", out_dir)
     return 0
 
 

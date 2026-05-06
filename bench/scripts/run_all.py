@@ -24,7 +24,10 @@ import threading
 import time
 
 from . import _config
+from . import _logging
 from .start_run import start_run
+
+log = _logging.get_logger(__name__)
 
 REPO_ROOT = _config.repo_root()
 
@@ -39,11 +42,16 @@ def _drive_one_implementer(task: str,
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="End-to-end: implementers → judges → aggregate.")
+    p = argparse.ArgumentParser(description="End-to-end: implementers -> judges -> aggregate.")
     p.add_argument("task", help="task name under bench/tasks/")
     p.add_argument("--concurrency", type=int, default=None,
                    help="parallel implementers (default: $IMPL_CONCURRENCY or 3)")
+    p.add_argument("--quiet", "-q", action="store_true",
+                   help="warnings + errors only")
+    p.add_argument("--verbose", "-v", action="store_true",
+                   help="debug output")
     args = p.parse_args()
+    _logging.setup_logging(quiet=args.quiet, verbose=args.verbose)
 
     if args.concurrency is not None:
         concurrency = args.concurrency
@@ -51,30 +59,30 @@ def main() -> int:
         env = os.environ.get("IMPL_CONCURRENCY")
         concurrency = int(env) if env else 3
     if concurrency < 1:
-        print(f"error: --concurrency must be >= 1, got {concurrency}", file=sys.stderr)
+        log.error("--concurrency must be >= 1, got %d", concurrency)
         return 2
 
     cfg = _config.load()
     implementers = list(cfg.implementers)
     if not implementers:
-        print("error: no implementers in bench/config.json", file=sys.stderr)
+        log.error("no implementers in bench/config.json")
         return 1
 
     ok_models: list[str] = []
     fail_models: list[str] = []
     results_lock = threading.Lock()
 
-    print(f"==> implementer phase: {len(implementers)} model(s), concurrency={concurrency}")
+    log.info("==> implementer phase: %d model(s), concurrency=%d",
+             len(implementers), concurrency)
 
     if concurrency <= 1:
         for model in implementers:
-            print()
-            print(f"--- {model} ---")
+            log.info("--- %s ---", model)
             rc = start_run(args.task, model, auto=True)
             if rc == 0:
                 ok_models.append(model)
             else:
-                print(f"WARN: {model} failed, continuing", file=sys.stderr)
+                log.warning("%s failed, continuing", model)
                 fail_models.append(model)
     else:
         lock = threading.Lock()
@@ -84,7 +92,7 @@ def main() -> int:
             lp.parent.mkdir(parents=True, exist_ok=True)
             log_paths[model] = lp
 
-        print(f"  logs: builds/<model>/last-impl.log")
+        log.info("logs: builds/<model>/last-impl.log")
         with cf.ThreadPoolExecutor(max_workers=concurrency) as pool:
             futures = {
                 pool.submit(_drive_one_implementer, args.task, m, lock, log_paths[m]): m
@@ -93,9 +101,11 @@ def main() -> int:
             for fut in cf.as_completed(futures):
                 model, rc, elapsed = fut.result()
                 log_rel = log_paths[model].relative_to(REPO_ROOT)
-                mark = "✓" if rc == 0 else "✗"
-                extra = "" if rc == 0 else f" exit {rc}"
-                print(f"  {mark} {model} ({elapsed:.0f}s){extra} — {log_rel}")
+                if rc == 0:
+                    log.info("ok: %s (%.0fs) — %s", model, elapsed, log_rel)
+                else:
+                    log.error("fail: %s (%.0fs) exit %d — %s",
+                              model, elapsed, rc, log_rel)
                 with results_lock:
                     if rc == 0:
                         ok_models.append(model)
@@ -103,37 +113,45 @@ def main() -> int:
                         fail_models.append(model)
 
         for model in fail_models:
-            log = log_paths[model]
-            print(f"\n--- tail {log.relative_to(REPO_ROOT)} ---", file=sys.stderr)
+            log_path = log_paths[model]
+            log.error("--- tail %s ---", log_path.relative_to(REPO_ROOT))
             try:
-                lines = log.read_text(errors="replace").splitlines()
+                lines = log_path.read_text(errors="replace").splitlines()
                 for ln in lines[-40:]:
                     print(ln, file=sys.stderr)
             except OSError as e:
-                print(f"  (could not read log: {e})", file=sys.stderr)
+                log.error("could not read log: %s", e)
 
-    print()
-    print("==> judgment phase")
+    # Propagate verbosity to subprocess children so the format is consistent.
+    child_flags: list[str] = []
+    if args.quiet:
+        child_flags.append("--quiet")
+    if args.verbose:
+        child_flags.append("--verbose")
+
+    log.info("==> judgment phase")
     rc_judge = subprocess.run(
-        [sys.executable, "-m", "bench.scripts.start_judgments", "--auto", args.task],
+        [sys.executable, "-m", "bench.scripts.start_judgments", "--auto",
+         *child_flags, args.task],
         cwd=REPO_ROOT,
     ).returncode
 
-    print()
-    print("==> aggregate phase")
+    log.info("==> aggregate phase")
     rc_agg = subprocess.run(
-        [sys.executable, "-m", "bench.scripts.aggregate_judges", args.task],
+        [sys.executable, "-m", "bench.scripts.aggregate_judges",
+         *child_flags, args.task],
         cwd=REPO_ROOT,
     ).returncode
 
+    # Summary table — kept as print so it lands on stdout for piping.
     print()
     print("==> done")
     print(f"ok:     {' '.join(ok_models) if ok_models else 'none'}")
     print(f"failed: {' '.join(fail_models) if fail_models else 'none'}")
     if rc_judge:
-        print(f"judge phase exited {rc_judge}", file=sys.stderr)
+        log.error("judge phase exited %d", rc_judge)
     if rc_agg:
-        print(f"aggregate phase exited {rc_agg}", file=sys.stderr)
+        log.error("aggregate phase exited %d", rc_agg)
     return 1 if (fail_models or rc_judge or rc_agg) else 0
 
 

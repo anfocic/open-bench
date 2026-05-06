@@ -24,8 +24,11 @@ import threading
 
 from . import _config
 from . import _git
+from . import _logging
 from . import _opencode_run
 from . import _task
+
+log = _logging.get_logger(__name__)
 
 REPO_ROOT = _config.repo_root()
 _run_git = _git.run_git
@@ -64,17 +67,17 @@ def start_run(task: str, model: str, auto: bool = False,
 
     task_dir = REPO_ROOT / "bench" / "tasks" / task
     if not task_dir.is_dir():
-        print(f"error: no task at {task_dir}", file=sys.stderr)
+        log.error("no task at %s", task_dir)
         return 1
 
     if not (task_dir / "PROMPT.md").exists() or not (task_dir / "SPEC.md").exists():
-        print("error: task missing PROMPT.md or SPEC.md", file=sys.stderr)
+        log.error("task missing PROMPT.md or SPEC.md")
         return 1
 
     cfg = _config.load()
     if model not in cfg.implementers:
-        print(f"  warn: '{model}' not in bench/config.json implementers", file=sys.stderr)
-        print("        proceeding anyway — add it to config if this is intentional", file=sys.stderr)
+        log.warning("'%s' not in bench/config.json implementers — proceeding "
+                    "anyway; add it to config if intentional", model)
 
     date_stamp = os.environ.get("RUN_STAMP", dt.date.today().isoformat())
     slug = f"{task}-{model}-{date_stamp}"
@@ -85,14 +88,14 @@ def start_run(task: str, model: str, auto: bool = False,
     with lock_ctx:
         existing = _run_git("worktree", "list", "--porcelain", cwd=REPO_ROOT, check=False)
         if f"worktree {worktree_dir}" in existing:
-            print(f"error: worktree already exists at {worktree_dir}", file=sys.stderr)
-            print(f"       remove with: git worktree remove {worktree_dir}", file=sys.stderr)
+            log.error("worktree already exists at %s — remove with: "
+                      "git worktree remove %s", worktree_dir, worktree_dir)
             return 1
 
         try:
             _run_git("rev-parse", "--verify", branch, cwd=REPO_ROOT)
-            print(f"error: branch {branch} already exists", file=sys.stderr)
-            print(f"       delete with: git branch -D {branch}", file=sys.stderr)
+            log.error("branch %s already exists — delete with: git branch -D %s",
+                      branch, branch)
             return 1
         except RuntimeError:
             pass
@@ -118,13 +121,12 @@ def start_run(task: str, model: str, auto: bool = False,
         }
         (run_dir / "meta.json").write_text(json.dumps(run_meta, indent=2) + "\n")
 
-    print()
-    print("✓ worktree ready")
-    print(f"  path:    {worktree_dir}")
-    print(f"  branch:  {branch}")
-    print(f"  base:    {base}")
+    log.info("worktree ready: path=%s branch=%s base=%s",
+             worktree_dir, branch, base)
 
     if not auto:
+        # Multi-line operator instructions — kept as print so it renders
+        # as a UX block regardless of log level.
         print()
         print("next steps")
         print(f"  1. cd {worktree_dir}")
@@ -132,13 +134,11 @@ def start_run(task: str, model: str, auto: bool = False,
         print("  3. paste PROMPT.md into the session and let it run")
         print(f"  4. when finished, drop the session export at: {worktree_dir}/transcript.md")
         print("  5. capture artifacts:")
-        print(f"     {REPO_ROOT}/bench/scripts/capture_run.py {task} {model}")
+        print(f"     python3 -m bench.scripts.capture_run {task} {model}")
         print()
         return 0
 
-    print()
-    print(f"▶ --auto: driving opencode against {worktree_dir}")
-    print()
+    log.info("--auto: driving opencode against %s", worktree_dir)
 
     slug_str = cfg.slug_for(model)
     message = (
@@ -156,14 +156,12 @@ def start_run(task: str, model: str, auto: bool = False,
     )
 
     if rc != 0:
-        print()
-        print(f"✗ opencode run exited {rc}; not capturing")
-        print(f"  worktree preserved at: {worktree_dir}")
-        print("  inspect, then either retry or run capture_run.py manually")
+        log.error("opencode run exited %d; not capturing. "
+                  "worktree preserved at %s — inspect, then retry or run "
+                  "capture_run manually", rc, worktree_dir)
         return rc
 
-    print()
-    print("▶ --auto: chaining to capture_run.py")
+    log.info("--auto: chaining to capture_run")
 
     from .capture_run import capture
     return capture(task, model)
@@ -175,7 +173,12 @@ def main() -> int:
                    help="drive opencode non-interactively, then capture")
     p.add_argument("task", help="task name under bench/tasks/")
     p.add_argument("model", help="model short name (e.g. kimi, deepseek)")
+    p.add_argument("--quiet", "-q", action="store_true",
+                   help="warnings + errors only")
+    p.add_argument("--verbose", "-v", action="store_true",
+                   help="debug output")
     args = p.parse_args()
+    _logging.setup_logging(quiet=args.quiet, verbose=args.verbose)
     return start_run(args.task, args.model, auto=args.auto)
 
 
