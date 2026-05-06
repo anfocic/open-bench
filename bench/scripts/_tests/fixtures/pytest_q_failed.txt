@@ -1,0 +1,16 @@
+.F.FFs.F.                                                                [100%]
+=================================== FAILURES ===================================
+________________________ test_output_format ___________________________________
+AssertionError
+________________________ test_timeout _________________________________________
+AssertionError
+________________________ test_network_default_isolated ________________________
+AssertionError
+________________________ test_truncation ______________________________________
+AssertionError
+=========================== short test summary info ============================
+FAILED _eval_tests/test_sandbox.py::test_output_format
+FAILED _eval_tests/test_sandbox.py::test_timeout
+FAILED _eval_tests/test_sandbox.py::test_network_default_isolated
+FAILED _eval_tests/test_sandbox.py::test_truncation
+4 failed, 4 passed, 1 skipped in 2.34s

@@ -32,6 +32,7 @@ import re
 import shutil
 import string
 import sys
+import threading
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _config  # noqa: E402
@@ -238,6 +239,7 @@ def auto_drive_judges(out_root: pathlib.Path,
           f"(concurrency={concurrency})")
 
     results: list[tuple[str, int, float]] = []
+    results_lock = threading.Lock()
     log_paths: dict[str, pathlib.Path] = {
         j: out_root / j / "judge.log" for j in drivable
     }
@@ -254,7 +256,8 @@ def auto_drive_judges(out_root: pathlib.Path,
             mark = "✓" if rc == 0 else "✗"
             extra = "" if rc == 0 else f" exit {rc}"
             print(f"  {mark} {judge} ({elapsed:.0f}s){extra} — {log_rel}")
-            results.append((judge, rc, elapsed))
+            with results_lock:
+                results.append((judge, rc, elapsed))
 
     failed = [(j, rc) for j, rc, _ in results if rc != 0]
     passed = len(results) - len(failed)

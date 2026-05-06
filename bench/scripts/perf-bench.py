@@ -27,7 +27,6 @@ import argparse
 import datetime as dt
 import json
 import shutil
-import statistics
 import subprocess
 import sys
 import tempfile
@@ -39,17 +38,17 @@ sys.path.insert(0, str(Path(__file__).parent))
 import _opencode  # noqa: E402
 import _opencode_run  # noqa: E402
 import _config  # noqa: E402
+import _pytest_parse  # noqa: E402
+import _stats  # noqa: E402
 import _task  # noqa: E402
 
 
 def median_or_none(xs: list[float]) -> float | None:
-    xs = [x for x in xs if x is not None]
-    return round(statistics.median(xs), 3) if xs else None
+    return _stats.median_rounded(xs, 3)
 
 
 def stdev_or_none(xs: list[float]) -> float | None:
-    xs = [x for x in xs if x is not None]
-    return round(statistics.stdev(xs), 3) if len(xs) >= 2 else None
+    return _stats.stdev_rounded(xs, 3)
 
 
 def run_once(
@@ -141,21 +140,9 @@ def run_once(
     test_exit = proc.returncode
     test_stdout = proc.stdout
 
-    # parse "N passed" "M failed" off the last line
-    passed = failed = 0
-    for line in reversed(test_stdout.splitlines()):
-        line = line.strip()
-        if "passed" in line or "failed" in line:
-            for tok in line.replace("=", " ").replace(",", " ").split():
-                pass
-            import re
-            m = re.search(r"(\d+)\s+passed", line)
-            if m:
-                passed = int(m.group(1))
-            m = re.search(r"(\d+)\s+failed", line)
-            if m:
-                failed = int(m.group(1))
-            break
+    parsed = _pytest_parse.parse_pytest_output(test_stdout)
+    passed = parsed["passed"]
+    failed = parsed["failed"]
 
     impl_loc = _task.loc_count(impl, task_cfg["loc_method"])
     impl_content = impl.read_text(errors="replace")
@@ -213,7 +200,8 @@ def main() -> int:
         print(f"\n--- run {i}/{args.n} ---")
         try:
             result = run_once(task_dir, task_cfg, model_slug, repo_root)
-        except Exception as e:
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired,
+                OSError, json.JSONDecodeError) as e:
             result = {"ok": False, "reason": f"exception: {e}"}
         runs.append(result)
         (out_dir / f"run-{i}.json").write_text(json.dumps(result, indent=2))

@@ -33,7 +33,10 @@ def load(task: str) -> dict:
     path = REPO_ROOT / "bench" / "tasks" / task / "task.json"
     if path.exists():
         with open(path) as f:
-            data = json.load(f)
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError as e:
+                raise SystemExit(f"malformed JSON in {path}: {e}")
     else:
         data = {}
     merged = dict(DEFAULTS)

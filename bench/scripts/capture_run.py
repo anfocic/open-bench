@@ -22,23 +22,12 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _config  # noqa: E402
+import _git  # noqa: E402
 import _opencode  # noqa: E402
 import _task  # noqa: E402
 
 REPO_ROOT = _config.REPO_ROOT
-
-
-def _run_git(*args: str, cwd: pathlib.Path | None = None, check: bool = True) -> str:
-    result = subprocess.run(
-        ["git"] + list(args),
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if check and result.returncode != 0:
-        raise RuntimeError(f"git {' '.join(args)} failed: {result.stderr}")
-    return result.stdout
+_run_git = _git.run_git
 
 
 def find_run_dir(model_dir: pathlib.Path, task: str) -> pathlib.Path | None:
@@ -63,7 +52,9 @@ def determine_base_branch(repo_root: pathlib.Path) -> str:
                          cwd=repo_root, check=False).strip()
         if head.startswith("origin/"):
             return head[len("origin/"):]
-    except Exception:
+    except RuntimeError:
+        # _run_git only raises RuntimeError on git failure; fall through
+        # to the main/master probe.
         pass
     for cand in ("main", "master"):
         try:
@@ -150,7 +141,9 @@ def capture(task: str, model: str) -> int:
                 cwd=worktree_dir, capture_output=True, text=True, check=False,
             )
             diff_lines.append(result.stdout)
-        except Exception:
+        except OSError:
+            # git binary missing or fpath unreadable — skip this entry; the
+            # rest of the diff still captures.
             pass
 
     (run_dir / "diff.patch").write_text("\n".join(diff_lines))
@@ -228,7 +221,8 @@ def capture(task: str, model: str) -> int:
             else:
                 print("  note: no opencode session found for worktree — "
                       "falling back to transcript.md", file=sys.stderr)
-    except Exception as e:
+    except (subprocess.CalledProcessError, OSError, json.JSONDecodeError,
+            _opencode.OpencodeNotAvailable) as e:
         print(f"  warn: opencode capture failed ({e}); skipping auto-capture",
               file=sys.stderr)
 
@@ -252,7 +246,9 @@ def capture(task: str, model: str) -> int:
         opencode_version = subprocess.check_output(
             ["opencode", "--version"], text=True, stderr=subprocess.DEVNULL
         ).strip()
-    except Exception:
+    except (subprocess.CalledProcessError, OSError):
+        # opencode not installed, or installed but exited non-zero —
+        # leave 'unknown' in meta.json; not a failure of capture.
         pass
 
     python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
@@ -315,7 +311,8 @@ def main() -> int:
     p = argparse.ArgumentParser(description="Capture artifacts from a finished run.")
     p.add_argument("task", help="task name under bench/tasks/")
     p.add_argument("model", help="model short name (e.g. kimi, deepseek)")
-    return capture(p.parse_args().task, p.parse_args().model)
+    args = p.parse_args()
+    return capture(args.task, args.model)
 
 
 if __name__ == "__main__":

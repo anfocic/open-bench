@@ -14,7 +14,11 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _stats  # noqa: E402
 
 
 class OpencodeNotAvailable(Exception):
@@ -136,8 +140,9 @@ def summarize(session: dict) -> dict:
         if "completed" in time:
             ended_ms = time["completed"] if ended_ms is None else max(ended_ms, time["completed"])
 
-    if model_counts:
-        (provider, model), _ = max(model_counts.items(), key=lambda kv: kv[1])
+    top = _stats.mode_of_counts(model_counts)
+    if top is not None:
+        provider, model = top
         model_slug = f"{provider}/{model}" if provider else model
     else:
         model_slug = None
