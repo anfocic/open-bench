@@ -1,0 +1,40 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+The format follows [Keep a Changelog](https://keepachangelog.com/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## [0.1.0] — 2026-05-06
+
+First versioned release. Captures the senior-review refactor trilogy
+plus follow-up fixes.
+
+### Added
+- `bench/scripts/` is now a real Python package; `python3 -m bench.scripts.X`
+  is the canonical invocation. (#29)
+- Run identity stamped into `meta.json` / `runs_index.json` /
+  `judgment_meta.json`; readers no longer slice directory names. (#30)
+- `--quiet` / `--verbose` flags on every entry point; status routes
+  through `logging`. (#35)
+- Property-based tests (`hypothesis`) for `_pytest_parse`. (#36)
+- `_pytest_parse` tolerates ANSI color codes and pytest-xdist worker
+  prefixes. (#37)
+- `CAPTURE_TEST_TIMEOUT` env var (default 300s) bounds hidden-test
+  execution; timeouts record `test_exit_code=124`. (#38)
+- `pyproject.toml`; `pip install -e ".[dev]"` installs the package and
+  puts seven CLIs on PATH (`bench-new-task`, `bench-start-run`,
+  `bench-capture-run`, `bench-run-all`, `bench-judgments`,
+  `bench-aggregate`, `bench-perf`).
+
+### Changed
+- `_config.repo_root()` and `aggregate_judges` config are lazy — no
+  subprocess or disk I/O at import time. (#29)
+- `perf-bench.py` renamed to `perf_bench.py`. (#29)
+- 13 emoji rule violations (✓ ✗ ▶) removed from script output. (#35)
+
+### Removed
+- `bench/scripts/{capture-run,start-run,run-all,new-task}.sh` shim
+  wrappers — direct `python3 -m bench.scripts.<name>` (or the new
+  `bench-<name>` CLI) replaces them. (#34)
+- `requirements-dev.txt` — replaced by `[project.optional-dependencies] dev`
+  in `pyproject.toml`.

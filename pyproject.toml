@@ -1,0 +1,32 @@
+[project]
+name = "open-bench"
+version = "0.1.0"
+description = "A weekly coding battle royale between AI models."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [{ name = "Andrej Focic", email = "andrej@fole.dev" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "hypothesis>=6"]
+
+[project.scripts]
+bench-new-task     = "bench.scripts.new_task:main"
+bench-start-run    = "bench.scripts.start_run:main"
+bench-capture-run  = "bench.scripts.capture_run:main"
+bench-run-all      = "bench.scripts.run_all:main"
+bench-judgments    = "bench.scripts.start_judgments:main"
+bench-aggregate    = "bench.scripts.aggregate_judges:main"
+bench-perf         = "bench.scripts.perf_bench:main"
+
+[project.urls]
+Homepage = "https://github.com/anfocic/open-bench"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["bench*"]
+exclude = ["bench.tasks*", "bench.scripts._tests*"]
