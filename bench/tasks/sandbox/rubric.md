@@ -30,7 +30,7 @@ Subtotal: __/10
 
 ## Hidden test results
 
-Filled by `capture-run.sh`. One row per test:
+Filled by `capture_run.py`. One row per test:
 
 | Test | Pass / Fail / Skip | Notes |
 |---|---|---|
