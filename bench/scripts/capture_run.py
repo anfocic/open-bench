@@ -83,10 +83,14 @@ def capture(task: str, model: str) -> int:
         print("       did you call start_run.py first?", file=sys.stderr)
         return 1
 
-    run_basename = run_dir.name
-    run_date = run_basename[len(task) + 1:]
-    slug = f"{task}-{model}-{run_date}"
-    worktree_dir = (REPO_ROOT / ".." / f"eval-{slug}").resolve()
+    meta_path = run_dir / "meta.json"
+    if not meta_path.exists():
+        print(f"error: {meta_path} missing — start_run.py was not used to create "
+              f"this run dir, or it predates the meta.json stamp", file=sys.stderr)
+        return 1
+    run_meta = json.loads(meta_path.read_text())
+    slug = run_meta["slug"]
+    worktree_dir = pathlib.Path(run_meta["worktree"])
     if not worktree_dir.is_dir():
         print(f"error: worktree not found at {worktree_dir}", file=sys.stderr)
         return 1
@@ -102,8 +106,7 @@ def capture(task: str, model: str) -> int:
             return 1
         print(f"  note: {entrypoint} missing; ALLOW_EMPTY_IMPL=1, continuing", file=sys.stderr)
 
-    started_at_file = run_dir / ".started_at"
-    started_at = started_at_file.read_text().strip() if started_at_file.exists() else "unknown"
+    started_at = run_meta.get("started_at", "unknown")
     ended_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     run_dir.mkdir(parents=True, exist_ok=True)

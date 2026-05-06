@@ -34,6 +34,7 @@ def render() -> str:
     judgment_dir = REPO_ROOT / "results" / "judgments" / f"{TASK}-{DATE}"
     pairings = json.loads((judgment_dir / "pairings.json").read_text())
     runs_index = json.loads((judgment_dir / "runs_index.json").read_text())
+    judgment_meta = json.loads((judgment_dir / "judgment_meta.json").read_text())
 
     scores_by_judge: dict[str, dict[str, dict | None]] = {}
     for judge, mapping in pairings.items():
@@ -42,8 +43,8 @@ def render() -> str:
         )
 
     test_results: dict[str, dict] = {}
-    for model, rel_run in runs_index.items():
-        out = REPO_ROOT / rel_run / "test-output.txt"
+    for model, entry in runs_index.items():
+        out = REPO_ROOT / entry["path"] / "test-output.txt"
         if out.exists():
             test_results[model] = aggregate_judges.parse_pytest_output(out.read_text())
         else:
@@ -53,6 +54,7 @@ def render() -> str:
 
     return aggregate_judges.render_review(
         task=TASK,
+        date_stamp=judgment_meta["date_stamp"],
         judgment_dir=judgment_dir,
         pairings=pairings,
         runs_index=runs_index,

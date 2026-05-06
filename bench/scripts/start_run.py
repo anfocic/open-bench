@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import datetime as dt
+import json
 import os
 import pathlib
 import shutil
@@ -106,9 +107,16 @@ def start_run(task: str, model: str, auto: bool = False,
 
         run_dir = REPO_ROOT / "builds" / model / "rounds" / f"{task}-{date_stamp}"
         run_dir.mkdir(parents=True, exist_ok=True)
-        (run_dir / ".started_at").write_text(
-            dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        )
+        run_meta = {
+            "task": task,
+            "model": model,
+            "slug": slug,
+            "date_stamp": date_stamp,
+            "branch": branch,
+            "worktree": str(worktree_dir),
+            "started_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        (run_dir / "meta.json").write_text(json.dumps(run_meta, indent=2) + "\n")
 
     print()
     print("✓ worktree ready")

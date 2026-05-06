@@ -28,7 +28,6 @@ import json
 import os
 import pathlib
 import random
-import re
 import shutil
 import string
 import sys
@@ -44,15 +43,14 @@ REPO_ROOT = _config.repo_root()
 def find_runs(task: str, entrypoint: str) -> list[dict[str, Any]]:
     """Find latest implementation run per model for `task`.
 
-    Layout: builds/<model>/rounds/<task>-<YYYY-MM-DD>/<entrypoint>.
+    Identity (task, model, date_stamp, slug) is read from each run's
+    meta.json — written by start_run.py and extended by capture_run.py.
+    Run dirs without a parseable meta are skipped with a warning.
     """
     by_model: dict[str, dict[str, Any]] = {}
     builds_root = REPO_ROOT / "builds"
     if not builds_root.is_dir():
         return []
-
-    date_re = re.compile(r"^\d{4}-\d{2}-\d{2}(?:-r\d+)?$")
-    prefix = f"{task}-"
 
     for model_entry in sorted(builds_root.iterdir()):
         if not model_entry.is_dir() or model_entry.name.startswith("."):
@@ -62,30 +60,41 @@ def find_runs(task: str, entrypoint: str) -> list[dict[str, Any]]:
         if not rounds_dir.is_dir():
             continue
 
-        dated = [
-            d for d in sorted(rounds_dir.iterdir())
-            if d.is_dir()
-            and d.name.startswith(prefix)
-            and date_re.match(d.name[len(prefix):])
-        ]
-        if not dated:
-            continue
+        for run_entry in sorted(rounds_dir.iterdir()):
+            if not run_entry.is_dir():
+                continue
+            meta_path = run_entry / "meta.json"
+            if not meta_path.exists():
+                continue
+            try:
+                meta = json.loads(meta_path.read_text())
+            except json.JSONDecodeError:
+                print(f"  warn: {meta_path.relative_to(REPO_ROOT)} not valid JSON "
+                      f"— skipping", file=sys.stderr)
+                continue
+            if meta.get("task") != task:
+                continue
 
-        for run_entry in dated:
-            run_date = run_entry.name[len(prefix):]
             impl = run_entry / entrypoint
             if not impl.exists():
                 print(f"  warn: {run_entry.relative_to(REPO_ROOT)} has no "
                       f"{entrypoint} — skipping", file=sys.stderr)
                 continue
 
+            date_stamp = meta.get("date_stamp")
+            if not date_stamp:
+                print(f"  warn: {meta_path.relative_to(REPO_ROOT)} missing "
+                      f"'date_stamp' — skipping", file=sys.stderr)
+                continue
+
             existing = by_model.get(run_model)
-            if existing is None or run_date > existing["date"]:
+            if existing is None or date_stamp > existing["date_stamp"]:
                 by_model[run_model] = {
                     "model": run_model,
-                    "date": run_date,
+                    "date_stamp": date_stamp,
                     "run_dir": run_entry,
                     "impl_path": impl,
+                    "meta": meta,
                 }
 
     return list(by_model.values())
@@ -367,13 +376,30 @@ def main() -> int:
         json.dumps(pairings, indent=2, sort_keys=True) + "\n"
     )
 
-    # Record context for aggregator: which run dir each model came from.
+    # Record context for aggregator: which run dir each model came from,
+    # plus the run identity stamped at start_run time. Aggregator reads
+    # `path` and other fields directly instead of slicing dir names.
     runs_index = {
-        impl["model"]: str(impl["run_dir"].relative_to(REPO_ROOT))
+        impl["model"]: {
+            "path": str(impl["run_dir"].relative_to(REPO_ROOT)),
+            "slug": impl["meta"].get("slug"),
+            "date_stamp": impl["date_stamp"],
+            "started_at": impl["meta"].get("started_at"),
+        }
         for impl in impls
     }
     (out_root / "runs_index.json").write_text(
         json.dumps(runs_index, indent=2, sort_keys=True) + "\n"
+    )
+
+    judgment_meta = {
+        "task": args.task,
+        "date_stamp": date_stamp,
+        "judges": judges,
+        "impl_models": impl_models,
+    }
+    (out_root / "judgment_meta.json").write_text(
+        json.dumps(judgment_meta, indent=2, sort_keys=True) + "\n"
     )
 
     print()
