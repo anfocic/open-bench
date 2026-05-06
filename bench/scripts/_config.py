@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import pathlib
 import subprocess
+from typing import Any
 
 
 REPO_ROOT = pathlib.Path(
@@ -23,7 +24,7 @@ CONFIG_PATH = REPO_ROOT / "bench" / "config.json"
 
 
 class Config:
-    def __init__(self, data: dict) -> None:
+    def __init__(self, data: dict[str, Any]) -> None:
         self.implementers: list[str] = list(data.get("implementers", []))
         self.expert_judges: list[str] = list(data.get("expert_judges", []))
         self.harness: str = str(data.get("harness", "opencode"))
@@ -58,6 +59,13 @@ class Config:
 
 
 def load() -> Config:
+    """Read bench/config.json and return a validated Config.
+
+    Raises FileNotFoundError when the file is missing (with a hint at
+    the minimal schema), and SystemExit when the file exists but is
+    malformed JSON. Validation errors raised by Config (empty
+    implementers, judge/implementer overlap) propagate as ValueError.
+    """
     if not CONFIG_PATH.exists():
         raise FileNotFoundError(
             f"{CONFIG_PATH} not found. Create it with at minimum:\n"

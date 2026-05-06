@@ -19,6 +19,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+from typing import Any
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _config  # noqa: E402
@@ -269,7 +270,7 @@ def capture(task: str, model: str) -> int:
     }
 
     meta_path = run_dir / "meta.json"
-    existing_meta: dict = {}
+    existing_meta: dict[str, Any] = {}
     if meta_path.exists():
         try:
             existing_meta = json.loads(meta_path.read_text())

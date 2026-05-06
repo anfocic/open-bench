@@ -10,6 +10,7 @@ back to a non-anchored summary-line regex when no `===` lines exist.
 from __future__ import annotations
 
 import re
+from typing import Any
 
 
 _PER_TEST_RE = re.compile(
@@ -19,7 +20,7 @@ _PER_TEST_RE = re.compile(
 )
 
 
-def parse_pytest_output(text: str) -> dict:
+def parse_pytest_output(text: str) -> dict[str, Any]:
     """Extract pass/fail counts and per-test status from pytest output.
 
     Handles both `-v` (verbose, with `===` summary borders) and `-q`

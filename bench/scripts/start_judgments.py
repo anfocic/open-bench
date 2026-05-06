@@ -33,6 +33,7 @@ import shutil
 import string
 import sys
 import threading
+from typing import Any
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _config  # noqa: E402
@@ -41,12 +42,12 @@ import _task  # noqa: E402
 REPO_ROOT = _config.REPO_ROOT
 
 
-def find_runs(task: str, entrypoint: str) -> list[dict]:
+def find_runs(task: str, entrypoint: str) -> list[dict[str, Any]]:
     """Find latest implementation run per model for `task`.
 
     Layout: builds/<model>/rounds/<task>-<YYYY-MM-DD>/<entrypoint>.
     """
-    by_model: dict[str, dict] = {}
+    by_model: dict[str, dict[str, Any]] = {}
     builds_root = REPO_ROOT / "builds"
     if not builds_root.is_dir():
         return []
