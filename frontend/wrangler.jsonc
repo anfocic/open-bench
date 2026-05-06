@@ -1,0 +1,8 @@
+{
+  "name": "open-bench",
+  "compatibility_date": "2026-05-06",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  }
+}
