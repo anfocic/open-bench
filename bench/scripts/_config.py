@@ -64,4 +64,8 @@ def load() -> Config:
             f'  {{"implementers": ["..."], "expert_judges": ["..."]}}'
         )
     with open(CONFIG_PATH) as f:
-        return Config(json.load(f))
+        try:
+            data = json.load(f)
+        except json.JSONDecodeError as e:
+            raise SystemExit(f"malformed JSON in {CONFIG_PATH}: {e}")
+    return Config(data)

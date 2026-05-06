@@ -65,6 +65,7 @@ def main() -> int:
 
     ok_models: list[str] = []
     fail_models: list[str] = []
+    results_lock = threading.Lock()
 
     print(f"==> implementer phase: {len(implementers)} model(s), concurrency={concurrency}")
 
@@ -98,10 +99,11 @@ def main() -> int:
                 mark = "✓" if rc == 0 else "✗"
                 extra = "" if rc == 0 else f" exit {rc}"
                 print(f"  {mark} {model} ({elapsed:.0f}s){extra} — {log_rel}")
-                if rc == 0:
-                    ok_models.append(model)
-                else:
-                    fail_models.append(model)
+                with results_lock:
+                    if rc == 0:
+                        ok_models.append(model)
+                    else:
+                        fail_models.append(model)
 
         for model in fail_models:
             log = log_paths[model]
@@ -129,7 +131,11 @@ def main() -> int:
     print("==> done")
     print(f"ok:     {' '.join(ok_models) if ok_models else 'none'}")
     print(f"failed: {' '.join(fail_models) if fail_models else 'none'}")
-    return 1 if fail_models else 0
+    if rc_judge:
+        print(f"judge phase exited {rc_judge}", file=sys.stderr)
+    if rc_agg:
+        print(f"aggregate phase exited {rc_agg}", file=sys.stderr)
+    return 1 if (fail_models or rc_judge or rc_agg) else 0
 
 
 if __name__ == "__main__":

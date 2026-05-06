@@ -107,6 +107,20 @@ class TestConfigLoad(unittest.TestCase):
                 _config.load()
             self.assertIn("not found", str(ctx.exception))
 
+    def test_load_malformed_json_raises_system_exit(self) -> None:
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            f.write("{not valid json")
+            tmp_path = pathlib.Path(f.name)
+        try:
+            with mock.patch.object(_config, "CONFIG_PATH", tmp_path):
+                with self.assertRaises(SystemExit) as ctx:
+                    _config.load()
+            msg = str(ctx.exception)
+            self.assertIn("malformed JSON", msg)
+            self.assertIn(str(tmp_path), msg)
+        finally:
+            tmp_path.unlink()
+
 
 if __name__ == "__main__":
     unittest.main()

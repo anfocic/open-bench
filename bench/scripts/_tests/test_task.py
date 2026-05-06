@@ -47,6 +47,19 @@ class TestTaskLoad(unittest.TestCase):
         # unspecified keys still come from defaults
         self.assertEqual(merged["test_runner"], "pytest")
 
+    def test_malformed_json_raises_system_exit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tasks_dir = Path(tmp) / "bench" / "tasks" / "broken"
+            tasks_dir.mkdir(parents=True)
+            bad = tasks_dir / "task.json"
+            bad.write_text("{not valid json")
+            with mock.patch.object(_task, "REPO_ROOT", Path(tmp)):
+                with self.assertRaises(SystemExit) as ctx:
+                    _task.load("broken")
+            msg = str(ctx.exception)
+            self.assertIn("malformed JSON", msg)
+            self.assertIn(str(bad), msg)
+
 
 class TestLocCount(unittest.TestCase):
     def test_non_blank_non_comment_lines(self) -> None:

@@ -18,29 +18,17 @@ import datetime as dt
 import os
 import pathlib
 import shutil
-import subprocess
 import sys
 import threading
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _config  # noqa: E402
+import _git  # noqa: E402
 import _opencode_run  # noqa: E402
 import _task  # noqa: E402
 
 REPO_ROOT = _config.REPO_ROOT
-
-
-def _run_git(*args: str, cwd: pathlib.Path | None = None, check: bool = True) -> str:
-    result = subprocess.run(
-        ["git"] + list(args),
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if check and result.returncode != 0:
-        raise RuntimeError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
-    return result.stdout
+_run_git = _git.run_git
 
 
 def determine_base_branch(repo_root: pathlib.Path) -> str:
@@ -52,7 +40,9 @@ def determine_base_branch(repo_root: pathlib.Path) -> str:
                          cwd=repo_root, check=False).strip()
         if head.startswith("origin/"):
             return head[len("origin/"):]
-    except Exception:
+    except RuntimeError:
+        # _run_git only raises RuntimeError on git failure; fall through
+        # to the main/master probe.
         pass
     for cand in ("main", "master"):
         try:

@@ -24,12 +24,13 @@ import argparse
 import datetime as dt
 import json
 import pathlib
-import re
 import statistics
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _config  # noqa: E402
+import _pytest_parse  # noqa: E402
+import _stats  # noqa: E402
 
 REPO_ROOT = _config.REPO_ROOT
 
@@ -50,42 +51,7 @@ def latest_judgment_dir(task: str) -> pathlib.Path | None:
     return candidates[-1] if candidates else None
 
 
-def parse_pytest_output(text: str) -> dict:
-    """Extract pass/fail counts and per-test status from pytest -v output.
-
-    Pytest summary lines vary in ordering (e.g. `7 failed, 2 passed in 3.79s`
-    when failures exist; `9 passed in 3.28s` when all pass), so we anchor on
-    the `===` summary border lines and grep each label independently."""
-    summary_text = "\n".join(
-        line for line in text.splitlines()
-        if line.startswith("=")
-        and any(k in line for k in ("passed", "failed", "skipped", "error"))
-    )
-
-    def count(label: str) -> int:
-        m = re.search(rf"(\d+)\s+{label}", summary_text)
-        return int(m.group(1)) if m else 0
-
-    passed = count("passed")
-    failed = count("failed")
-    skipped = count("skipped")
-    errors = count("error")
-
-    per_test = {}
-    line_re = re.compile(
-        r"^(?P<path>_eval_tests/[^:]+)::(?P<name>[\w\[\]\-]+)\s+(?P<verdict>PASSED|FAILED|SKIPPED|ERROR)",
-        re.MULTILINE,
-    )
-    for m in line_re.finditer(text):
-        per_test[m.group("name")] = m.group("verdict")
-
-    return {
-        "passed": passed,
-        "failed": failed,
-        "skipped": skipped,
-        "errors": errors,
-        "per_test": per_test,
-    }
+parse_pytest_output = _pytest_parse.parse_pytest_output
 
 
 def load_judge_scores(judge_dir: pathlib.Path,
@@ -108,10 +74,7 @@ def load_judge_scores(judge_dir: pathlib.Path,
 
 
 def compute_median(values: list[float]) -> float | None:
-    clean = [v for v in values if v is not None]
-    if not clean:
-        return None
-    return statistics.median(clean)
+    return _stats.median(values)
 
 
 def fmt_int(v: float | int | None) -> str:
@@ -245,12 +208,7 @@ def render_scoreboard(impl_models: list[str], judges: list[str],
             fails = sum(1 for h in sp["hard_fails"] if h == "fail")
             hf_summary = f"fail ({fails}/{len(sp['hard_fails'])})"
 
-        verdict_mode = "—"
-        if sp["verdicts"]:
-            counter: dict[str, int] = {}
-            for v in sp["verdicts"]:
-                counter[v] = counter.get(v, 0) + 1
-            verdict_mode = max(counter.items(), key=lambda kv: kv[1])[0]
+        verdict_mode = _stats.mode(sp["verdicts"]) or "—"
 
         tests = test_results.get(model, {})
         total_tests = sum(tests.get(k, 0) for k in ("passed", "failed", "skipped", "errors"))
