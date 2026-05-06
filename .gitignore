@@ -19,3 +19,9 @@ frontend/node_modules/
 frontend/dist/
 frontend/.astro/
 frontend/public/og/
+
+# wrangler
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
