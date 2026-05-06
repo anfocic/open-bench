@@ -94,6 +94,9 @@ inspection and capture is skipped.
    recommendation are the human-written sections; everything else is
    derived from the JSON inputs.
 
+All entry points accept `--quiet` (warnings only) and `--verbose` (debug
++ timestamps). Default emits one-line status to stderr.
+
 ## Judgment phase
 
 After all implementations are captured, every implementation is scored by
