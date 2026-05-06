@@ -26,6 +26,7 @@ import json
 import pathlib
 import statistics
 import sys
+from typing import Any
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _config  # noqa: E402
@@ -55,10 +56,10 @@ parse_pytest_output = _pytest_parse.parse_pytest_output
 
 
 def load_judge_scores(judge_dir: pathlib.Path,
-                      mapping: dict[str, str]) -> dict[str, dict | None]:
-    """Return {model: scores_dict | None} for one judge."""
+                      mapping: dict[str, str]) -> dict[str, dict[str, Any] | None]:
+    """Return {model: scores_dict[str, Any] | None} for one judge."""
     out_dir = judge_dir / "output"
-    by_model: dict[str, dict | None] = {}
+    by_model: dict[str, dict[str, Any] | None] = {}
     for model, label in mapping.items():
         f = out_dir / f"{label}_scores.json"
         if not f.exists():
@@ -87,7 +88,7 @@ def fmt_int(v: float | int | None) -> str:
     return str(v)
 
 
-def quality_total(q: dict | None) -> int | None:
+def quality_total(q: dict[str, Any] | None) -> int | None:
     if not q:
         return None
     keys = ("clarity", "conciseness", "error_handling", "comments")
@@ -97,7 +98,7 @@ def quality_total(q: dict | None) -> int | None:
     return sum(parts)
 
 
-def load_run_meta(run_dir_rel: str) -> dict:
+def load_run_meta(run_dir_rel: str) -> dict[str, Any]:
     """Read meta.json from a run dir; return empty dict if missing/malformed."""
     p = REPO_ROOT / run_dir_rel / "meta.json"
     if not p.exists():
@@ -108,7 +109,7 @@ def load_run_meta(run_dir_rel: str) -> dict:
         return {}
 
 
-def get_impl_loc(meta: dict) -> int | str:
+def get_impl_loc(meta: dict[str, Any]) -> int | str:
     """Return impl_loc from meta.json, falling back to sandbox_py_loc."""
     if "impl_loc" in meta:
         return meta["impl_loc"]
@@ -117,14 +118,14 @@ def get_impl_loc(meta: dict) -> int | str:
     return "—"
 
 
-def get_entrypoint(meta: dict) -> str:
+def get_entrypoint(meta: dict[str, Any]) -> str:
     """Return entrypoint from meta.json, falling back to 'sandbox.py'."""
     return meta.get("entrypoint", "sandbox.py")
 
 
 def split_judge_scores(judges: list[str],
-                       scores_by_judge: dict[str, dict[str, dict | None]],
-                       model: str) -> dict:
+                       scores_by_judge: dict[str, dict[str, dict[str, Any] | None]],
+                       model: str) -> dict[str, Any]:
     """Return spec/quality/verdict/hard_fail scores split by judge tier.
 
     Self-judgments (judge == impl model) are tracked separately in
@@ -186,7 +187,8 @@ def split_judge_scores(judges: list[str],
 
 
 def render_scoreboard(impl_models: list[str], judges: list[str],
-                      scores_by_judge: dict, test_results: dict) -> list[str]:
+                      scores_by_judge: dict[str, Any],
+                      test_results: dict[str, Any]) -> list[str]:
     """Top-level scoreboard with all-judge / expert / peer median splits."""
     lines = ["## Scoreboard", ""]
     lines.append(
@@ -229,7 +231,7 @@ def render_scoreboard(impl_models: list[str], judges: list[str],
 
 
 def render_per_judge_ranking(impl_models: list[str], judges: list[str],
-                             scores_by_judge: dict) -> list[str]:
+                             scores_by_judge: dict[str, Any]) -> list[str]:
     """For each judge, sort impls they scored by spec_compliance descending."""
     lines = ["## Per-judge ranking by spec compliance", ""]
     lines.append("How each judge ranked the implementations (highest spec score first). "
@@ -261,8 +263,9 @@ def render_per_judge_ranking(impl_models: list[str], judges: list[str],
 
 
 def render_per_implementation(impl_models: list[str], judges: list[str],
-                              scores_by_judge: dict, runs_index: dict,
-                              test_results: dict) -> list[str]:
+                              scores_by_judge: dict[str, Any],
+                              runs_index: dict[str, str],
+                              test_results: dict[str, Any]) -> list[str]:
     """One section per impl with every judge's row + objective tests."""
     lines = ["## Per-implementation detail", ""]
     for model in impl_models:
@@ -307,7 +310,7 @@ def render_per_implementation(impl_models: list[str], judges: list[str],
 
 
 def render_inter_judge_agreement(impl_models: list[str], judges: list[str],
-                                 scores_by_judge: dict) -> list[str]:
+                                 scores_by_judge: dict[str, Any]) -> list[str]:
     """Surface where judges agreed/disagreed sharply on spec scores per impl."""
     lines = ["## Inter-judge agreement", ""]
     lines.append("Spec-score variance across judges per implementation. High range "
@@ -368,7 +371,7 @@ def render_inter_judge_agreement(impl_models: list[str], judges: list[str],
 
 
 def render_self_bias_check(impl_models: list[str], judges: list[str],
-                           scores_by_judge: dict) -> list[str]:
+                           scores_by_judge: dict[str, Any]) -> list[str]:
     """How much each model overrates its own work vs peer consensus.
 
     Δ = self_score − peer_median. Positive = the model scored its own
@@ -468,8 +471,8 @@ def render_judge_cost(judges: list[str], judgment_dir: pathlib.Path) -> list[str
     return lines
 
 
-def render_cost_efficiency(impl_models: list[str], runs_index: dict,
-                           test_results: dict) -> list[str]:
+def render_cost_efficiency(impl_models: list[str], runs_index: dict[str, str],
+                           test_results: dict[str, Any]) -> list[str]:
     """Cost / wall-clock / cost-per-passing-test, pulled from each run's meta.json."""
     lines = ["## Cost & efficiency", ""]
     lines.append("Per-implementation cost data, pulled from `builds/<model>/rounds/<task>-<date>/meta.json`. "
@@ -511,8 +514,8 @@ def render_review(task: str,
                   judgment_dir: pathlib.Path,
                   pairings: dict[str, dict[str, str]],
                   runs_index: dict[str, str],
-                  scores_by_judge: dict[str, dict[str, dict | None]],
-                  test_results: dict[str, dict]) -> str:
+                  scores_by_judge: dict[str, dict[str, dict[str, Any] | None]],
+                  test_results: dict[str, dict[str, Any]]) -> str:
     impl_models = sorted(runs_index.keys())
     judges = list(pairings.keys())
     date_stamp = judgment_dir.name[len(task) + 1:]
@@ -623,7 +626,7 @@ def main() -> int:
     print(f"  impls:  {', '.join(runs_index.keys())}")
 
     # Per-judge scores keyed by model
-    scores_by_judge: dict[str, dict[str, dict | None]] = {}
+    scores_by_judge: dict[str, dict[str, dict[str, Any] | None]] = {}
     for judge, mapping in pairings.items():
         scores_by_judge[judge] = load_judge_scores(judgment_dir / judge, mapping)
 

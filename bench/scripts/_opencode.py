@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _stats  # noqa: E402
@@ -63,7 +64,7 @@ def find_session_for_directory(directory: str | Path) -> str | None:
     return matching[0]["id"]
 
 
-def export_session(session_id: str) -> dict | None:
+def export_session(session_id: str) -> dict[str, Any] | None:
     """Return parsed export JSON for `session_id`, or None on failure.
 
     `opencode export` prints a leading "Exporting session: <id>" line
@@ -96,7 +97,7 @@ def export_session(session_id: str) -> dict | None:
         return None
 
 
-def summarize(session: dict) -> dict:
+def summarize(session: dict[str, Any]) -> dict[str, Any]:
     """Sum per-message cost + tokens. Picks the modal model+provider
     across assistant messages, since a session may contain multiple
     models if the user switched mid-session."""
@@ -168,7 +169,7 @@ def summarize(session: dict) -> dict:
     }
 
 
-def render_transcript(session: dict) -> str:
+def render_transcript(session: dict[str, Any]) -> str:
     """Render the session as the same markdown shape as opencode's TUI
     export, so existing transcripts and auto-captured ones look alike.
 

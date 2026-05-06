@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import _config  # noqa: E402 — same directory
 
 REPO_ROOT = _config.REPO_ROOT
 
-DEFAULTS: dict = {
+DEFAULTS: dict[str, Any] = {
     "entrypoint": "sandbox.py",
     "language": "python",
     "test_runner": "pytest",
@@ -24,7 +25,7 @@ DEFAULTS: dict = {
 }
 
 
-def load(task: str) -> dict:
+def load(task: str) -> dict[str, Any]:
     """Read bench/tasks/<task>/task.json and merge with defaults.
 
     Missing keys fall back to DEFAULTS so that omitting the file entirely

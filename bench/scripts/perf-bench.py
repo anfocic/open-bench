@@ -33,6 +33,7 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
 import _opencode  # noqa: E402
@@ -53,10 +54,10 @@ def stdev_or_none(xs: list[float]) -> float | None:
 
 def run_once(
     task_dir: Path,
-    task_cfg: dict,
+    task_cfg: dict[str, Any],
     model_slug: str,
     repo_root: Path,
-) -> dict:
+) -> dict[str, Any]:
     """Single run: fresh tmp dir, opencode, capture meta + tests."""
     entrypoint = task_cfg["entrypoint"]
     run_id = uuid.uuid4().hex[:8]
@@ -105,7 +106,7 @@ def run_once(
     # session lookup + meta — opencode session list is project-scoped to
     # cwd, so we shell out from the work dir to see sessions for this run.
     session_id = None
-    summary: dict = {}
+    summary: dict[str, Any] = {}
     try:
         out = subprocess.check_output(
             ["opencode", "session", "list", "--format", "json"],
