@@ -135,10 +135,12 @@ def summarize(session: dict[str, Any]) -> dict[str, Any]:
             model_counts[key] = model_counts.get(key, 0) + 1
 
         time = info.get("time") or {}
-        if "created" in time:
-            started_ms = time["created"] if started_ms is None else min(started_ms, time["created"])
-        if "completed" in time:
-            ended_ms = time["completed"] if ended_ms is None else max(ended_ms, time["completed"])
+        created = time.get("created")
+        completed = time.get("completed")
+        if isinstance(created, (int, float)) and not isinstance(created, bool):
+            started_ms = int(created) if started_ms is None else min(started_ms, int(created))
+        if isinstance(completed, (int, float)) and not isinstance(completed, bool):
+            ended_ms = int(completed) if ended_ms is None else max(ended_ms, int(completed))
 
     top = _stats.mode_of_counts(model_counts)
     if top is not None:
