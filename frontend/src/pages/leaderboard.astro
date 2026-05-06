@@ -7,6 +7,7 @@ import { getCollection } from 'astro:content';
 import { fmtCost, fmtNum } from '../lib/format';
 import { computeStandings, sparkline } from '../lib/aggregate';
 import { pageSeo } from '../lib/seo';
+import Term from '../components/Term.astro';
 
 const entries = await getCollection('rounds');
 const rounds = entries.map(e => e.data);
@@ -33,20 +34,20 @@ const seo = pageSeo('leaderboard', '/leaderboard', {
           <tr>
             <th class="num">#</th>
             <th>model</th>
-            <th class="num">elo</th>
+            <th class="num"><Term k="elo">elo</Term></th>
             <th class="num">rounds</th>
             <th class="num">wins</th>
-            <th class="num">podium</th>
-            <th class="num">avg</th>
-            <th class="num">$/round</th>
-            <th>trend</th>
+            <th class="num"><Term k="podium">podium</Term></th>
+            <th class="num"><Term k="avg">avg</Term></th>
+            <th class="num"><Term k="costPerRound">$/round</Term></th>
+            <th><Term k="trend">trend</Term></th>
           </tr>
         </thead>
         <tbody>
           {standings.map((s, i) => (
             <tr>
               <td class="num">{i + 1}</td>
-              <td><a href={`/model/${s.impl}`}>{s.impl}</a></td>
+              <td><a href={`/model/${s.impl}`} transition:name={`model-${s.impl}`}>{s.impl}</a></td>
               <td class="num"><strong>{Math.round(s.elo)}</strong></td>
               <td class="num">{s.rounds}</td>
               <td class="num">{s.wins}</td>

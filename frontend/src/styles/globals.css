@@ -1,3 +1,26 @@
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -40px;
+  z-index: 100;
+  padding: 6px 12px;
+  background: var(--bg);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  text-decoration: none;
+  font-family: var(--mono, monospace);
+  font-size: 14px;
+  border-radius: 2px;
+  transition: top 0.15s ease-out;
+}
+.skip-link:focus {
+  top: 8px;
+  outline: none;
+}
+[id="main"]:focus {
+  outline: none;
+}
+
 /* Dark theme (default) */
 :root {
   --bg: #0a0a0a;
@@ -180,21 +203,6 @@ pre {
   margin-bottom: -3px;
 }
 .site-nav a.active::before { color: var(--accent); }
-
-.theme-toggle {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: 15.6px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-}
-.theme-toggle:hover { color: var(--fg-bright); }
-.theme-toggle::before { content: '> '; color: var(--dim); }
 
 /* Masthead */
 .masthead {
@@ -650,8 +658,8 @@ tr.cheapest-row td.model::before { content: '$ '; color: var(--green); font-weig
 }
 .footer-grid {
   display: grid;
-  grid-template-columns: repeat(4, max-content);
-  gap: 24px 48px;
+  grid-template-columns: repeat(3, max-content);
+  gap: 24px 64px;
   margin-bottom: 24px;
   justify-content: center;
 }
@@ -674,8 +682,6 @@ tr.cheapest-row td.model::before { content: '$ '; color: var(--green); font-weig
   text-transform: lowercase;
 }
 .footer-heading::before { content: '// '; color: var(--dim); font-weight: 400; }
-.footer-meta { color: var(--muted); }
-.footer-meta code { background: none; border: none; padding: 0; color: var(--accent); }
 .footer-base {
   padding-top: 12px;
   border-top: 1px dashed var(--rule);
@@ -687,6 +693,10 @@ tr.cheapest-row td.model::before { content: '$ '; color: var(--green); font-weig
 }
 .footer-base a { color: var(--accent); text-decoration: none; }
 .footer-base a:hover { text-decoration: underline; }
+.footer-icons { display: inline-flex; gap: 10px; align-items: center; margin-left: 4px; }
+.footer-icons a { color: var(--muted); display: inline-flex; align-items: center; }
+.footer-icons a:hover { color: var(--accent); text-decoration: none; }
+.footer-icons svg { display: block; }
 
 /* Hero card on /round/[date] — stripped of card chrome */
 .hero-card {

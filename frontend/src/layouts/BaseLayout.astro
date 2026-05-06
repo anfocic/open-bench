@@ -18,34 +18,16 @@ const { seo } = Astro.props;
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <SEO {...seo} />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <ClientRouter />
   <script is:inline>
-    function withViewTransition(fn) { var doc = document; if (doc.startViewTransition) doc.startViewTransition(fn); else fn(); }
     (function(){var t=localStorage.getItem('theme');if(t){document.documentElement.setAttribute('data-theme',t)}else if(window.matchMedia('(prefers-color-scheme:light)').matches){document.documentElement.setAttribute('data-theme','light')}})();
   </script>
 </head>
 <body>
+  <a href="#main" class="skip-link">skip to content</a>
   <slot />
-  <script>
-    function setupThemeToggle() {
-      const btn = document.getElementById('theme-toggle');
-      if (!btn) return;
-      function getTheme() {
-        return document.documentElement.getAttribute('data-theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-      }
-      btn.textContent = getTheme() === 'dark' ? 'light' : 'dark';
-      btn.onclick = () => {
-        const next = getTheme() === 'dark' ? 'light' : 'dark';
-        const apply = () => {
-          document.documentElement.setAttribute('data-theme', next);
-          localStorage.setItem('theme', next);
-          btn.textContent = next === 'dark' ? 'light' : 'dark';
-        };
-        withViewTransition(apply);
-      };
-    }
-    setupThemeToggle();
-    document.addEventListener('astro:after-swap', setupThemeToggle);
-  </script>
 </body>
 </html>
