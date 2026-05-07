@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -39,8 +40,25 @@ def tasks_dir() -> Path:
     return _config.repo_root() / "bench" / "tasks"
 
 
+_VALID_TASK_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+
+
+def _validate_task_name(name: str) -> None:
+    """Reject task names that contain path separators or traverse parents.
+
+    Task names are joined into filesystem paths and into opencode session
+    titles, so we constrain them to a conservative shell- and path-safe
+    alphabet rather than blocking only `..` / `/`.
+    """
+    if not _VALID_TASK_NAME.match(name):
+        raise ValueError(
+            f"invalid task name {name!r}: must match {_VALID_TASK_NAME.pattern}"
+        )
+
+
 def task_dir(name: str) -> Path:
     """Path to a single task under the active tasks directory."""
+    _validate_task_name(name)
     return tasks_dir() / name
 
 

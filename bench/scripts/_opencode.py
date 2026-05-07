@@ -59,7 +59,7 @@ def find_session_for_directory(directory: str | Path) -> str | None:
     ]
     if not matching:
         return None
-    matching.sort(key=lambda s: s.get("updated", 0), reverse=True)
+    matching.sort(key=lambda s: s.get("updated") or 0, reverse=True)
     return matching[0]["id"]
 
 
