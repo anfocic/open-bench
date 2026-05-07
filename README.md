@@ -38,9 +38,37 @@ The most recent finalized scoreboard lives at [`results/reviews/`](results/revie
 
 Updated when each round's review lands. Per-run artifacts (transcripts, diffs, meta.json) live alongside under [`builds/<model>/rounds/`](builds/).
 
+## Quickstart
+
+Requires Python 3.11–3.13 and [opencode] (tested against 1.14.x). Authenticate opencode against your providers first (`opencode auth login`).
+
+```bash
+git clone https://github.com/anfocic/open-bench.git
+cd open-bench
+pip install -e ".[dev]"
+
+bench-start-run --auto sandbox kimi   # one model, one round
+bench-capture-run sandbox kimi        # extract artifacts + run hidden tests
+bench-run-all sandbox                 # full round across the lineup
+```
+
+Outputs land in `builds/<model>/rounds/` and `results/reviews/`. See [ABOUT.md](ABOUT.md) for the full pipeline, task configuration, and forking guide.
+
+## What's not here yet
+
+v0.1 is a single-task, opencode-only, single-machine harness. Specifically:
+
+- One task kind (code; entrypoint + pytest + LOC). Generation/choice tasks land in v0.2 — see [`PLAN_V0_2.md`](PLAN_V0_2.md).
+- Implementer + judge runs both go through opencode. No first-class Anthropic/OpenAI providers yet.
+- Worktrees and run artifacts assume one machine; no shared storage / CI mode.
+- Installs from a clone (`pip install -e .`); no PyPI release yet.
+
+If those gaps block you, file an issue — the v1.0 roadmap in `PLAN_V0_2.md` covers them.
+
 ## Read more
 
 - [**ABOUT.md**](ABOUT.md) — how the harness works, how to run it locally, how to fork it for your own n-way comparison, task configuration, layout, limitations.
+- [`PLAN_V0_2.md`](PLAN_V0_2.md) — decoupling roadmap (pluggable task kinds, provider abstractions).
 - [`bench/plans/improvements.md`](bench/plans/improvements.md) — known gaps and planned work.
 
 ## License
