@@ -6,13 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.1.2] — unreleased
 
-First step of v0.2 plugin work. Makes config and tasks locations
-overridable so a downstream consumer (e.g. a separate `royale/` tree)
-can run the harness against its own lineup and tasks without forking,
-and consolidates four divergent task-dir validation snippets into a
-single helper.
+First two structural steps of v0.2 plugin work: configurable config /
+tasks paths so a downstream consumer (e.g. a separate `royale/` tree)
+can drive the harness without forking, and the empty plugin scaffolding
+(`_kinds/` registry, `task_kind` field) that PRs to come will fill in
+as logic is carved out of `capture_run` / `start_judgments` /
+`aggregate_judges`.
 
 ### Added
+- `bench/scripts/_kinds/` package with a registry of task kinds.
+  Currently one kind (`code`, empty `CodeTask` class). Methods grow
+  as carve-out PRs land.
+- `task_kind` field on `_task.load()` (default: `"code"`); existing
+  `task.json` files don't need updating.
+- `_task.kind_for(name)` resolves a task to its plugin instance via
+  the registry.
 - `OPENBENCH_CONFIG` env var overrides the path to `config.json`
   (default: `<repo_root>/bench/config.json`).
 - `OPENBENCH_TASKS_DIR` env var overrides the directory holding task

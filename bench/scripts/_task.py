@@ -21,6 +21,7 @@ from typing import Any
 from . import _config
 
 DEFAULTS: dict[str, Any] = {
+    "task_kind": "code",
     "entrypoint": "sandbox.py",
     "language": "python",
     "test_runner": "pytest",
@@ -75,6 +76,17 @@ def load(task: str) -> dict[str, Any]:
     merged = dict(DEFAULTS)
     merged.update(data)
     return merged
+
+
+def kind_for(name: str):
+    """Resolve and instantiate the plugin for this task's kind.
+
+    Reads task.json (via load()), dispatches via the _kinds registry.
+    Raises ValueError when task_kind is unknown.
+    """
+    from . import _kinds  # local: avoids any future cycle if _kinds imports _task
+    cfg = load(name)
+    return _kinds.get(cfg["task_kind"])
 
 
 def loc_count(path: Path, method: str) -> int:
