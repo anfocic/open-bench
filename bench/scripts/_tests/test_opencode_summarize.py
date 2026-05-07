@@ -13,6 +13,8 @@ import unittest
 
 from . import conftest  # noqa: F401
 
+from unittest import mock
+
 from bench.scripts import _opencode  # noqa: E402
 
 
@@ -66,6 +68,28 @@ class TestSummarizeNumericGuards(unittest.TestCase):
         }
         out = _opencode.summarize(session)
         self.assertIsNone(out["model_wall_clock_seconds"])
+
+
+class TestFindSessionSortNoneTolerant(unittest.TestCase):
+    """Pin: find_session sort key tolerates explicit `null` in `updated`.
+
+    `s.get("updated", 0)` only handles missing keys; an explicit
+    `"updated": null` previously crashed `sort` with a TypeError when
+    comparing None to int.
+    """
+
+    def test_explicit_null_updated_does_not_crash(self):
+        sessions_json = '''[
+            {"id": "a", "directory": "/tmp/foo", "updated": null},
+            {"id": "b", "directory": "/tmp/foo", "updated": 1000},
+            {"id": "c", "directory": "/tmp/foo"}
+        ]'''
+        with mock.patch.object(_opencode, "available", return_value=True), \
+             mock.patch.object(_opencode.subprocess, "check_output",
+                               return_value=sessions_json):
+            sid = _opencode.find_session_for_directory("/tmp/foo")
+        # The explicit-int session should win the sort.
+        self.assertEqual(sid, "b")
 
 
 if __name__ == "__main__":

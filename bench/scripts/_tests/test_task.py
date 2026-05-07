@@ -98,5 +98,20 @@ class TestLocCount(unittest.TestCase):
             path.unlink()
 
 
+class TestTaskNameValidation(unittest.TestCase):
+    """Pin: task names that traverse parents or contain shell metachars are rejected."""
+
+    def test_dotdot_rejected(self):
+        for bad in ("..", "../escape", "foo/../bar", "/abs", "a b", ".hidden"):
+            with self.subTest(name=bad):
+                with self.assertRaises(ValueError):
+                    _task.task_dir(bad)
+
+    def test_valid_names_accepted(self):
+        for ok in ("sandbox", "rust-task", "task_v2", "task.v2", "Task1"):
+            with self.subTest(name=ok):
+                _task.task_dir(ok)  # should not raise
+
+
 if __name__ == "__main__":
     unittest.main()

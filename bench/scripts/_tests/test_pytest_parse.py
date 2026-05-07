@@ -74,5 +74,18 @@ class TestParsePytestOutputQuiet(unittest.TestCase):
         self.assertEqual(result["errors"], 0)
 
 
+class TestSummaryRegexAnchored(unittest.TestCase):
+    """Pin: count regex requires word boundary, so a per-test name like
+    `test_5_passed_thing` doesn't get scraped as a count when no border
+    summary line filters it out (the `-q` no-border path).
+    """
+
+    def test_test_name_with_passed_token_doesnt_skew_count(self):
+        text = "test_5_passed_thing FAILED\n2 passed, 1 failed in 0.05s\n"
+        result = _pytest_parse.parse_pytest_output(text)
+        self.assertEqual(result["passed"], 2)
+        self.assertEqual(result["failed"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -137,12 +138,13 @@ def run_once(
         tests_src = task_dir / "tests"
         test_dst = work / "_eval_tests"
         shutil.copytree(tests_src, test_dst)
+        test_timeout = int(os.environ.get("CAPTURE_TEST_TIMEOUT", "300"))
         proc = subprocess.run(
             [sys.executable, "-m", "pytest", str(test_dst), "-q"],
             cwd=work,
             capture_output=True,
             text=True,
-            timeout=300,
+            timeout=test_timeout,
         )
         test_exit = proc.returncode
         test_stdout = proc.stdout

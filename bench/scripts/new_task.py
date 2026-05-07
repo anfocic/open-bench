@@ -185,6 +185,7 @@ def test_placeholder():
 """
 
 TASK_JSON_TEMPLATE = {
+    "task_kind": "code",
     "entrypoint": "<filename>.py",
     "language": "python",
     "test_runner": "pytest",

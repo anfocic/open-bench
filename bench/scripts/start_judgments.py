@@ -299,11 +299,13 @@ def main() -> int:
     rng = random.Random(args.seed)
     date_stamp = dt.datetime.now(dt.timezone.utc).date().isoformat()
     out_root = REPO_ROOT / "results" / "judgments" / f"{args.task}-{date_stamp}"
-    if out_root.exists():
+    out_root.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        out_root.mkdir()
+    except FileExistsError:
         log.error("%s already exists — remove it or pick a fresh date",
                   out_root)
         return 1
-    out_root.mkdir(parents=True)
 
     impl_models = [impl["model"] for impl in impls]
     judges: list[str] = list(cfg.expert_judges) + impl_models

@@ -58,7 +58,10 @@ def parse_pytest_output(text: str) -> dict[str, Any]:
     counts = {"passed": 0, "failed": 0, "skipped": 0, "errors": 0}
     for label, key in (("passed", "passed"), ("failed", "failed"),
                        ("skipped", "skipped"), ("error", "errors")):
-        m = re.search(rf"(\d+)\s+{label}", haystack)
+        # Anchor on word boundary so a test name like "test_5_passed_thing"
+        # in a non-summary line can't get picked up as a count. The full
+        # phrase pytest emits is e.g. "5 passed", "1 failed", "2 skipped".
+        m = re.search(rf"\b(\d+)\s+{label}\b", haystack)
         if m:
             counts[key] = int(m.group(1))
 
