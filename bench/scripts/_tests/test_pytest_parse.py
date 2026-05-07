@@ -3,9 +3,6 @@
 Covers both shapes pytest emits:
 - `-v`: per-test lines plus `===` summary borders (used by aggregate_judges)
 - `-q`: dot/F char map plus a single trailing summary line (used by perf-bench)
-
-aggregate_judges.parse_pytest_output is now an alias to the canonical
-implementation; same calls are pinned through it for back-compat.
 """
 
 from __future__ import annotations
@@ -16,7 +13,6 @@ from pathlib import Path
 from . import conftest  # noqa: F401
 
 from bench.scripts import _pytest_parse  # noqa: E402
-from bench.scripts import aggregate_judges  # noqa: E402
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
@@ -76,14 +72,6 @@ class TestParsePytestOutputQuiet(unittest.TestCase):
         self.assertEqual(result["failed"], 4)
         self.assertEqual(result["skipped"], 1)
         self.assertEqual(result["errors"], 0)
-
-
-class TestAggregateAlias(unittest.TestCase):
-    """aggregate_judges.parse_pytest_output is an alias for back-compat."""
-
-    def test_alias_identity(self) -> None:
-        self.assertIs(aggregate_judges.parse_pytest_output,
-                      _pytest_parse.parse_pytest_output)
 
 
 if __name__ == "__main__":

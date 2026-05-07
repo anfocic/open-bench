@@ -23,6 +23,7 @@ from pathlib import Path
 from . import conftest  # noqa: F401
 
 from bench.scripts import aggregate_judges  # noqa: E402
+from bench.scripts._kinds.code import CodeTask  # noqa: E402
 
 REPO_ROOT = aggregate_judges.REPO_ROOT
 GOLDEN = Path(__file__).resolve().parent / "fixtures" / "golden_review-2026-05-05.md"
@@ -36,30 +37,12 @@ def render() -> str:
     runs_index = json.loads((judgment_dir / "runs_index.json").read_text())
     judgment_meta = json.loads((judgment_dir / "judgment_meta.json").read_text())
 
-    scores_by_judge: dict[str, dict[str, dict | None]] = {}
-    for judge, mapping in pairings.items():
-        scores_by_judge[judge] = aggregate_judges.load_judge_scores(
-            judgment_dir / judge, mapping,
-        )
-
-    test_results: dict[str, dict] = {}
-    for model, entry in runs_index.items():
-        out = REPO_ROOT / entry["path"] / "test-output.txt"
-        if out.exists():
-            test_results[model] = aggregate_judges.parse_pytest_output(out.read_text())
-        else:
-            test_results[model] = {
-                "passed": 0, "failed": 0, "skipped": 0, "errors": 0, "per_test": {},
-            }
-
-    return aggregate_judges.render_review(
-        task=TASK,
-        date_stamp=judgment_meta["date_stamp"],
+    return CodeTask().aggregate(
         judgment_dir=judgment_dir,
+        judgment_meta=judgment_meta,
         pairings=pairings,
         runs_index=runs_index,
-        scores_by_judge=scores_by_judge,
-        test_results=test_results,
+        repo_root=REPO_ROOT,
     )
 
 
