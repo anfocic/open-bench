@@ -56,13 +56,15 @@ class TestCaptureRunTimeout(unittest.TestCase):
                                                     stderr=b"slow stderr")
                 return real_run(*args, **kwargs)
 
+            from bench.scripts._kinds import code as code_kind
+
             with mock.patch.object(cr, "REPO_ROOT", tmp), \
                  mock.patch.object(cr._task._config, "repo_root", lambda: tmp), \
                  mock.patch.object(cr, "find_run_dir", return_value=run_dir), \
-                 mock.patch.object(cr, "_run_git", return_value=""), \
                  mock.patch.object(cr, "determine_base_branch", return_value="main"), \
                  mock.patch.object(cr._opencode, "available", return_value=False), \
-                 mock.patch.object(cr.subprocess, "run", side_effect=fake_run), \
+                 mock.patch.object(code_kind, "_run_git", return_value="abc123"), \
+                 mock.patch.object(code_kind.subprocess, "run", side_effect=fake_run), \
                  mock.patch.dict(os.environ, {"CAPTURE_TEST_TIMEOUT": "1"}, clear=False):
                 rc = cr.capture(task, model)
 

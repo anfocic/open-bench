@@ -6,17 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.1.2] — unreleased
 
-First two structural steps of v0.2 plugin work: configurable config /
+Three structural steps of v0.2 plugin work: configurable config /
 tasks paths so a downstream consumer (e.g. a separate `royale/` tree)
-can drive the harness without forking, and the empty plugin scaffolding
-(`_kinds/` registry, `task_kind` field) that PRs to come will fill in
-as logic is carved out of `capture_run` / `start_judgments` /
-`aggregate_judges`.
+can drive the harness without forking; plugin scaffolding (`_kinds/`
+registry, `task_kind` field); and the first carve-out — the
+code-specific subset of `capture_run` now lives on `CodeTask`. No
+behaviour change.
 
 ### Added
 - `bench/scripts/_kinds/` package with a registry of task kinds.
-  Currently one kind (`code`, empty `CodeTask` class). Methods grow
-  as carve-out PRs land.
+  Currently one kind (`code`, `CodeTask`).
+- `CodeTask.extract_artifact(...)`: pathspec/diff + entrypoint copy
+  + hidden-test invocation + LOC count, returning a dict the
+  orchestrator merges into meta.json. Carved out of `capture_run.py`.
 - `task_kind` field on `_task.load()` (default: `"code"`); existing
   `task.json` files don't need updating.
 - `_task.kind_for(name)` resolves a task to its plugin instance via
