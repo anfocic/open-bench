@@ -16,7 +16,7 @@ from pathlib import Path
 
 from . import conftest  # noqa: F401
 
-from bench.scripts._kinds.code import CodeTask, quality_total
+from bench.scripts._kinds.code import CodeTask, _quality_total
 
 
 class TestCodeTaskAggregate(unittest.TestCase):
@@ -106,19 +106,37 @@ class TestCodeTaskAggregate(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
+class TestLoadJudgeScoresMalformed(unittest.TestCase):
+    """Pin: scores file with non-dict top level is demoted to None, not raised."""
+
+    def test_top_level_list_is_treated_as_missing(self):
+        from bench.scripts._kinds.code import _load_judge_scores
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            judge_dir = tmp / "claude"
+            (judge_dir / "output").mkdir(parents=True)
+            (judge_dir / "output" / "A_scores.json").write_text("[]")
+            (judge_dir / "output" / "B_scores.json").write_text("\"oops\"")
+            result = _load_judge_scores(judge_dir, {"alpha": "A", "beta": "B"})
+            self.assertIsNone(result["alpha"])
+            self.assertIsNone(result["beta"])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 class TestQualityTotal(unittest.TestCase):
     def test_bool_true_not_counted_as_one(self):
         q = {"clarity": True, "conciseness": 4,
              "error_handling": 4, "comments": 4}
-        self.assertIsNone(quality_total(q))
+        self.assertIsNone(_quality_total(q))
 
     def test_all_real_scores_sum(self):
         q = {"clarity": 5, "conciseness": 4,
              "error_handling": 4, "comments": 4}
-        self.assertEqual(quality_total(q), 17)
+        self.assertEqual(_quality_total(q), 17)
 
     def test_missing_key_returns_none(self):
-        self.assertIsNone(quality_total(
+        self.assertIsNone(_quality_total(
             {"clarity": 5, "conciseness": 4, "error_handling": 4}
         ))
 

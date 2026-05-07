@@ -159,31 +159,32 @@ class CodeTask:
 
         test_timeout = int(os.environ.get("CAPTURE_TEST_TIMEOUT", "300"))
         try:
-            proc = subprocess.run(
-                test_invocation,
-                cwd=str(worktree),
-                capture_output=True,
-                text=True,
-                timeout=test_timeout,
-            )
-            test_exit = proc.returncode
-            test_stdout = proc.stdout
-            test_stderr = proc.stderr
-        except subprocess.TimeoutExpired as e:
-            log.error("hidden tests timed out after %ds — recording exit 124. "
-                      "Override with CAPTURE_TEST_TIMEOUT=<seconds>.",
-                      test_timeout)
-            test_exit = 124
-            test_stdout = (e.stdout.decode(errors="replace")
-                           if isinstance(e.stdout, bytes)
-                           else (e.stdout or ""))
-            test_stderr = (e.stderr.decode(errors="replace")
-                           if isinstance(e.stderr, bytes)
-                           else (e.stderr or ""))
-        (run_dir / "test-output.txt").write_text(
-            test_stdout + "\n--- stderr ---\n" + test_stderr)
-
-        shutil.rmtree(eval_dir, ignore_errors=True)
+            try:
+                proc = subprocess.run(
+                    test_invocation,
+                    cwd=str(worktree),
+                    capture_output=True,
+                    text=True,
+                    timeout=test_timeout,
+                )
+                test_exit = proc.returncode
+                test_stdout = proc.stdout
+                test_stderr = proc.stderr
+            except subprocess.TimeoutExpired as e:
+                log.error("hidden tests timed out after %ds — recording exit 124. "
+                          "Override with CAPTURE_TEST_TIMEOUT=<seconds>.",
+                          test_timeout)
+                test_exit = 124
+                test_stdout = (e.stdout.decode(errors="replace")
+                               if isinstance(e.stdout, bytes)
+                               else (e.stdout or ""))
+                test_stderr = (e.stderr.decode(errors="replace")
+                               if isinstance(e.stderr, bytes)
+                               else (e.stderr or ""))
+            (run_dir / "test-output.txt").write_text(
+                test_stdout + "\n--- stderr ---\n" + test_stderr)
+        finally:
+            shutil.rmtree(eval_dir, ignore_errors=True)
 
         impl_path = worktree / entrypoint
         loc = _task.loc_count(impl_path, loc_method) if impl_path.exists() else 0
@@ -316,6 +317,7 @@ class CodeTask:
             runs_index=runs_index,
             scores_by_judge=scores_by_judge,
             test_results=test_results,
+            repo_root=repo_root,
         )
 
 
@@ -347,7 +349,7 @@ def _fmt_int(v: float | int | None) -> str:
     return str(v)
 
 
-def quality_total(q: dict[str, Any] | None) -> int | None:
+def _quality_total(q: dict[str, Any] | None) -> int | None:
     if not q:
         return None
     keys = ("clarity", "conciseness", "error_handling", "comments")
@@ -367,10 +369,17 @@ def _load_judge_scores(judge_dir: pathlib.Path,
             by_model[model] = None
             continue
         try:
-            by_model[model] = json.loads(f.read_text())
+            parsed = json.loads(f.read_text())
         except json.JSONDecodeError as e:
             log.warning("%s not valid JSON: %s", f, e)
             by_model[model] = None
+            continue
+        if not isinstance(parsed, dict):
+            log.warning("%s top-level is %s, expected object — treating as missing",
+                        f, type(parsed).__name__)
+            by_model[model] = None
+            continue
+        by_model[model] = parsed
     return by_model
 
 
@@ -411,7 +420,7 @@ def _split_judge_scores(judges: list[str],
         if s is None:
             continue
         spec = s.get("spec_compliance")
-        qt = quality_total(s.get("code_quality"))
+        qt = _quality_total(s.get("code_quality"))
         is_expert = judge in _expert_judges()
         is_self = judge == model
         if _is_score(spec):
@@ -543,7 +552,7 @@ def _render_per_implementation(impl_models: list[str], judges: list[str],
             if s is None:
                 lines.append(f"| {judge} | {tier} | (no scores file) | — | — | — | — |")
                 continue
-            qt = quality_total(s.get("code_quality"))
+            qt = _quality_total(s.get("code_quality"))
             note = s.get("one_line_summary", "").replace("|", "\\|")
             if len(note) > 80:
                 note = note[:77] + "..."
@@ -757,7 +766,8 @@ def _render_review(task: str,
                    pairings: dict[str, dict[str, str]],
                    runs_index: dict[str, dict[str, Any]],
                    scores_by_judge: dict[str, dict[str, dict[str, Any] | None]],
-                   test_results: dict[str, dict[str, Any]]) -> str:
+                   test_results: dict[str, dict[str, Any]],
+                   repo_root: pathlib.Path) -> str:
     impl_models = sorted(runs_index.keys())
     judges = list(pairings.keys())
     expert_judges = [j for j in judges if j in _expert_judges()]
@@ -797,7 +807,6 @@ def _render_review(task: str,
         )
         lines.append("")
 
-    repo_root = _config.repo_root()
     lines.extend(_render_scoreboard(impl_models, judges, scores_by_judge, test_results))
     lines.extend(_render_per_judge_ranking(impl_models, judges, scores_by_judge))
     lines.extend(_render_self_bias_check(impl_models, judges, scores_by_judge))

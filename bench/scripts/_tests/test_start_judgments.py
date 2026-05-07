@@ -16,6 +16,7 @@ from unittest import mock
 
 from . import conftest  # noqa: F401
 
+from bench.scripts import _opencode_run  # noqa: E402
 from bench.scripts import start_judgments as sj  # noqa: E402
 
 
@@ -78,6 +79,51 @@ class TestFindRunsMetaDriven(unittest.TestCase):
             with mock.patch.object(sj, "REPO_ROOT", tmp):
                 runs = sj.find_runs("sandbox", "sandbox.py")
             self.assertEqual(runs, [])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+class TestAutoDriveJudgesParallel(unittest.TestCase):
+    """Pin the ThreadPoolExecutor branch of auto_drive_judges (concurrency>1)."""
+
+    def _make_cfg(self, slugs: dict[str, str]):
+        class Cfg:
+            def __init__(self, slugs):
+                self.slugs = slugs
+            def slug_for(self, name):
+                return self.slugs[name]
+        return Cfg(slugs)
+
+    def test_parallel_branch_per_judge_logpath_and_failure_aggregation(self):
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            out_root = tmp / "results" / "judgments" / "sandbox-2026-05-07"
+            for j in ("alpha", "beta", "gamma"):
+                (out_root / j).mkdir(parents=True)
+
+            cfg = self._make_cfg({"alpha": "a/x", "beta": "b/x", "gamma": "c/x"})
+
+            captured: list[tuple[str, Path]] = []
+
+            class FakeKind:
+                def score(self, *, judge, judge_dir, slug, message,
+                          log_path, out_root_name):
+                    captured.append((judge, log_path))
+                    rcs = {"alpha": 0, "beta": 3, "gamma": 0}
+                    return rcs[judge], 0.01
+
+            with mock.patch.object(sj, "REPO_ROOT", tmp), \
+                 mock.patch.object(_opencode_run, "preflight",
+                                   return_value=None):
+                rc = sj.auto_drive_judges(
+                    out_root, ["alpha", "beta", "gamma"], cfg, FakeKind(),
+                    concurrency=2,
+                )
+
+            self.assertEqual(rc, 3)
+            self.assertEqual(len(captured), 3)
+            for judge, log_path in captured:
+                self.assertEqual(log_path, out_root / judge / "judge.log")
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
