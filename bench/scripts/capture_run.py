@@ -77,7 +77,11 @@ def capture(task: str, model: str) -> int:
     test_invocation = task_cfg["test_invocation"]
     loc_method = task_cfg["loc_method"]
 
-    task_dir = REPO_ROOT / "bench" / "tasks" / task
+    try:
+        task_dir = _task.require(task)
+    except FileNotFoundError as e:
+        log.error("%s", e)
+        return 1
     model_dir = REPO_ROOT / "builds" / model
 
     run_dir = find_run_dir(model_dir, task)

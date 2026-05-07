@@ -14,6 +14,7 @@ import sys
 
 from . import _config
 from . import _logging
+from . import _task
 
 log = _logging.get_logger(__name__)
 
@@ -202,7 +203,7 @@ def main() -> int:
     args = p.parse_args()
     _logging.setup_logging(quiet=args.quiet, verbose=args.verbose)
 
-    task_dir = REPO_ROOT / "bench" / "tasks" / args.name
+    task_dir = _task.tasks_dir() / args.name
     if task_dir.exists():
         log.error("%s already exists", task_dir)
         return 1

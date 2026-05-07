@@ -81,6 +81,23 @@ Edit `bench/config.json`:
 
 Labels become `builds/<label>/` dirs. Add a new task with `bench-new-task <name>`. Discover provider slugs with `opencode models <provider>`.
 
+### Pointing the harness at a different tree
+
+Two env vars override where the harness looks for config and tasks:
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `OPENBENCH_CONFIG` | `<repo_root>/bench/config.json` | The implementer / judge / slug config. |
+| `OPENBENCH_TASKS_DIR` | `<repo_root>/bench/tasks` | Directory holding task definitions. Tasks are resolved as `<dir>/<task-name>/`. |
+
+Both expand `~` and accept absolute or relative paths. With these set, a downstream consumer (e.g. a sibling `royale/` tree) can drive `bench-*` CLIs against its own config + tasks without forking the harness:
+
+```bash
+OPENBENCH_CONFIG=royale/config.json \
+  OPENBENCH_TASKS_DIR=royale/tasks \
+  bench-run-all reddit-vote
+```
+
 ### Task configuration
 
 Each task directory (`bench/tasks/<task>/`) can optionally contain a `task.json` that defines:

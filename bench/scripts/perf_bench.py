@@ -185,9 +185,10 @@ def main() -> int:
     _logging.setup_logging(quiet=args.quiet, verbose=args.verbose)
 
     repo_root = _config.repo_root()
-    task_dir = repo_root / "bench" / "tasks" / args.task
-    if not task_dir.is_dir():
-        log.error("no task at %s", task_dir)
+    try:
+        task_dir = _task.require(args.task)
+    except FileNotFoundError as e:
+        log.error("%s", e)
         return 1
 
     cfg = _config.load()
