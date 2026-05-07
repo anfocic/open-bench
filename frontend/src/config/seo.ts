@@ -57,7 +57,7 @@ export interface TemplateSeo {
 export const seoPages = {
   home: {
     title: 'open-bench — weekly LLM coding battle royale',
-    description: 'Every week, every major coding LLM gets the same blank repo and the same SPEC.md. Hidden tests gate. Models judge each other. Cost and wall-clock tracked. Loser is eliminated.',
+    description: 'Every week, selected open-source coding models get the same blank repo and the same SPEC.md. Hidden tests gate. Models judge each other. Cost and wall-clock tracked. Loser is eliminated.',
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'website', 'datasetSite'],
   },
@@ -69,7 +69,7 @@ export const seoPages = {
   },
   modelRoyale: {
     title: 'Model Royale · open-bench',
-    description: 'Model Royale: weekly elimination-style coding tournament between every major LLM, run on the open-bench harness. Lineup, rules, current task, lineage.',
+    description: 'Model Royale: weekly elimination-style coding tournament between selected open-source models, run on the open-bench harness. Lineup, rules, current task, lineage.',
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'website'],
   },
