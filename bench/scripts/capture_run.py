@@ -74,8 +74,6 @@ def determine_base_branch(repo_root: pathlib.Path) -> str:
 def capture(task: str, model: str) -> int:
     task_cfg = _task.load(task)
     entrypoint = task_cfg["entrypoint"]
-    test_invocation = task_cfg["test_invocation"]
-    loc_method = task_cfg["loc_method"]
 
     try:
         task_dir = _task.require(task)
@@ -118,114 +116,27 @@ def capture(task: str, model: str) -> int:
     run_dir.mkdir(parents=True, exist_ok=True)
 
     base_branch = determine_base_branch(REPO_ROOT)
-    base = _run_git("merge-base", "HEAD", base_branch, cwd=worktree_dir, check=False).strip()
-    if not base:
-        try:
-            base = _run_git("rev-parse", base_branch, cwd=REPO_ROOT).strip()
-        except RuntimeError as e:
-            log.error("could not resolve base branch '%s' (merge-base + "
-                      "rev-parse both failed): %s", base_branch, e)
-            return 1
 
-    diff_lines: list[str] = []
-
-    diff_out = _run_git("diff", f"{base}...HEAD", "--", ".", ":!PROMPT.md", ":!SPEC.md",
-                         cwd=worktree_dir, check=False)
-    diff_lines.append(diff_out)
-
-    diff_out = _run_git("diff", "HEAD", "--", ".", ":!PROMPT.md", ":!SPEC.md",
-                         cwd=worktree_dir, check=False)
-    diff_lines.append(diff_out)
-
-    untracked = _run_git("ls-files", "--others", "--exclude-standard",
-                          cwd=worktree_dir).strip().splitlines()
-
-    for f in untracked:
-        f = f.strip()
-        if not f or f in ("PROMPT.md", "SPEC.md", "transcript.md"):
-            continue
-        if f.startswith("_eval_tests/"):
-            continue
-        fpath = worktree_dir / f
-        if not fpath.exists():
-            continue
-        try:
-            result = subprocess.run(
-                ["git", "diff", "--no-index", "--no-color", "/dev/null", str(fpath)],
-                cwd=worktree_dir, capture_output=True, text=True, check=False,
-            )
-            diff_lines.append(result.stdout)
-        except OSError:
-            # git binary missing or fpath unreadable — skip this entry; the
-            # rest of the diff still captures.
-            pass
-
-    (run_dir / "diff.patch").write_text("\n".join(diff_lines))
-
-    suffix = pathlib.Path(entrypoint).suffix
-    # Empty suffix → fall back to the entrypoint basename. Otherwise `*""`
-    # expands to `*`, which matches every path in the worktree and defeats
-    # the filter (would copy unrelated files into the run dir).
-    pathspec = f"*{suffix}" if suffix else pathlib.Path(entrypoint).name
-    modified_ext = _run_git("diff", "--name-only", base, "--", pathspec,
-                             cwd=worktree_dir, check=False).strip().splitlines()
-    modified_ext += _run_git("diff", "--name-only", "HEAD", "--", pathspec,
-                              cwd=worktree_dir, check=False).strip().splitlines()
-    untracked_ext = _run_git("ls-files", "--others", "--exclude-standard", pathspec,
-                              cwd=worktree_dir).strip().splitlines()
-
-    all_modified = sorted(set(
-        f.strip() for f in modified_ext + untracked_ext
-        if f.strip() and not f.strip().startswith("_eval_tests/")
-    ))
-
-    for rel in all_modified:
-        src = worktree_dir / rel
-        if not src.is_file():
-            continue
-        dest = run_dir / rel
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
-
-    if (run_dir / entrypoint).exists():
-        shutil.copy2(run_dir / entrypoint, model_dir / entrypoint)
-
-    eval_dir = worktree_dir / "_eval_tests"
-    if eval_dir.exists():
-        shutil.rmtree(eval_dir)
-    eval_dir.mkdir()
-
-    tests_src = task_dir / "tests"
-    if not tests_src.is_dir():
-        log.error("no tests dir at %s", tests_src)
-        shutil.rmtree(eval_dir, ignore_errors=True)
+    kind = _task.kind_for(task)
+    try:
+        artifact = kind.extract_artifact(
+            worktree=worktree_dir,
+            run_dir=run_dir,
+            model_dir=model_dir,
+            task_dir=task_dir,
+            task_cfg=task_cfg,
+            base_branch=base_branch,
+        )
+    except FileNotFoundError as e:
+        log.error("%s", e)
+        return 1
+    except RuntimeError as e:
+        log.error("could not resolve base branch '%s': %s", base_branch, e)
         return 1
 
-    shutil.copytree(tests_src, eval_dir, dirs_exist_ok=True)
-
-    test_timeout = int(os.environ.get("CAPTURE_TEST_TIMEOUT", "300"))
-    try:
-        proc = subprocess.run(
-            test_invocation,
-            cwd=str(worktree_dir),
-            capture_output=True,
-            text=True,
-            timeout=test_timeout,
-        )
-        test_exit = proc.returncode
-        test_stdout = proc.stdout
-        test_stderr = proc.stderr
-    except subprocess.TimeoutExpired as e:
-        log.error("hidden tests timed out after %ds — recording exit 124. "
-                  "Override with CAPTURE_TEST_TIMEOUT=<seconds>.", test_timeout)
-        test_exit = 124  # convention: command timed out
-        test_stdout = (e.stdout.decode(errors="replace") if isinstance(e.stdout, bytes)
-                       else (e.stdout or ""))
-        test_stderr = (e.stderr.decode(errors="replace") if isinstance(e.stderr, bytes)
-                       else (e.stderr or ""))
-    (run_dir / "test-output.txt").write_text(test_stdout + "\n--- stderr ---\n" + test_stderr)
-
-    shutil.rmtree(eval_dir, ignore_errors=True)
+    base = artifact["base_commit"]
+    test_exit = artifact["test_exit_code"]
+    loc = artifact["impl_loc"]
 
     opencode_session_json = run_dir / "opencode_session.json"
     opencode_summary_json = run_dir / ".opencode_summary.json"
@@ -268,8 +179,6 @@ def capture(task: str, model: str) -> int:
             f"  - or copy the terminal scrollback to {worktree_transcript}\n"
             "then re-run capture_run.py.\n"
         )
-
-    loc = _task.loc_count(impl_path, loc_method) if impl_path.exists() else 0
 
     opencode_version = "unknown"
     try:

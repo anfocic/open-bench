@@ -93,6 +93,7 @@ class TestCapturePathspecIntegration(unittest.TestCase):
 
             # Force the entrypoint that capture() reads to be extensionless.
             task_cfg = {
+                "task_kind": "code",
                 "entrypoint": "Makefile",
                 "test_invocation": ["echo", "ok"],
                 "loc_method": "wc",
@@ -114,12 +115,14 @@ class TestCapturePathspecIntegration(unittest.TestCase):
                     seen_pathspecs.append(last)
                 return ""
 
+            from bench.scripts._kinds import code as code_kind
+
             with mock.patch.object(capture_run, "REPO_ROOT", tmp), \
                  mock.patch.object(capture_run._task._config, "repo_root", lambda: tmp), \
                  mock.patch.object(capture_run, "find_run_dir", return_value=run_dir), \
                  mock.patch.object(capture_run, "determine_base_branch", return_value="main"), \
                  mock.patch.object(capture_run._task, "load", return_value=task_cfg), \
-                 mock.patch.object(capture_run, "_run_git", side_effect=fake_git):
+                 mock.patch.object(code_kind, "_run_git", side_effect=fake_git):
                 capture_run.capture(task, model)
 
             self.assertTrue(seen_pathspecs, "expected git diff/ls-files calls")
