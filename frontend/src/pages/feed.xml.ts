@@ -27,7 +27,7 @@ export async function GET(context: APIContext) {
     const cost = totalCost(r.samples);
     items.push({
       title: `Round ${r.date} — ${champ.impl}`,
-      link: `/round/${r.date}`,
+      link: `/model-royale/round/${r.date}`,
       pubDate: new Date(r.date),
       description: `Round ${r.date}: ${modelCount} models on sandbox. Winner ${champ.impl} at ${fmtNum(champ.score, 1)}/30. $${fmtNum(cost, 2)} total spend.`,
       sortKey: r.date,
@@ -39,7 +39,7 @@ export async function GET(context: APIContext) {
     const n = entry.data;
     items.push({
       title: n.title,
-      link: `/notes/${entry.id}`,
+      link: `/model-royale/writeups/${entry.id}`,
       pubDate: new Date(n.publishedAt),
       description: n.summary,
       sortKey: n.publishedAt,

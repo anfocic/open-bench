@@ -1,31 +1,33 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import Header from '../../components/Header.astro';
-import Footer from '../../components/Footer.astro';
-import Masthead from '../../components/Masthead.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Header from '../../../components/Header.astro';
+import RoyaleNav from "../../../components/RoyaleNav.astro";
+import Footer from '../../../components/Footer.astro';
+import Masthead from '../../../components/Masthead.astro';
 import { getCollection } from 'astro:content';
-import { fmtDate } from '../../lib/format';
-import { pageSeo } from '../../lib/seo';
+import { fmtDate } from '../../../lib/format';
+import { pageSeo } from '../../../lib/seo';
 
 const all = await getCollection('notes', n => !(import.meta.env.PROD && n.data.draft));
 const notes = all.sort((a, b) => b.data.publishedAt.localeCompare(a.data.publishedAt));
 
-const seo = pageSeo('notesIndex', '/notes', {
+const seo = pageSeo('notesIndex', '/model-royale/writeups', {
   notes: notes.map(n => ({ slug: n.id, title: n.data.title, publishedAt: n.data.publishedAt })),
 });
 ---
 
 <BaseLayout seo={seo}>
   <Header subtitle="writeups" />
+  <RoyaleNav />
   <Masthead title="writeups" subtitle={`Round retrospectives, model behaviour notes, and post-mortems. ${notes.length} so far.`} />
 
   <section>
     {notes.length === 0 ? (
-      <p class="muted">No writeups yet — see <a href="/round">rounds</a> for raw data.</p>
+      <p class="muted">No writeups yet — see <a href="/model-royale/round">rounds</a> for raw data.</p>
     ) : (
       <div class="archive-list">
         {notes.map(n => (
-          <a href={`/notes/${n.id}`}>
+          <a href={`/model-royale/writeups/${n.id}`}>
             <div class="row">
               <span class="date">{fmtDate(n.data.publishedAt)}</span>
               <span class="winner">{n.data.title}</span>

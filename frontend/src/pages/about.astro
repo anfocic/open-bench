@@ -1,7 +1,8 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
-import '../styles/deck.css';
+import Footer from '../components/Footer.astro';
+import Masthead from '../components/Masthead.astro';
 import { pageSeo } from '../lib/seo';
 
 const sections = [
@@ -45,7 +46,7 @@ const sections = [
       { href: 'https://github.com/anfocic/open-bench/tree/main/builds', label: 'builds/', note: 'per-model artifacts' },
       { href: 'https://github.com/anfocic/open-bench/tree/main/results', label: 'results/', note: 'aggregated reviews' },
       { href: '/dataset', label: 'dataset', note: 'JSON + CSV exports, schema, citation' },
-      { href: '/', label: 'latest round →', note: '' },
+      { href: '/', label: 'open-bench home →', note: '' },
     ],
   },
 ];
@@ -56,75 +57,158 @@ const seo = pageSeo('about', '/about');
 <BaseLayout seo={seo}>
   <Header subtitle="about" />
 
-  <nav class="deck-toc" aria-label="Sections">
+  <Masthead title="about" subtitle="What open-bench is, why it exists, and how a round actually runs." />
+
+  <nav class="toc" aria-label="Sections">
     {sections.map(s => (
-      <a href={`#${s.id}`} data-toc={s.id}>{s.title}</a>
+      <a href={`#${s.id}`}># {s.title}</a>
     ))}
-    <span class="deck-progress" aria-hidden="true">
-      <span class="deck-progress-num" data-progress-num>1</span>
-      <span class="muted"> / {sections.length}</span>
-    </span>
   </nav>
 
-  <main class="deck">
+  <main>
     {sections.map((s, i) => (
-      <section
-        id={s.id}
-        class="deck-section"
-        data-section={s.id}
-        data-index={i}
-        data-active={i === 0 ? 'true' : undefined}
-        aria-hidden={i === 0 ? 'false' : 'true'}
-      >
-        <div class="deck-inner">
-          <h2><span class="deck-h-num">[{String(i + 1).padStart(2, '0')}]</span> {s.title}</h2>
+      <section id={s.id} class="page-section">
+        <h2><span class="num">[{String(i + 1).padStart(2, '0')}]</span> {s.title}</h2>
 
-          {s.body && <div class="deck-body" set:html={s.body} />}
+        {s.body && <div class="body" set:html={s.body} />}
 
-          {s.steps && (
-            <ol class="deck-steps">
-              {s.steps.map((step, j) => (
-                <li>
-                  <span class="deck-step-num">{j + 1}</span>
-                  <span class="step-body">{step}</span>
-                </li>
-              ))}
-            </ol>
-          )}
+        {s.steps && (
+          <ol class="steps">
+            {s.steps.map((step, j) => (
+              <li>
+                <span class="step-num">{j + 1}</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+        )}
 
-          {s.defs && (
-            <dl class="deck-defs">
-              {s.defs.map(([k, v]) => (
-                <div>
-                  <dt>{k}</dt>
-                  <dd>{v}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
+        {s.defs && (
+          <dl class="defs">
+            {s.defs.map(([k, v]) => (
+              <div>
+                <dt>{k}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
 
-          {s.links && (
-            <ul class="deck-links">
-              {s.links.map(l => (
-                <li>
-                  <a href={l.href}>{l.label}</a>
-                  {l.note && <span class="muted"> &mdash; {l.note}</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {s.links && (
+          <ul class="links">
+            {s.links.map(l => (
+              <li>
+                <a href={l.href}>{l.label}</a>
+                {l.note && <span class="muted"> &mdash; {l.note}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     ))}
   </main>
 
-  <div class="deck-hint muted" aria-hidden="true">
-    <span>scroll · arrows · swipe</span>
-  </div>
+  <Footer />
 </BaseLayout>
 
+<style>
+  html { scroll-behavior: smooth; }
+  .toc {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: baseline;
+    padding: 10px 0;
+    margin: 4px 0 8px;
+    border-bottom: 1px dashed var(--rule);
+    font-size: 14.4px;
+  }
+  .toc a { color: var(--muted); text-decoration: none; padding: 2px 4px; }
+  .toc a:hover { color: var(--fg-bright); }
+
+  .page-section { padding: 24px 0; border-bottom: 1px dashed var(--rule); scroll-margin-top: 16px; }
+  .page-section:last-of-type { border-bottom: none; }
+  .page-section h2 {
+    font-size: 26px;
+    margin: 0 0 14px;
+    color: var(--fg-bright);
+    text-transform: lowercase;
+    letter-spacing: -0.01em;
+  }
+  .num { color: var(--accent); font-weight: 700; font-size: 15px; margin-right: 8px; }
+
+  .body p { margin: 10px 0; line-height: 1.6; font-size: 16.2px; max-width: 70ch; }
+  .body strong { color: var(--fg-bright); }
+  .body a { color: var(--accent); }
+
+  .pull {
+    margin: 14px 0 0;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    color: var(--fg-bright);
+    font-size: 16.5px;
+    line-height: 1.5;
+    max-width: 70ch;
+  }
+
+  .steps { list-style: none; margin: 0; padding: 0; max-width: 70ch; }
+  .steps li {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--rule);
+    font-size: 16.2px;
+    line-height: 1.5;
+  }
+  .steps li:last-child { border-bottom: none; }
+  .step-num { color: var(--accent); font-weight: 700; }
+  .step-num::before { content: '['; color: var(--dim); font-weight: 400; }
+  .step-num::after { content: ']'; color: var(--dim); font-weight: 400; }
+
+  .defs { display: grid; gap: 0; max-width: 70ch; margin: 0; }
+  .defs > div {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .defs > div:last-child { border-bottom: none; }
+  .defs dt { color: var(--fg-bright); font-weight: 700; text-transform: lowercase; }
+  .defs dd { margin: 0; color: var(--muted); font-size: 15.6px; line-height: 1.55; }
+
+  .links { list-style: none; margin: 0; padding: 0; max-width: 70ch; }
+  .links li { padding: 6px 0; border-bottom: 1px dashed var(--rule); font-size: 16.2px; }
+  .links li:last-child { border-bottom: none; }
+  .links li::before { content: '> '; color: var(--dim); }
+  .links a { color: var(--accent); }
+
+  @media (max-width: 600px) {
+    .defs > div { grid-template-columns: 1fr; gap: 4px; }
+    .page-section h2 { font-size: 22px; }
+  }
+</style>
+
 <script>
-  import { setupDeck } from '../scripts/deck';
-  setupDeck();
-  document.addEventListener('astro:after-swap', setupDeck);
+  (() => {
+    const links = document.querySelectorAll<HTMLAnchorElement>('.toc a');
+    const setActive = () => {
+      const ids = Array.from(links).map(a => a.getAttribute('href')!.slice(1));
+      let active = ids[0];
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        if (r.top - 80 <= 0) active = id;
+      }
+      links.forEach(a => {
+        const on = a.getAttribute('href') === '#' + active;
+        a.style.color = on ? 'var(--accent)' : '';
+        a.style.fontWeight = on ? '700' : '';
+      });
+    };
+    setActive();
+    window.addEventListener('scroll', setActive, { passive: true });
+  })();
 </script>

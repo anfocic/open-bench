@@ -1,5 +1,5 @@
 import { getCollection } from 'astro:content';
-import { roundsToRows, SCHEMA_VERSION } from '../../lib/dataset';
+import { roundsToRows, SCHEMA_VERSION } from '../../../lib/dataset';
 
 export const prerender = true;
 

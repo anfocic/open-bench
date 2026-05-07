@@ -89,7 +89,7 @@ function leaderboard(d: { round: RoundLite; canonicalPath: string }): Json {
       '@type': 'ListItem',
       position: i + 1,
       name: row.impl,
-      url: url(`/round/${r.date}/${row.impl}`),
+      url: url(`/model-royale/round/${r.date}/${row.impl}`),
     })),
   };
 }
@@ -116,7 +116,7 @@ function softwareSourceCode(d: { impl: string; date: string; canonicalPath: stri
     programmingLanguage: 'Python',
     codeRepository: seoSite.url,
     creator: { '@type': 'Organization', name: d.impl },
-    isPartOf: { '@type': 'Dataset', name: `open-bench round ${d.date}`, url: url(`/round/${d.date}`) },
+    isPartOf: { '@type': 'Dataset', name: `open-bench round ${d.date}`, url: url(`/model-royale/round/${d.date}`) },
   };
 }
 
@@ -169,7 +169,7 @@ function blog(d: { notes: { slug: string; title: string; publishedAt: string }[]
     blogPost: d.notes.map((n) => ({
       '@type': 'BlogPosting',
       headline: n.title,
-      url: url(`/notes/${n.slug}`),
+      url: url(`/model-royale/writeups/${n.slug}`),
       datePublished: n.publishedAt,
     })),
   };
@@ -203,7 +203,7 @@ function leaderboardCumulative(d: { standings: { impl: string; elo: number }[]; 
       '@type': 'ListItem',
       position: i + 1,
       name: s.impl,
-      url: url(`/model/${s.impl}`),
+      url: url(`/model-royale/model/${s.impl}`),
     })),
   };
 }
@@ -219,7 +219,7 @@ function roundList(d: { rounds: { date: string; winner: string }[] }): Json {
       '@type': 'ListItem',
       position: i + 1,
       name: `Round ${r.date} — ${r.winner}`,
-      url: url(`/round/${r.date}`),
+      url: url(`/model-royale/round/${r.date}`),
     })),
   };
 }

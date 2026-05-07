@@ -1,13 +1,14 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import Header from '../../components/Header.astro';
-import Footer from '../../components/Footer.astro';
-import Masthead from '../../components/Masthead.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Header from '../../../components/Header.astro';
+import RoyaleNav from "../../../components/RoyaleNav.astro";
+import Footer from '../../../components/Footer.astro';
+import Masthead from '../../../components/Masthead.astro';
 import { getCollection } from 'astro:content';
-import { fmtCost, fmtNum, fmtDate } from '../../lib/format';
-import { computeStandings, sparkline } from '../../lib/aggregate';
-import { templateSeo } from '../../lib/seo';
-import Term from '../../components/Term.astro';
+import { fmtCost, fmtNum, fmtDate } from '../../../lib/format';
+import { computeStandings, sparkline } from '../../../lib/aggregate';
+import { templateSeo } from '../../../lib/seo';
+import Term from '../../../components/Term.astro';
 
 export const prerender = true;
 
@@ -27,7 +28,7 @@ const standing = standings.find(s => s.impl === impl);
 if (!standing) return Astro.redirect('/404');
 
 const rank = standings.findIndex(s => s.impl === impl) + 1;
-const canonicalPath = `/model/${impl}`;
+const canonicalPath = `/model-royale/model/${impl}`;
 const seo = templateSeo(
   'model',
   canonicalPath,
@@ -42,7 +43,7 @@ const seo = templateSeo(
   },
   { trail: [
     { name: 'open-bench', path: '/' },
-    { name: 'leaderboard', path: '/leaderboard' },
+    { name: 'leaderboard', path: '/model-royale/leaderboard' },
     { name: impl, path: canonicalPath },
   ] },
 );
@@ -52,6 +53,7 @@ const history = [...standing.history].sort((a, b) => b.date.localeCompare(a.date
 
 <BaseLayout seo={seo}>
   <Header subtitle={impl} />
+  <RoyaleNav />
   <Masthead title={impl} titleTransitionName={`model-${impl}`} subtitle={`Rank <strong>#${rank}</strong> &middot; ELO <strong>${Math.round(standing.elo)}</strong> &middot; ${standing.wins} win${standing.wins === 1 ? '' : 's'} in ${standing.rounds} round${standing.rounds === 1 ? '' : 's'} &middot; ${fmtCost(standing.totalCost)} total spend`}>
     <div class="masthead-meta">
       <span>podium {standing.podium}</span>
@@ -81,7 +83,7 @@ const history = [...standing.history].sort((a, b) => b.date.localeCompare(a.date
             <td class="num">{h.dnf ? '—' : `${fmtNum(h.score, 1)}/30`}</td>
             <td class="num">{h.dnf ? 'DNF' : `#${h.rank}`}</td>
             <td class="num">{fmtCost(h.cost)}</td>
-            <td><a href={`/round/${h.date}`}>view round &rarr;</a></td>
+            <td><a href={`/model-royale/round/${h.date}`}>view round &rarr;</a></td>
           </tr>
         ))}
       </tbody>
@@ -89,7 +91,7 @@ const history = [...standing.history].sort((a, b) => b.date.localeCompare(a.date
   </section>
 
   <section>
-    <p><a href="/leaderboard">&larr; back to leaderboard</a></p>
+    <p><a href="/model-royale/leaderboard">&larr; back to leaderboard</a></p>
   </section>
 
   <Footer />

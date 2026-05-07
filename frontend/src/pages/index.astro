@@ -3,124 +3,123 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Masthead from '../components/Masthead.astro';
-import { getCollection } from 'astro:content';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { repoRoot } from '../lib/paths';
-import { fmtCost, fmtNum, fmtDate } from '../lib/format';
-import { findChampion, uniqueModelCount, totalCost } from '../lib/scoreboard';
-import { computeStandings } from '../lib/aggregate';
-import { readJsonOptional } from '../lib/io';
 import { pageSeo } from '../lib/seo';
 
-const entries = await getCollection('rounds');
-const rounds = entries.sort((a, b) => b.id.localeCompare(a.id)).map(e => e.data);
-const latestRound = rounds[0];
-const top3 = computeStandings(rounds).slice(0, 3);
-const configPath = resolve(repoRoot, 'bench/config.json');
-const config = readJsonOptional<{ implementers: string[]; slugs: Record<string, string> }>(configPath) ?? { implementers: [], slugs: {} };
-
-const champ = latestRound ? findChampion(latestRound.scoreboard) : { impl: '—', score: 0 };
-const champEntry = latestRound?.scoreboard.find(e => e.impl === champ.impl);
-const modelCount = latestRound ? uniqueModelCount(latestRound.samples) : 0;
-const latestCost = latestRound ? totalCost(latestRound.samples) : 0;
-const totalSamples = rounds.reduce((sum, r) => sum + r.samples.length, 0);
-const totalSpend = rounds.reduce((sum, r) => sum + totalCost(r.samples), 0);
 const seo = pageSeo('home', '/');
+
+const pipeline = [
+  ['task', 'A SPEC.md, a blank repo, hidden tests, a wall-clock budget. Tasks are versioned and live in <code>bench/tasks/</code>.'],
+  ['run', 'Each model in the lineup runs the task in an isolated worktree through a fixed agent loop. Cost, tokens, and wall-clock are captured.'],
+  ['gate', 'A hidden test suite runs against every output. Failing the gate means you cannot win the round, no matter what the judges think.'],
+  ['judge', 'Every model judges every other implementation under blinded labels. Self-bias is measured and excluded from the headline median.'],
+  ['aggregate', 'Scores, costs, transcripts, diffs, rubrics — all committed back into the repo. One ranked review per round.'],
+];
+
+const principles = [
+  ['objective gate first', 'Hidden tests run before any judge sees the code. No vibe-check inflates a non-functional output.'],
+  ['peer scoring, blinded', 'Models judge each other; labels are stripped. Self-bias is measured, then removed.'],
+  ['cost as a first-class column', 'Cheapest-and-correct wins ties. Slow-and-correct loses them.'],
+  ['reproducible by default', 'Every transcript, diff, rubric and score is committed. Re-run a round, audit a judgment, fork the lineup.'],
+  ['kind-agnostic', 'The harness ships with a code task kind today. New task kinds register through <code>bench/scripts/_kinds/</code> without forking the runner.'],
+];
 ---
 
 <BaseLayout seo={seo}>
   <Header />
 
-  <Masthead title="open-bench" subtitle={`Every week, selected open-source coding models get the same blank repo and the same SPEC.md. Hidden tests run first &mdash; the gate. Then the models judge each other. Cost and wall-clock are tracked. Loser is eliminated.`}>
+  <Masthead title="open-bench" subtitle={`A benchmark harness for coding LLMs. Drops a task spec into a fresh repo, drives every model through a real agent loop, runs a hidden test suite as the objective gate, has the models score each other, and commits the full artifact set.`}>
     <div class="masthead-meta">
-      <span>{rounds.length} round{rounds.length === 1 ? '' : 's'}</span>
-      <span>{config.implementers.length} models</span>
-      <span>{totalSamples} samples</span>
-      <span>{fmtCost(totalSpend)} spend</span>
-      <span>last: {latestRound ? fmtDate(latestRound.date) : '&mdash;'}</span>
+      <a href="https://github.com/anfocic/open-bench">github</a>
+      <span class="sep">|</span>
+      <a href="/about">methodology</a>
+      <span class="sep">|</span>
+      <a href="/dataset">dataset</a>
     </div>
   </Masthead>
 
-  {top3.length > 0 && (
-    <section>
-      <h2>standings</h2>
-      <div class="summary-line">
-        {top3.map((s, i) => (
-          <span>
-            {i > 0 && <span class="sep">|</span>}
-            <strong>#{i + 1}</strong> <a href={`/model/${s.impl}`}>{s.impl}</a> <span class="muted">{Math.round(s.elo)} ELO</span>
-          </span>
-        ))}
-        <span class="sep">|</span>
-        <a href="/leaderboard">full leaderboard &rarr;</a>
-      </div>
-    </section>
-  )}
-
-  {latestRound && champ.score > 0 && (
-    <section>
-      <h2>latest round</h2>
-      <div class="summary-line">
-        Round <strong>{fmtDate(latestRound.date)}</strong>
-        <span class="sep">|</span>
-        winner <strong>{champ.impl}</strong> at <strong>{fmtNum(champ.score, 1)}/30</strong>
-        <span class="sep">|</span>
-        spec {fmtNum(champEntry?.specPeer ?? 0, 1)}, quality {fmtNum(champEntry?.qualityPeer ?? 0, 1)}
-        <span class="sep">|</span>
-        {modelCount} models, {fmtCost(latestCost)} total &rarr;
-        <a href={`/round/${latestRound.date}`}>view round</a>
-      </div>
-    </section>
-  )}
-
   <section>
-    <h2>method</h2>
+    <h2>what</h2>
     <p>
-      One task per round (currently <a href="/task/sandbox">sandbox</a>: a Python sandbox
-      executor). Every model in the lineup gets identical SPEC.md, identical empty
-      sandbox, identical wall-clock budget. No mid-run prompts, no cross-talk.
+      open-bench is the engine. You give it a task &mdash; a SPEC, a hidden
+      test suite, a lineup of models &mdash; and it produces a ranked review
+      with everything needed to audit the result. It is not a leaderboard
+      service or a vendor benchmark; it is the framework you point at the
+      models you actually care about.
     </p>
     <p>
-      Hidden pytest battery runs against each output &mdash; objective gate. Then
-      every model judges every other model on spec coverage and code quality
-      (peer + expert tier). Self-bias is measured and reported. Cheapest run
-      wins ties. <a href="/about">Full methodology &rarr;</a>
+      The flagship format running on top of it is
+      <a href="/model-royale">Model Royale</a>: a weekly elimination
+      tournament across every major LLM. Royale is one consumer of the engine,
+      not the engine itself.
     </p>
   </section>
 
   <section>
-    <h2>lineup</h2>
-    <div class="lineup-list">
-      {config.implementers.map(impl => (
-        <div class="row">
-          <span class="name">{impl}</span>
-          <span class="slug">{config.slugs[impl] ?? '—'}</span>
+    <h2>pipeline</h2>
+    <ol class="pipeline">
+      {pipeline.map(([k, v]) => (
+        <li>
+          <span class="k">{k}</span>
+          <span class="v" set:html={v} />
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <section>
+    <h2>principles</h2>
+    <dl class="defs">
+      {principles.map(([k, v]) => (
+        <div>
+          <dt>{k}</dt>
+          <dd set:html={v} />
         </div>
       ))}
-    </div>
+    </dl>
   </section>
 
-  <section id="archive">
-    <h2>archive</h2>
-    {rounds.length === 0 && <p class="muted">No rounds yet.</p>}
-    <div class="archive-list">
-      {rounds.map(r => {
-        const c = findChampion(r.scoreboard);
-        const mc = uniqueModelCount(r.samples);
-        const tc = totalCost(r.samples);
-        return (
-          <a href={`/round/${r.date}`}>
-            <div class="row">
-              <span class="date">{fmtDate(r.date)}</span>
-              <span class="winner">{c.impl} <span class="muted">{fmtNum(c.score, 1)}/30</span></span>
-              <span class="meta">{mc} models · {fmtCost(tc)}</span>
-            </div>
-          </a>
-        );
-      })}
-    </div>
+  <section>
+    <h2>running it</h2>
+    <p>
+      The engine is task-kind agnostic. The shipping kind is
+      <code>code</code>: write code against a SPEC, gated by hidden tests,
+      judged on spec coverage and quality. New kinds (eval-style, agentic,
+      multi-step) plug in through the <code>_kinds/</code> registry.
+    </p>
+    <p>
+      The reference consumer is <a href="/model-royale">Model Royale</a> &mdash;
+      weekly tournament, fixed lineup, elimination format. See the
+      <a href="/about">about page</a> for full methodology, or jump straight
+      to the <a href="/model-royale/round">round archive</a>.
+    </p>
+  </section>
+
+  <section>
+    <h2>source &amp; data</h2>
+    <ul class="links">
+      <li><a href="https://github.com/anfocic/open-bench">github.com/anfocic/open-bench</a> &mdash; harness, tasks, results</li>
+      <li><a href="https://github.com/anfocic/open-bench/blob/main/ABOUT.md">ABOUT.md</a> &mdash; methodology, scoring math, task config</li>
+      <li><a href="/dataset">dataset</a> &mdash; JSON + CSV exports, schema, citation</li>
+      <li><a href="/model-royale/changelog">changelog</a> &mdash; spec edits, lineup changes, rubric tweaks</li>
+    </ul>
   </section>
 
   <Footer />
 </BaseLayout>
+
+<style>
+  .pipeline { list-style: none; padding: 0; margin: 0; counter-reset: step; }
+  .pipeline li { display: grid; grid-template-columns: 7rem 1fr; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px solid var(--rule); }
+  .pipeline li:last-child { border-bottom: 0; }
+  .pipeline .k { font-family: var(--mono); color: var(--accent); text-transform: lowercase; }
+  .defs { display: grid; gap: 0.75rem; }
+  .defs > div { display: grid; grid-template-columns: 14rem 1fr; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px solid var(--rule); }
+  .defs > div:last-child { border-bottom: 0; }
+  .defs dt { font-weight: 600; }
+  .defs dd { margin: 0; color: var(--text-muted, inherit); }
+  .links { list-style: none; padding: 0; margin: 0; }
+  .links li { padding: 0.25rem 0; }
+  @media (max-width: 640px) {
+    .pipeline li, .defs > div { grid-template-columns: 1fr; gap: 0.25rem; }
+  }
+</style>

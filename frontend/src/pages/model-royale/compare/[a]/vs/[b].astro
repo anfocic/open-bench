@@ -1,13 +1,14 @@
 ---
-import BaseLayout from '../../../../layouts/BaseLayout.astro';
-import Header from '../../../../components/Header.astro';
-import Footer from '../../../../components/Footer.astro';
-import Masthead from '../../../../components/Masthead.astro';
+import BaseLayout from '../../../../../layouts/BaseLayout.astro';
+import Header from '../../../../../components/Header.astro';
+import RoyaleNav from '../../../../../components/RoyaleNav.astro';
+import Footer from '../../../../../components/Footer.astro';
+import Masthead from '../../../../../components/Masthead.astro';
 import { getCollection } from 'astro:content';
-import { fmtCost, fmtNum, fmtDate } from '../../../../lib/format';
-import { compareModels, allPairs, computeStandings, sparkline } from '../../../../lib/aggregate';
-import { templateSeo } from '../../../../lib/seo';
-import Term from '../../../../components/Term.astro';
+import { fmtCost, fmtNum, fmtDate } from '../../../../../lib/format';
+import { compareModels, allPairs, computeStandings, sparkline } from '../../../../../lib/aggregate';
+import { templateSeo } from '../../../../../lib/seo';
+import Term from '../../../../../components/Term.astro';
 
 export const prerender = true;
 
@@ -29,7 +30,7 @@ if (!cmp) return Astro.redirect('/404');
 const aRank = standings.findIndex(s => s.impl === a) + 1;
 const bRank = standings.findIndex(s => s.impl === b) + 1;
 
-const canonicalPath = `/compare/${a}/vs/${b}`;
+const canonicalPath = `/model-royale/compare/${a}/vs/${b}`;
 const seo = templateSeo(
   'compare',
   canonicalPath,
@@ -46,7 +47,7 @@ const seo = templateSeo(
   },
   { trail: [
     { name: 'open-bench', path: '/' },
-    { name: 'compare', path: '/compare' },
+    { name: 'compare', path: '/model-royale/compare' },
     { name: `${a} vs ${b}`, path: canonicalPath },
   ] },
 );
@@ -61,11 +62,12 @@ const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.dat
 
 <BaseLayout seo={seo}>
   <Header subtitle={`${a} vs ${b}`} />
+  <RoyaleNav />
   <Masthead title={`${a} vs ${b}`} subtitle={`Head-to-head across ${cmp.common.length} shared round${cmp.common.length === 1 ? '' : 's'}. <strong>${cmp.aWins}</strong>–<strong>${cmp.bWins}</strong>${cmp.ties ? `–${cmp.ties}t` : ''}.`} />
 
   <section class="cards">
     <article class={`card ${eloLeader === a ? 'card-lead' : ''}`}>
-      <header><a href={`/model/${a}`} transition:name={`model-${a}`}>{a}</a> <span class="rank">#{aRank}</span></header>
+      <header><a href={`/model-royale/model/${a}`} transition:name={`model-${a}`}>{a}</a> <span class="rank">#{aRank}</span></header>
       <dl>
         <div><dt><Term k="elo">ELO</Term></dt><dd>{Math.round(cmp.a.elo)}</dd></div>
         <div><dt>rounds</dt><dd>{cmp.a.rounds}</dd></div>
@@ -77,7 +79,7 @@ const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.dat
       </dl>
     </article>
     <article class={`card ${eloLeader === b ? 'card-lead' : ''}`}>
-      <header><a href={`/model/${b}`} transition:name={`model-${b}`}>{b}</a> <span class="rank">#{bRank}</span></header>
+      <header><a href={`/model-royale/model/${b}`} transition:name={`model-${b}`}>{b}</a> <span class="rank">#{bRank}</span></header>
       <dl>
         <div><dt><Term k="elo">ELO</Term></dt><dd>{Math.round(cmp.b.elo)}</dd></div>
         <div><dt>rounds</dt><dd>{cmp.b.rounds}</dd></div>
@@ -124,7 +126,7 @@ const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.dat
               ? row.aCost - row.bCost : null;
             return (
               <tr>
-                <td><a href={`/round/${row.date}`}>{fmtDate(row.date)}</a></td>
+                <td><a href={`/model-royale/round/${row.date}`}>{fmtDate(row.date)}</a></td>
                 <td class={`num ${row.winner === 'a' ? 'win' : ''}`}>{aLabel}</td>
                 <td class={`num ${row.winner === 'b' ? 'win' : ''}`}>{bLabel}</td>
                 <td>{w}</td>
@@ -139,7 +141,7 @@ const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.dat
   )}
 
   <section>
-    <p><a href="/compare">&larr; pick another pair</a> &middot; <a href="/leaderboard">leaderboard</a></p>
+    <p><a href="/model-royale/compare">&larr; pick another pair</a> &middot; <a href="/model-royale/leaderboard">leaderboard</a></p>
   </section>
 
   <Footer />
