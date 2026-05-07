@@ -176,5 +176,42 @@ class TestCodeTaskExtractArtifact(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
+class TestEvalDirCleanupOnUnexpectedRaise(unittest.TestCase):
+    """Pin: _eval_tests/ is cleaned up even if subprocess.run raises something
+    other than TimeoutExpired (e.g. OSError, KeyboardInterrupt). The pre-fix
+    code only cleaned up on the happy + Timeout paths."""
+
+    def test_eval_dir_removed_on_oserror(self):
+        tmp = Path(tempfile.mkdtemp())
+        worktree = tmp / "wt"; worktree.mkdir()
+        run_dir = tmp / "run"; run_dir.mkdir()
+        model_dir = tmp / "model"; model_dir.mkdir()
+        task_dir = tmp / "task"
+        (task_dir / "tests").mkdir(parents=True)
+        (task_dir / "tests" / "test_x.py").write_text("def test_x(): pass\n")
+        (worktree / "sandbox.py").write_text("# impl\n")
+        try:
+            task_cfg = {
+                "task_kind": "code", "entrypoint": "sandbox.py",
+                "test_invocation": ["true"],
+                "loc_method": "non_blank_non_comment_lines",
+            }
+
+            def fake_run(*args, **kwargs):
+                raise OSError("something exploded")
+
+            with mock.patch.object(code_kind, "_run_git", return_value="abc"), \
+                 mock.patch.object(code_kind.subprocess, "run", side_effect=fake_run):
+                with self.assertRaises(OSError):
+                    CodeTask().extract_artifact(
+                        worktree=worktree, run_dir=run_dir, model_dir=model_dir,
+                        task_dir=task_dir, task_cfg=task_cfg, base_branch="main",
+                    )
+            self.assertFalse((worktree / "_eval_tests").exists(),
+                             "eval_dir should be cleaned up on unexpected raise")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

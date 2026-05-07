@@ -4,7 +4,7 @@
 - judgment_meta.json present but missing `date_stamp` → log.error + return 1
   (regression: previously raised an unguarded KeyError).
 
-Also pins the bool-as-int fix in quality_total / split_judge_scores: a
+Also pins the bool-as-int fix in _quality_total / split_judge_scores: a
 judge writing `"spec_compliance": true` is silently *not* counted as 1.
 """
 
@@ -21,7 +21,7 @@ from unittest import mock
 from . import conftest  # noqa: F401
 
 from bench.scripts import aggregate_judges as aj  # noqa: E402
-from bench.scripts._kinds.code import quality_total  # noqa: E402
+from bench.scripts._kinds.code import _quality_total  # noqa: E402
 
 
 def _make_judgment_dir(tmp: Path, *, with_date_stamp: bool, with_meta: bool = True) -> Path:
@@ -67,12 +67,12 @@ class TestAggregateJudgmentMetaErrors(unittest.TestCase):
 class TestQualityTotalRejectsBool(unittest.TestCase):
     def test_bool_true_not_counted_as_one(self) -> None:
         q = {"clarity": True, "conciseness": 4, "error_handling": 4, "comments": 4}
-        # quality_total expects 4 numeric keys; True is a bool, not a score.
-        self.assertIsNone(quality_total(q))
+        # _quality_total expects 4 numeric keys; True is a bool, not a score.
+        self.assertIsNone(_quality_total(q))
 
     def test_all_real_scores_sum(self) -> None:
         q = {"clarity": 5, "conciseness": 4, "error_handling": 4, "comments": 4}
-        self.assertEqual(quality_total(q), 17)
+        self.assertEqual(_quality_total(q), 17)
 
 
 if __name__ == "__main__":

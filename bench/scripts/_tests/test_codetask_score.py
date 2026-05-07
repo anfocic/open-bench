@@ -145,10 +145,11 @@ class TestCodeTaskScore(unittest.TestCase):
         self.assertIsNone(captured["log_path"])
 
     def test_score_passes_through_log_path_for_concurrent_mode(self):
-        log_path = Path("/tmp/out/claude/judge.log")
+        expected_log_path = Path("/tmp/out/claude/judge.log")
+        captured: dict = {}
 
         def fake_run(*, log_path, **kw):
-            self.assertEqual(log_path, log_path)
+            captured["log_path"] = log_path
             return 7
 
         with mock.patch.object(code_kind._opencode_run, "run",
@@ -158,11 +159,12 @@ class TestCodeTaskScore(unittest.TestCase):
                 judge_dir=Path("/tmp/out/codex"),
                 slug="openai/codex-x",
                 message="go",
-                log_path=log_path,
+                log_path=expected_log_path,
                 out_root_name="task-2026-05-07",
             )
 
         self.assertEqual(rc, 7)
+        self.assertEqual(captured["log_path"], expected_log_path)
 
 
 if __name__ == "__main__":
