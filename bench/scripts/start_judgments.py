@@ -28,13 +28,13 @@ import json
 import os
 import pathlib
 import random
-import shutil
 import string
 import sys
 import threading
 from typing import Any
 
 from . import _config
+from . import _kinds
 from . import _logging
 from . import _task
 
@@ -112,80 +112,14 @@ def randomize_labels(n: int, rng: random.Random) -> list[str]:
     return labels
 
 
-def write_packet(
-    task_dir: pathlib.Path,
-    judge_dir: pathlib.Path,
-    impls: list[dict],
-    mapping: dict[str, str],
-    entrypoint: str,
-) -> None:
-    """Write one judge's packet at judge_dir."""
-    packet = judge_dir / "packet"
-    impl_dir = packet / "implementations"
-    output = judge_dir / "output"
-    impl_dir.mkdir(parents=True, exist_ok=True)
-    output.mkdir(parents=True, exist_ok=True)
-
-    for fname in ["PROMPT.md", "SPEC.md", "JUDGE_PROMPT.md", "JUDGE_RUBRIC.md"]:
-        src = task_dir / fname
-        if src.exists():
-            shutil.copy2(src, packet / fname)
-
-    suffix = pathlib.Path(entrypoint).suffix
-    for impl in impls:
-        if impl["model"] not in mapping:
-            continue
-        label = mapping[impl["model"]]
-        shutil.copy2(impl["impl_path"], impl_dir / f"{label}{suffix}")
-
-    # Per-judge cover note: which labels exist, no model→label leak.
-    labels = sorted(mapping.values())
-    cover = packet / "README.md"
-    cover.write_text(
-        f"# Judgment packet\n\n"
-        f"Implementations to review (blinded labels): {', '.join(labels)}\n\n"
-        f"Read PROMPT.md and SPEC.md first to understand what was asked.\n"
-        f"Then read JUDGE_PROMPT.md for your task and the output format.\n"
-        f"Score each implementation independently. Write outputs to ../output/.\n"
-    )
-
-
 # Prototype for the same parallelization pattern (ThreadPoolExecutor +
 # per-target log file + as_completed summary) that the implementer phase
 # in run_all.py will eventually adopt. Keep it as a local helper for now —
 # one call site, premature to hoist into a shared module.
-def _drive_one_judge(judge: str,
-                     out_root: pathlib.Path,
-                     cfg,
-                     message: str,
-                     log_path: pathlib.Path | None) -> tuple[str, int, float]:
-    """Drive a single judge through `opencode run`.
-
-    Returns (judge, rc, elapsed_seconds). Caller is responsible for
-    skipping judges whose slug isn't in config — this helper assumes
-    the slug exists.
-    """
-    import time as _time
-    from . import _opencode_run
-
-    judge_dir = out_root / judge
-    slug = cfg.slug_for(judge)
-    title = f"{out_root.name}-{judge}"
-
-    started = _time.monotonic()
-    rc = _opencode_run.run(
-        directory=judge_dir,
-        model=slug,
-        message=message,
-        title=title,
-        log_path=log_path,
-    )
-    return judge, rc, _time.monotonic() - started
-
-
 def auto_drive_judges(out_root: pathlib.Path,
                       judges: list[str],
                       cfg,
+                      kind,
                       concurrency: int = 1) -> int:
     """For each judge with a slug in config, drive `opencode run` against
     its packet directory. Judges without a slug (e.g. configured to run
@@ -234,8 +168,13 @@ def auto_drive_judges(out_root: pathlib.Path,
             slug = cfg.slug_for(judge)
             log.info("--auto: driving %s (%s) against %s",
                      judge, slug, judge_dir.relative_to(REPO_ROOT))
-            _, rc, _elapsed = _drive_one_judge(
-                judge, out_root, cfg, message, log_path=None
+            rc, _elapsed = kind.score(
+                judge=judge,
+                judge_dir=judge_dir,
+                slug=slug,
+                message=message,
+                log_path=None,
+                out_root_name=out_root.name,
             )
             if rc != 0:
                 log.error("%s exited %d", judge, rc)
@@ -252,13 +191,20 @@ def auto_drive_judges(out_root: pathlib.Path,
     log_paths: dict[str, pathlib.Path] = {
         j: out_root / j / "judge.log" for j in drivable
     }
+
+    def _drive(j: str) -> tuple[str, int, float]:
+        rc, elapsed = kind.score(
+            judge=j,
+            judge_dir=out_root / j,
+            slug=cfg.slug_for(j),
+            message=message,
+            log_path=log_paths[j],
+            out_root_name=out_root.name,
+        )
+        return j, rc, elapsed
+
     with _cf.ThreadPoolExecutor(max_workers=concurrency) as pool:
-        futures = {
-            pool.submit(
-                _drive_one_judge, j, out_root, cfg, message, log_paths[j]
-            ): j
-            for j in drivable
-        }
+        futures = {pool.submit(_drive, j): j for j in drivable}
         for fut in _cf.as_completed(futures):
             judge, rc, elapsed = fut.result()
             log_rel = log_paths[judge].relative_to(REPO_ROOT)
@@ -326,6 +272,7 @@ def main() -> int:
     cfg = _config.load()
     task_cfg = _task.load(args.task)
     entrypoint = task_cfg["entrypoint"]
+    kind = _kinds.get(task_cfg.get("task_kind", "code"))
 
     impls = find_runs(args.task, entrypoint)
     if not impls:
@@ -376,7 +323,13 @@ def main() -> int:
         pairings[judge] = mapping
 
         judge_dir = out_root / judge
-        write_packet(task_dir, judge_dir, impls, mapping, entrypoint)
+        kind.assemble_packet(
+            task_dir=task_dir,
+            judge_dir=judge_dir,
+            impls=impls,
+            mapping=mapping,
+            entrypoint=entrypoint,
+        )
         log.info("packet ready: %s (%d impl%s)",
                  judge_dir.relative_to(REPO_ROOT),
                  len(targets), 's' if len(targets) != 1 else '')
@@ -414,7 +367,8 @@ def main() -> int:
     log.info("judgment phase set up at %s", out_root.relative_to(REPO_ROOT))
 
     if args.auto:
-        rc = auto_drive_judges(out_root, judges, cfg, concurrency=concurrency)
+        rc = auto_drive_judges(out_root, judges, cfg, kind,
+                               concurrency=concurrency)
         manual = [j for j in judges if j not in cfg.slugs]
         if manual:
             print()

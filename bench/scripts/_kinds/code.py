@@ -7,7 +7,14 @@ hidden test suite, and counts LOC. The orchestrator (`capture_run.py`)
 remains responsible for run-dir lifecycle, meta.json, transcript
 handling, and operator-facing UX.
 
-Other methods (`score`, `aggregate`) grow in subsequent PRs.
+`assemble_packet` and `score` are the per-judge code-specific subset of
+the judgment phase: packet assembly (the four task files +
+blinded `implementations/<label><suffix>` layout) and the per-judge
+opencode invocation. The orchestrator (`start_judgments.py`) remains
+responsible for run discovery, label assignment, pairings/runs_index/
+judgment_meta.json, and the threadpool fanout across judges.
+
+`aggregate` grows in a subsequent PR.
 """
 
 from __future__ import annotations
@@ -16,10 +23,12 @@ import os
 import pathlib
 import shutil
 import subprocess
+import time
 from typing import Any
 
 from .. import _git
 from .. import _logging
+from .. import _opencode_run
 from .. import _task
 
 log = _logging.get_logger(__name__)
@@ -173,3 +182,79 @@ class CodeTask:
             "impl_loc": loc,
             "test_exit_code": test_exit,
         }
+
+    def assemble_packet(
+        self,
+        *,
+        task_dir: pathlib.Path,
+        judge_dir: pathlib.Path,
+        impls: list[dict],
+        mapping: dict[str, str],
+        entrypoint: str,
+    ) -> None:
+        """Write one judge's packet at judge_dir.
+
+        Side effects (filesystem):
+          - <judge_dir>/packet/{PROMPT.md, SPEC.md, JUDGE_PROMPT.md,
+            JUDGE_RUBRIC.md} (each copied from task_dir if present)
+          - <judge_dir>/packet/implementations/<label><suffix> per impl
+            in mapping, blinded
+          - <judge_dir>/packet/README.md cover note
+          - <judge_dir>/output/ (empty — judge fills it)
+        """
+        packet = judge_dir / "packet"
+        impl_dir = packet / "implementations"
+        output = judge_dir / "output"
+        impl_dir.mkdir(parents=True, exist_ok=True)
+        output.mkdir(parents=True, exist_ok=True)
+
+        for fname in ["PROMPT.md", "SPEC.md", "JUDGE_PROMPT.md", "JUDGE_RUBRIC.md"]:
+            src = task_dir / fname
+            if src.exists():
+                shutil.copy2(src, packet / fname)
+
+        suffix = pathlib.Path(entrypoint).suffix
+        for impl in impls:
+            if impl["model"] not in mapping:
+                continue
+            label = mapping[impl["model"]]
+            shutil.copy2(impl["impl_path"], impl_dir / f"{label}{suffix}")
+
+        labels = sorted(mapping.values())
+        cover = packet / "README.md"
+        cover.write_text(
+            f"# Judgment packet\n\n"
+            f"Implementations to review (blinded labels): {', '.join(labels)}\n\n"
+            f"Read PROMPT.md and SPEC.md first to understand what was asked.\n"
+            f"Then read JUDGE_PROMPT.md for your task and the output format.\n"
+            f"Score each implementation independently. Write outputs to ../output/.\n"
+        )
+
+    def score(
+        self,
+        *,
+        judge: str,
+        judge_dir: pathlib.Path,
+        slug: str,
+        message: str,
+        log_path: pathlib.Path | None,
+        out_root_name: str,
+    ) -> tuple[int, float]:
+        """Drive a single judge through `opencode run`.
+
+        Returns (rc, elapsed_seconds). Caller is responsible for skipping
+        judges whose slug isn't in config — this helper assumes the slug
+        exists. With log_path=None, opencode inherits stdout (sequential
+        mode); with log_path set, output is redirected so concurrent
+        judges' streams don't interleave.
+        """
+        title = f"{out_root_name}-{judge}"
+        started = time.monotonic()
+        rc = _opencode_run.run(
+            directory=judge_dir,
+            model=slug,
+            message=message,
+            title=title,
+            log_path=log_path,
+        )
+        return rc, time.monotonic() - started
