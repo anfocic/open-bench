@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] — 2026-05-07
+
+Pre-publish polish on top of 0.1.0. No behaviour change.
+
+### Added
+- README quickstart (`pip install -e ".[dev]"` → `bench-start-run`) and
+  "what's not here yet" section setting v0.1 vs v0.2/v1.0 expectations.
+- `PLAN_V0_2.md` linked from README — pluggable task kinds + v1.0 roadmap.
+
+### Changed
+- `requires-python` now bounded `>=3.11,<3.14` (tested upper bound).
+- ABOUT.md run-it section uses the `bench-*` console scripts instead of
+  `python3 -m bench.scripts.*` and the long-removed `run-all.py`.
+
+### Fixed
+- `capture_run` pathspec falls back to entrypoint basename for
+  extensionless task entrypoints. (#42)
+- `start_run.determine_base_branch` test coverage for fallback paths. (#42)
+
 ## [0.1.0] — 2026-05-06
 
 First versioned release. Captures the senior-review refactor trilogy

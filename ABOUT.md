@@ -19,36 +19,46 @@ Recursive joke: the first benchmark task is implementing `sandbox.py` itself.
 
 Drop a spec in `bench/tasks/<task>/SPEC.md`, write `PROMPT.md` (what the model sees), and a hidden test suite (it doesn't). Each model runs through opencode and produces its implementation. The task's `task.json` defines the entrypoint filename, test invocation, and LOC counting method — defaults match round-1 (single-file Python). Implementations are graded by every model in the lineup (including itself — self-judgments are surfaced separately as a bias check, not counted in the headline scoreboard). Optional expert tier via `expert_judges` in `bench/config.json`. Output: peer-median scoreboard, per-judge ranking, self-bias delta, inter-judge agreement, hidden-test results.
 
+## Install
+
+```bash
+git clone https://github.com/anfocic/open-bench.git
+cd open-bench
+pip install -e ".[dev]"
+```
+
+This puts the `bench-*` console scripts on `PATH`. Requires Python 3.11–3.13 and [opencode] 1.14+ authenticated against the providers in `bench/config.json`.
+
 ## Run it
 
 End-to-end (canonical single round):
 
 ```bash
-JUDGE_CONCURRENCY=3 bench/scripts/run-all.py sandbox
+JUDGE_CONCURRENCY=3 bench-run-all sandbox
 ```
 
-Judges run in parallel (cap with `JUDGE_CONCURRENCY` or the `--concurrency` flag on `start_judgments.py`); implementer phase is still sequential.
+Judges run in parallel (cap with `JUDGE_CONCURRENCY` or the `--concurrency` flag on `bench-judgments`); implementer phase is still sequential.
 
 Per-model perf (n=5 with median + stdev):
 
 ```bash
-python3 -m bench.scripts.perf_bench sandbox kimi 5
+bench-perf sandbox kimi 5
 ```
 
 One implementer at a time:
 
 ```bash
-python3 -m bench.scripts.start_run --auto sandbox kimi   # auto-drive
-python3 -m bench.scripts.capture_run sandbox kimi
+bench-start-run --auto sandbox kimi   # auto-drive
+bench-capture-run sandbox kimi
 ```
 
 Multiple samples per model on the same date — set `RUN_STAMP` to disambiguate worktree/branch names:
 
 ```bash
-RUN_STAMP="$(date +%F)-r2" python3 -m bench.scripts.start_run --auto sandbox kimi
+RUN_STAMP="$(date +%F)-r2" bench-start-run --auto sandbox kimi
 ```
 
-Stdlib + pytest only on the local side; no requirements file.
+Stdlib + pytest only on the local side; no extra runtime dependencies.
 
 > **`--auto` runs `opencode run --dangerously-skip-permissions`.** Model has full host filesystem access during the session. Trust your task content.
 
