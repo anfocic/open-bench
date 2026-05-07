@@ -8,7 +8,7 @@ const sections = [
   {
     id: 'what',
     title: 'what',
-    body: `<p><strong>open-bench</strong> is a benchmark harness for coding LLMs. It drops a task spec into a fresh repo, drives every model in the lineup through a real agent loop, runs a hidden test suite as the objective gate, has the models score each other, and commits the full artifact set — transcripts, diffs, judge rubrics, scores — to the repository. One round, one ranked review.</p><p>The flagship format on top of it is <a href="/model-royale">Model Royale</a>: a weekly elimination tournament between every major LLM I can get a key for. The harness is general; the tournament is one thing you can run on it.</p>`,
+    body: `<p><strong>open-bench</strong> is a benchmark harness for coding LLMs. It drops a task spec into a fresh repo, drives every model through a real agent loop, runs a hidden test suite as the objective gate, has the models score each other, and commits the full artifact set — transcripts, diffs, judge rubrics, scores — to the repository. One round, one ranked review.</p><p>The engine is provider-agnostic: tasks, runs, judging, and aggregation work without any specific agent harness. The bundled <code>--auto</code> driver shells out to <a href="https://opencode.ai">opencode</a> today; replacing it with Claude Code, Aider, or anything that can take a prompt and write to a worktree is a single-module swap. Manual flow needs no driver at all.</p><p>The flagship format on top of it is <a href="/model-royale">Model Royale</a>: a weekly elimination tournament between every major LLM I can get a key for. The harness is general; the tournament is one thing you can run on it.</p>`,
   },
   {
     id: 'why',
@@ -20,7 +20,7 @@ const sections = [
     title: 'how',
     steps: [
       'Every model in the lineup gets the same task and an isolated git worktree.',
-      'Each writes its implementation through opencode under a fixed wall-clock budget.',
+      'Each writes its implementation through an agent harness (opencode by default, swappable) under a fixed wall-clock budget.',
       'A hidden pytest battery runs against each output — the objective gate.',
       'Every model judges every implementation, blinded. Cost and tokens are captured.',
       'Scores are aggregated into one ranked review per round, plus a self-bias delta.',
