@@ -159,11 +159,15 @@ def capture(task: str, model: str) -> int:
     (run_dir / "diff.patch").write_text("\n".join(diff_lines))
 
     suffix = pathlib.Path(entrypoint).suffix
-    modified_ext = _run_git("diff", "--name-only", base, "--", f"*{suffix}",
+    # Empty suffix → fall back to the entrypoint basename. Otherwise `*""`
+    # expands to `*`, which matches every path in the worktree and defeats
+    # the filter (would copy unrelated files into the run dir).
+    pathspec = f"*{suffix}" if suffix else pathlib.Path(entrypoint).name
+    modified_ext = _run_git("diff", "--name-only", base, "--", pathspec,
                              cwd=worktree_dir, check=False).strip().splitlines()
-    modified_ext += _run_git("diff", "--name-only", "HEAD", "--", f"*{suffix}",
+    modified_ext += _run_git("diff", "--name-only", "HEAD", "--", pathspec,
                               cwd=worktree_dir, check=False).strip().splitlines()
-    untracked_ext = _run_git("ls-files", "--others", "--exclude-standard", f"*{suffix}",
+    untracked_ext = _run_git("ls-files", "--others", "--exclude-standard", pathspec,
                               cwd=worktree_dir).strip().splitlines()
 
     all_modified = sorted(set(
