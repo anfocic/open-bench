@@ -7,9 +7,9 @@ The shared module covers:
 - _stats.mode              most-frequent item over a stream
 - _stats.mode_of_counts    argmax over a pre-aggregated count map
 
-Wrappers in aggregate_judges (compute_median) and perf_bench
-(median_or_none, stdev_or_none) are kept thin for back-compat; they're
-verified to delegate correctly so callers see no behavior change.
+Wrappers in perf_bench (median_or_none, stdev_or_none) are kept thin for
+back-compat; they're verified to delegate correctly so callers see no
+behavior change.
 """
 
 from __future__ import annotations
@@ -19,7 +19,6 @@ import unittest
 from . import conftest  # noqa: F401
 
 from bench.scripts import _stats  # noqa: E402
-from bench.scripts import aggregate_judges  # noqa: E402
 from bench.scripts import perf_bench  # noqa: E402
 
 
@@ -95,14 +94,6 @@ class TestStatsModeOfCounts(unittest.TestCase):
     def test_tuple_keys(self) -> None:
         counts = {("p1", "m1"): 3, ("p2", "m2"): 5, ("p1", "m2"): 1}
         self.assertEqual(_stats.mode_of_counts(counts), ("p2", "m2"))
-
-
-class TestComputeMedianWrapper(unittest.TestCase):
-    """aggregate_judges.compute_median is now a thin wrapper around _stats.median."""
-
-    def test_delegates(self) -> None:
-        self.assertIsNone(aggregate_judges.compute_median([]))
-        self.assertEqual(aggregate_judges.compute_median([1.0, 2.0, 3.0]), 2.0)
 
 
 class TestPerfBenchWrappers(unittest.TestCase):
