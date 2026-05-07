@@ -29,6 +29,7 @@ class TestCaptureRunReadsMeta(unittest.TestCase):
             model = "alpha"
             run_dir = tmp / "builds" / model / "rounds" / "sandbox-2026-05-05"
             run_dir.mkdir(parents=True)
+            (tmp / "bench" / "tasks" / task).mkdir(parents=True)
 
             # Worktree path NOT derivable from the dir name. If capture()
             # were still slicing, it would compute
@@ -67,6 +68,7 @@ class TestCaptureRunReadsMeta(unittest.TestCase):
         try:
             run_dir = tmp / "builds" / "alpha" / "rounds" / "sandbox-2026-05-05"
             run_dir.mkdir(parents=True)
+            (tmp / "bench" / "tasks" / "sandbox").mkdir(parents=True)
             # No meta.json present.
             with mock.patch.object(cr, "REPO_ROOT", tmp), \
                  mock.patch.object(cr._task._config, "repo_root", lambda: tmp), \

@@ -314,14 +314,14 @@ def main() -> int:
         log.error("--concurrency must be >= 1, got %d", concurrency)
         return 2
 
-    task_dir = REPO_ROOT / "bench" / "tasks" / args.task
-    if not task_dir.is_dir():
-        log.error("no task at %s", task_dir)
+    try:
+        task_dir = _task.require(
+            args.task,
+            ["JUDGE_PROMPT.md", "JUDGE_RUBRIC.md", "SPEC.md", "PROMPT.md"],
+        )
+    except FileNotFoundError as e:
+        log.error("%s", e)
         return 1
-    for required in ("JUDGE_PROMPT.md", "JUDGE_RUBRIC.md", "SPEC.md", "PROMPT.md"):
-        if not (task_dir / required).exists():
-            log.error("task missing %s", required)
-            return 1
 
     cfg = _config.load()
     task_cfg = _task.load(args.task)

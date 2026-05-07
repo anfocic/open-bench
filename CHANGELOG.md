@@ -4,6 +4,37 @@ All notable changes to this project will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.2] — unreleased
+
+First step of v0.2 plugin work. Makes config and tasks locations
+overridable so a downstream consumer (e.g. a separate `royale/` tree)
+can run the harness against its own lineup and tasks without forking,
+and consolidates four divergent task-dir validation snippets into a
+single helper.
+
+### Added
+- `OPENBENCH_CONFIG` env var overrides the path to `config.json`
+  (default: `<repo_root>/bench/config.json`).
+- `OPENBENCH_TASKS_DIR` env var overrides the directory holding task
+  definitions (default: `<repo_root>/bench/tasks`).
+- `_task.tasks_dir()`, `_task.task_dir(name)`, `_task.require(name, files=[])`
+  helpers; `~` in env-var paths is expanded.
+
+### Changed
+- `start_run`, `capture_run`, `start_judgments`, `perf_bench` now route
+  task-dir resolution + required-files validation through
+  `_task.require()`. Callers no longer recompute the path or repeat the
+  `is_dir()` check.
+- `new_task` scaffolds under `_task.tasks_dir()` so `OPENBENCH_TASKS_DIR`
+  is honoured at scaffold time too.
+
+### Fixed
+- `capture_run` now validates the task directory up front. A typo'd
+  task name previously surfaced as `"no tests dir at .../tests"`; the
+  message now points at the task directory itself.
+- `start_run` error on missing task files now names the specific
+  missing file rather than `"missing PROMPT.md or SPEC.md"`.
+
 ## [0.1.1] — 2026-05-07
 
 Pre-publish polish on top of 0.1.0. No behaviour change.

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import functools
 import json
+import os
 import pathlib
 import subprocess
 from typing import Any
@@ -25,6 +26,13 @@ def repo_root() -> pathlib.Path:
 
 
 def config_path() -> pathlib.Path:
+    """Resolve the config.json path. Honours OPENBENCH_CONFIG when set so
+    a downstream consumer can run the harness against its own lineup
+    without forking. Defaults to <repo_root>/bench/config.json.
+    """
+    override = os.environ.get("OPENBENCH_CONFIG")
+    if override:
+        return pathlib.Path(override).expanduser()
     return repo_root() / "bench" / "config.json"
 
 

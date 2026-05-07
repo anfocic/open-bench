@@ -1,6 +1,6 @@
 [project]
 name = "open-bench"
-version = "0.1.1"
+version = "0.1.2"
 description = "A weekly coding battle royale between AI models."
 readme = "README.md"
 license = { file = "LICENSE" }

@@ -65,13 +65,10 @@ def start_run(task: str, model: str, auto: bool = False,
     task_cfg = _task.load(task)
     entrypoint = task_cfg["entrypoint"]
 
-    task_dir = REPO_ROOT / "bench" / "tasks" / task
-    if not task_dir.is_dir():
-        log.error("no task at %s", task_dir)
-        return 1
-
-    if not (task_dir / "PROMPT.md").exists() or not (task_dir / "SPEC.md").exists():
-        log.error("task missing PROMPT.md or SPEC.md")
+    try:
+        task_dir = _task.require(task, ["PROMPT.md", "SPEC.md"])
+    except FileNotFoundError as e:
+        log.error("%s", e)
         return 1
 
     cfg = _config.load()

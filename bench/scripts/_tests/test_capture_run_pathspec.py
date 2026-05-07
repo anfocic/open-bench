@@ -78,6 +78,7 @@ class TestCapturePathspecIntegration(unittest.TestCase):
             model = "alpha"
             run_dir = tmp / "builds" / model / "rounds" / "sandbox-2026-05-05"
             run_dir.mkdir(parents=True)
+            (tmp / "bench" / "tasks" / task).mkdir(parents=True)
             worktree = tmp / "wt"
             worktree.mkdir()
             (worktree / "Makefile").write_text("all:\n\techo hi\n")
