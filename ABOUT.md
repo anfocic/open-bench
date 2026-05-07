@@ -1,23 +1,23 @@
 # About open-bench
 
-This is the long-form companion to the [README](README.md). It covers what's in the repo, who it's for, how the harness works, how to run it locally, how to fork it, layout, and limitations.
+Long-form companion to the [README](README.md). Covers what's in the repo, who it's for, how the harness works, how to run it locally, how to fork it for your own lineup, layout, and limitations.
 
 ## What's in this repo
 
-1. **`sandbox.py`** — the round-1 task. A single-file Python wrapper around Podman/Docker for ephemeral, network-isolated, resource-capped command execution. The thing the models implement.
-2. **`bench/`** — the framework that runs them through opencode, captures transcripts and diffs, runs hidden tests, and aggregates judgments into a single review.
+1. **`bench/`** — the harness: orchestration (`start_run`, `_opencode`), artifact capture (`capture_run`), scoring (`start_judgments`), aggregation (`aggregate_judges`), and CLI entry points.
+2. **`bench/tasks/sandbox/`** — the canonical code-task example: a single-file Python wrapper around Podman/Docker for ephemeral, network-isolated, resource-capped command execution. Ships with the package so `bench-start-run sandbox <model>` works out of the box.
 
-Recursive joke: the first benchmark task is implementing `sandbox.py` itself.
+Tournament results, lineup decisions, and per-round writeups live downstream in [Model Royale](https://open-bench.dev/royale), not here. open-bench is the engine; Royale is one consumer.
 
 ## Who this is for
 
 - **AI engineers** picking a coding model for an agent and tired of one-shot benchmarks.
-- **Open-weight watchers** comparing the new wave (DeepSeek, Kimi, MiniMax, Qwen, GLM, MiMo) head-to-head on the same task.
-- **Anyone who wants a fork-and-go harness** for running their own n-way comparison — see [Forking](#forking-for-your-own-n-way-comparison) below.
+- **Researchers** running n-way comparisons across an arbitrary lineup with their own tasks.
+- **Anyone who wants a fork-and-go harness** for a private comparison — see [Forking](#forking-for-your-own-n-way-comparison) below.
 
 ## How it works
 
-Drop a spec in `bench/tasks/<task>/SPEC.md`, write `PROMPT.md` (what the model sees), and a hidden test suite (it doesn't). Each model runs through opencode and produces its implementation. The task's `task.json` defines the entrypoint filename, test invocation, and LOC counting method — defaults match round-1 (single-file Python). Implementations are graded by every model in the lineup (including itself — self-judgments are surfaced separately as a bias check, not counted in the headline scoreboard). Optional expert tier via `expert_judges` in `bench/config.json`. Output: peer-median scoreboard, per-judge ranking, self-bias delta, inter-judge agreement, hidden-test results.
+Drop a spec in `bench/tasks/<task>/SPEC.md`, write `PROMPT.md` (what the model sees), and a hidden test suite (it doesn't). Each model runs through opencode and produces its implementation. The task's `task.json` defines the entrypoint filename, test invocation, and LOC counting method — defaults match a single-file Python target. Implementations are graded by every model in the lineup (including itself — self-judgments are surfaced separately as a bias check, not counted in the headline scoreboard). Optional expert tier via `expert_judges` in `bench/config.json`. Output: peer-median scoreboard, per-judge ranking, self-bias delta, inter-judge agreement, hidden-test results.
 
 ## Install
 
@@ -79,7 +79,7 @@ Edit `bench/config.json`:
 }
 ```
 
-Labels become `builds/<label>/` dirs. Add a new task with `python3 -m bench.scripts.new_task <name>`. Discover provider slugs with `opencode models <provider>`.
+Labels become `builds/<label>/` dirs. Add a new task with `bench-new-task <name>`. Discover provider slugs with `opencode models <provider>`.
 
 ### Task configuration
 
@@ -93,7 +93,7 @@ Each task directory (`bench/tasks/<task>/`) can optionally contain a `task.json`
 | `test_invocation` | `["python3", "-m", "pytest", "_eval_tests/", "-v", "--tb=short"]` | Argv to run hidden tests |
 | `loc_method` | `non_blank_non_comment_lines` | How to count implementation lines |
 
-If `task.json` is absent, the defaults reproduce round-1 behaviour (single-file Python). To add a different task, run `new_task.py` and edit the generated `task.json` to set the entrypoint and test invocation.
+If `task.json` is absent, the defaults assume a single-file Python target with pytest. To add a different task, run `bench-new-task <name>` and edit the generated `task.json` to set the entrypoint and test invocation.
 
 ## Layout
 
@@ -117,8 +117,8 @@ results/
 
 ## Limitations
 
-- One ~100-LOC task; standard contract-following territory, not novel reasoning.
-- Harness-locked to opencode. Different harness changes the numbers.
+- v0.1 ships one task kind (code, ~100-LOC scale on the example). Generation/choice land in v0.2 — see [`PLAN_V0_2.md`](PLAN_V0_2.md).
+- Harness-locked to opencode for both implementers and judges. Provider abstractions are v1.0 work.
 - n=5 perf is the floor where median means anything; stdev with n=5 is itself noisy.
 - A different judge panel would likely produce a different consensus. Inter-judge variance is reported in each review.
 - Self-judging is included for bias measurement but excluded from headline medians. The peer-blind scoreboard remains the canonical signal.
