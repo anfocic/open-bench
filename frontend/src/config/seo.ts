@@ -69,7 +69,7 @@ export const seoPages = {
   },
   modelRoyale: {
     title: 'Model Royale · open-bench',
-    description: 'Model Royale: weekly elimination-style coding tournament between every major LLM, run on the open-bench harness. Lineup, rules, current task, lineage.',
+    description: 'Model Royale: weekly elimination-style coding tournament between selected open-source coding models, run on the open-bench harness. Lineup, rules, current task, lineage.',
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'website'],
   },
