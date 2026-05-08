@@ -6,7 +6,7 @@ import Footer from '../../../components/Footer.astro';
 import Masthead from '../../../components/Masthead.astro';
 import { getCollection } from 'astro:content';
 import { fmtCost, fmtNum, fmtDate } from '../../../lib/format';
-import { computeStandings, sparkline } from '../../../lib/aggregate';
+import { computeStandings, computeBias, sparkline } from '../../../lib/aggregate';
 import { templateSeo } from '../../../lib/seo';
 import Term from '../../../components/Term.astro';
 
@@ -49,6 +49,14 @@ const seo = templateSeo(
 );
 
 const history = [...standing.history].sort((a, b) => b.date.localeCompare(a.date));
+const bias = computeBias(impl, rounds);
+const biasByDate = new Map(bias.perRound.map(b => [b.date, b]));
+
+const fmtDelta = (v: number | null): string => {
+  if (v === null) return '—';
+  const sign = v > 0 ? '+' : '';
+  return `${sign}${v.toFixed(1)}`;
+};
 ---
 
 <BaseLayout seo={seo}>
@@ -59,6 +67,12 @@ const history = [...standing.history].sort((a, b) => b.date.localeCompare(a.date
       <span>podium {standing.podium}</span>
       <span>avg {fmtNum(standing.avgScore, 1)}/30</span>
       <span>$/round {fmtCost(standing.avgCost)}</span>
+      <span title="Lifetime average self-vs-peer delta on spec compliance. Positive = overrates own work; negative = underrates.">
+        Δ self/peer (spec) {fmtDelta(bias.avgDeltaSpec)}
+      </span>
+      <span title="Lifetime average self-vs-peer delta on code quality.">
+        Δ self/peer (qual) {fmtDelta(bias.avgDeltaQual)}
+      </span>
       <span>last {fmtDate(standing.lastSeen)}</span>
       <span class="trend">{sparkline(standing.history)}</span>
     </div>
@@ -73,19 +87,26 @@ const history = [...standing.history].sort((a, b) => b.date.localeCompare(a.date
           <th class="num"><Term k="score">score</Term></th>
           <th class="num"><Term k="rank">rank</Term></th>
           <th class="num">cost</th>
+          <th class="num" title="Self-judgment minus peer median for that round.">Δ spec</th>
+          <th class="num" title="Self-judgment minus peer median on code quality for that round.">Δ qual</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-        {history.map(h => (
-          <tr class={h.dnf ? 'hardfail' : ''}>
-            <td>{fmtDate(h.date)}</td>
-            <td class="num">{h.dnf ? '—' : `${fmtNum(h.score, 1)}/30`}</td>
-            <td class="num">{h.dnf ? 'DNF' : `#${h.rank}`}</td>
-            <td class="num">{fmtCost(h.cost)}</td>
-            <td><a href={`/model-royale/round/${h.date}`}>view round &rarr;</a></td>
-          </tr>
-        ))}
+        {history.map(h => {
+          const b = biasByDate.get(h.date);
+          return (
+            <tr class={h.dnf ? 'hardfail' : ''}>
+              <td>{fmtDate(h.date)}</td>
+              <td class="num">{h.dnf ? '—' : `${fmtNum(h.score, 1)}/30`}</td>
+              <td class="num">{h.dnf ? 'DNF' : `#${h.rank}`}</td>
+              <td class="num">{fmtCost(h.cost)}</td>
+              <td class="num">{fmtDelta(b?.deltaSpec ?? null)}</td>
+              <td class="num">{fmtDelta(b?.deltaQual ?? null)}</td>
+              <td><a href={`/model-royale/round/${h.date}`}>view round &rarr;</a></td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   </section>
