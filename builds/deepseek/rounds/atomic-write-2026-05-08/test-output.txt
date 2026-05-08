@@ -1,0 +1,25 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.12, pytest-9.0.3, pluggy-1.6.0 -- /opt/homebrew/Caskroom/miniforge/base/bin/python3
+cachedir: .pytest_cache
+hypothesis profile 'default'
+rootdir: /Users/fole/Desktop/eval-atomic-write-deepseek-2026-05-08
+configfile: pyproject.toml
+plugins: cov-7.1.0, hypothesis-6.152.4, anyio-4.13.0
+collecting ... collected 12 items
+
+_eval_tests/test_atomic_write.py::test_text_basic_write PASSED           [  8%]
+_eval_tests/test_atomic_write.py::test_bytes_basic_write PASSED          [ 16%]
+_eval_tests/test_atomic_write.py::test_replaces_existing PASSED          [ 25%]
+_eval_tests/test_atomic_write.py::test_no_tmp_residue_on_success PASSED  [ 33%]
+_eval_tests/test_atomic_write.py::test_no_tmp_residue_on_open_failure PASSED [ 41%]
+_eval_tests/test_atomic_write.py::test_missing_parent_raises_filenotfound PASSED [ 50%]
+_eval_tests/test_atomic_write.py::test_path_is_directory_raises PASSED   [ 58%]
+_eval_tests/test_atomic_write.py::test_mode_preserved_when_none_and_target_exists PASSED [ 66%]
+_eval_tests/test_atomic_write.py::test_mode_applied_when_set PASSED      [ 75%]
+_eval_tests/test_atomic_write.py::test_concurrent_writers_no_corruption PASSED [ 83%]
+_eval_tests/test_atomic_write.py::test_symlink_writes_to_target PASSED   [ 91%]
+_eval_tests/test_atomic_write.py::test_cli_stdin_to_path PASSED          [100%]
+
+============================== 12 passed in 0.12s ==============================
+
+--- stderr ---

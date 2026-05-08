@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""Crash-safe atomic file writes - either fully succeed or leave previous contents intact."""
+
+import os
+import sys
+import tempfile
+
+
+def _get_file_mode(path: str) -> int | None:
+    """Get existing file mode, or None if file doesn't exist."""
+    try:
+        return os.stat(path).st_mode
+    except FileNotFoundError:
+        return None
+
+
+def _resolve_path(path: str | os.PathLike) -> tuple[str, bool]:
+    """Resolve path, handling symlinks. Returns (resolved_path, was_symlink)."""
+    path_str = os.fspath(path)
+    if os.path.islink(path_str):
+        return os.path.realpath(path_str), True
+    return path_str, False
+
+
+def _fsync_dir(dir_path: str) -> None:
+    """Fsync a directory to ensure rename is durable."""
+    dir_fd = os.open(dir_path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
+
+
+def _atomic_write(path: str, data: bytes, mode: int | None) -> None:
+    """Core atomic write implementation for bytes."""
+    resolved_path, _ = _resolve_path(path)
+    parent_dir = os.path.dirname(resolved_path)
+    if not parent_dir:
+        parent_dir = "."
+
+    if not os.path.isdir(parent_dir):
+        raise FileNotFoundError(f"Parent directory does not exist: {parent_dir}")
+
+    if os.path.isdir(resolved_path):
+        raise IsADirectoryError(f"Path is a directory: {resolved_path}")
+
+    existing_mode = _get_file_mode(resolved_path)
+
+    tmp_fd, tmp_path = tempfile.mkstemp(dir=parent_dir, prefix=".tmp_")
+    try:
+        os.write(tmp_fd, data)
+        os.fsync(tmp_fd)
+        os.close(tmp_fd)
+        tmp_fd = None
+
+        os.replace(tmp_path, resolved_path)
+        tmp_path = None
+
+        _fsync_dir(parent_dir)
+
+        if mode is None and existing_mode is not None:
+            os.chmod(resolved_path, existing_mode)
+        elif mode is not None:
+            os.chmod(resolved_path, mode)
+
+    except:
+        if tmp_fd is not None:
+            try:
+                os.close(tmp_fd)
+            except OSError:
+                pass
+        if tmp_path is not None and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+        raise
+
+
+def atomic_write_text(
+    path: str | os.PathLike,
+    data: str,
+    *,
+    encoding: str = "utf-8",
+    mode: int | None = None
+) -> None:
+    """Atomically write string data to a file.
+
+    Args:
+        path: Target file path (symlinks are followed).
+        data: String content to write.
+        encoding: Text encoding (default: utf-8).
+        mode: Optional file mode (octal). If None and target exists, preserves existing mode.
+    """
+    path_str = os.fspath(path)
+    bytes_data = data.encode(encoding)
+    _atomic_write(path_str, bytes_data, mode)
+
+
+def atomic_write_bytes(
+    path: str | os.PathLike,
+    data: bytes,
+    *,
+    mode: int | None = None
+) -> None:
+    """Atomically write bytes data to a file.
+
+    Args:
+        path: Target file path (symlinks are followed).
+        data: Bytes content to write.
+        mode: Optional file mode (octal). If None and target exists, preserves existing mode.
+    """
+    path_str = os.fspath(path)
+    _atomic_write(path_str, data, mode)
+
+
+def main() -> int:
+    """CLI entry point: read stdin and write atomically to target path."""
+    if len(sys.argv) != 2:
+        print("Usage: python atomic_write.py <path>", file=sys.stderr)
+        return 1
+
+    target_path = sys.argv[1]
+
+    try:
+        data = sys.stdin.buffer.read()
+        atomic_write_bytes(target_path, data)
+        return 0
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

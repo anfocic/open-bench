@@ -1,0 +1,128 @@
+
+
+diff --git a/Users/fole/Desktop/eval-atomic-write-mimo-2026-05-08/atomic_write.py b/Users/fole/Desktop/eval-atomic-write-mimo-2026-05-08/atomic_write.py
+new file mode 100644
+index 0000000..cff442c
+--- /dev/null
++++ b/Users/fole/Desktop/eval-atomic-write-mimo-2026-05-08/atomic_write.py
+@@ -0,0 +1,120 @@
++"""Crash-safe atomic file writes using temp + fsync + rename."""
++
++from __future__ import annotations
++
++import os
++import sys
++import tempfile
++from typing import Optional
++
++
++def _resolve_path(path: str | os.PathLike) -> tuple[str, str]:
++    """Return (resolved_target, parent_dir) for a path.
++
++    If *path* is a symlink, resolved_target is the real file (so we write
++    to the link target rather than replacing the symlink).  parent_dir is
++    always the directory that will host the temp file and fsync'd after
++    the rename.
++    """
++    resolved = os.path.realpath(path)
++    parent = os.path.dirname(resolved)
++    return resolved, parent
++
++
++def _copy_mode(src: str, dst_fd: int) -> None:
++    """Copy permission bits from *src* onto the open fd *dst_fd*."""
++    st = os.stat(src)
++    os.fchmod(dst_fd, st.st_mode & 0o7777)
++
++
++def _atomic_write(
++    path: str | os.PathLike,
++    data: bytes,
++    *,
++    mode: Optional[int] = None,
++) -> None:
++    target, parent = _resolve_path(path)
++
++    if not os.path.isdir(parent):
++        raise FileNotFoundError(f"Parent directory does not exist: {parent}")
++
++    target_existed = os.path.exists(target)
++    if target_existed and os.path.isdir(target):
++        raise IsADirectoryError(f"Is a directory: {target}")
++
++    fd: Optional[int] = None
++    tmp_path: Optional[str] = None
++    try:
++        fd, tmp_path = tempfile.mkstemp(dir=parent, suffix=".tmp")
++
++        os.write(fd, data)
++        os.fsync(fd)
++
++        if mode is not None:
++            os.fchmod(fd, mode)
++        elif target_existed:
++            _copy_mode(target, fd)
++
++        os.close(fd)
++        fd = None
++
++        os.replace(tmp_path, target)
++        tmp_path = None
++
++        dir_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
++        try:
++            os.fsync(dir_fd)
++        finally:
++            os.close(dir_fd)
++    except BaseException:
++        if fd is not None:
++            try:
++                os.close(fd)
++            except OSError:
++                pass
++        if tmp_path is not None:
++            try:
++                os.unlink(tmp_path)
++            except OSError:
++                pass
++        raise
++
++
++def atomic_write_text(
++    path: str | os.PathLike,
++    data: str,
++    *,
++    encoding: str = "utf-8",
++    mode: Optional[int] = None,
++) -> None:
++    """Atomically write the string *data* to *path*."""
++    _atomic_write(path, data.encode(encoding), mode=mode)
++
++
++def atomic_write_bytes(
++    path: str | os.PathLike,
++    data: bytes,
++    *,
++    mode: Optional[int] = None,
++) -> None:
++    """Atomically write the bytes *data* to *path*."""
++    _atomic_write(path, data, mode=mode)
++
++
++def _cli() -> None:
++    if len(sys.argv) != 2:
++        print(f"Usage: {sys.argv[0]} <path>", file=sys.stderr)
++        sys.exit(1)
++
++    target = sys.argv[1]
++    data = sys.stdin.buffer.read()
++
++    try:
++        atomic_write_bytes(target, data)
++    except Exception as exc:
++        print(f"atomic_write: {exc}", file=sys.stderr)
++        sys.exit(1)
++
++
++if __name__ == "__main__":
++    _cli()

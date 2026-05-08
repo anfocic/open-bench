@@ -1,0 +1,472 @@
+{
+  "info": {
+    "id": "ses_1f88171ffffefBbYNd41qJAIVJ",
+    "slug": "quick-knight",
+    "projectID": "0b5ed2f0254fe86b717e1c6161e83aeaf90c543d",
+    "directory": "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08",
+    "path": "",
+    "title": "atomic-write-glm-2026-05-08",
+    "version": "1.14.39",
+    "summary": {
+      "additions": 83,
+      "deletions": 0,
+      "files": 1
+    },
+    "permission": [
+      {
+        "permission": "question",
+        "pattern": "*",
+        "action": "deny"
+      },
+      {
+        "permission": "plan_enter",
+        "pattern": "*",
+        "action": "deny"
+      },
+      {
+        "permission": "plan_exit",
+        "pattern": "*",
+        "action": "deny"
+      }
+    ],
+    "time": {
+      "created": 1778242194944,
+      "updated": 1778242292594
+    }
+  },
+  "messages": [
+    {
+      "info": {
+        "role": "user",
+        "time": {
+          "created": 1778242194969
+        },
+        "agent": "build",
+        "model": {
+          "providerID": "opencode-go",
+          "modelID": "glm-5.1"
+        },
+        "summary": {
+          "diffs": [
+            {
+              "file": "atomic_write.py",
+              "patch": "Index: atomic_write.py\n===================================================================\n--- atomic_write.py\t\n+++ atomic_write.py\t\n@@ -0,0 +1,83 @@\n+\"\"\"Atomic file writes: either fully succeed or leave previous contents intact.\"\"\"\n+\n+import os\n+import sys\n+import tempfile\n+\n+\n+def _atomic_write(path, data, *, encoding=None, mode=None):\n+    path = os.fspath(path)\n+    real_path = os.path.realpath(path)\n+    parent = os.path.dirname(real_path)\n+\n+    if os.path.isdir(real_path):\n+        raise IsADirectoryError(f\"Is a directory: {real_path}\")\n+\n+    apply_mode = mode\n+    if apply_mode is None:\n+        try:\n+            apply_mode = os.stat(real_path).st_mode & 0o7777\n+        except FileNotFoundError:\n+            pass\n+\n+    tmp_path = None\n+    file_obj = None\n+    try:\n+        fd, tmp_path = tempfile.mkstemp(dir=parent)\n+        try:\n+            if encoding is not None:\n+                file_obj = os.fdopen(fd, \"w\", encoding=encoding)\n+            else:\n+                file_obj = os.fdopen(fd, \"wb\")\n+            file_obj.write(data)\n+            file_obj.flush()\n+            os.fsync(file_obj.fileno())\n+            file_obj.close()\n+        except BaseException:\n+            os.close(fd)\n+            raise\n+        file_obj = None\n+\n+        if apply_mode is not None:\n+            os.chmod(tmp_path, apply_mode)\n+\n+        os.replace(tmp_path, real_path)\n+        tmp_path = None\n+\n+        parent_fd = os.open(parent, os.O_RDONLY)\n+        try:\n+            os.fsync(parent_fd)\n+        finally:\n+            os.close(parent_fd)\n+    except BaseException:\n+        if file_obj is not None:\n+            try:\n+                file_obj.close()\n+            except Exception:\n+                pass\n+        if tmp_path is not None:\n+            try:\n+                os.unlink(tmp_path)\n+            except Exception:\n+                pass\n+        raise\n+\n+\n+def atomic_write_text(path, data, *, encoding=\"utf-8\", mode=None) -> None:\n+    _atomic_write(path, data, encoding=encoding, mode=mode)\n+\n+\n+def atomic_write_bytes(path, data, *, mode=None) -> None:\n+    _atomic_write(path, data, encoding=None, mode=mode)\n+\n+\n+if __name__ == \"__main__\":\n+    if len(sys.argv) != 2:\n+        print(f\"Usage: {sys.argv[0]} <path>\", file=sys.stderr)\n+        sys.exit(1)\n+    try:\n+        data = sys.stdin.buffer.read()\n+        atomic_write_bytes(sys.argv[1], data)\n+    except Exception as e:\n+        print(f\"Error: {e}\", file=sys.stderr)\n+        sys.exit(1)\n\\ No newline at end of file\n",
+              "additions": 83,
+              "deletions": 0,
+              "status": "added"
+            }
+          ]
+        },
+        "id": "msg_e077e8e19001a76f47l0YQHCWx",
+        "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ"
+      },
+      "parts": [
+        {
+          "type": "text",
+          "text": "\"Read PROMPT.md and SPEC.md at the worktree root, then implement atomic_write.py per the spec. Stop when atomic_write.py exists at the worktree root and your own quick smoke check passes.\"\n",
+          "id": "prt_e077e8e1a001H0K7zr156dbm7R",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077e8e19001a76f47l0YQHCWx"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_e077e8e19001a76f47l0YQHCWx",
+        "role": "assistant",
+        "mode": "build",
+        "agent": "build",
+        "path": {
+          "cwd": "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08",
+          "root": "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08"
+        },
+        "cost": 0.01820268,
+        "tokens": {
+          "total": 12909,
+          "input": 12689,
+          "output": 92,
+          "reasoning": 0,
+          "cache": {
+            "write": 0,
+            "read": 128
+          }
+        },
+        "modelID": "glm-5.1",
+        "providerID": "opencode-go",
+        "time": {
+          "created": 1778242195005,
+          "completed": 1778242198023
+        },
+        "finish": "tool-calls",
+        "id": "msg_e077e8e3d001RL1TAuM8JHVZwA",
+        "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ"
+      },
+      "parts": [
+        {
+          "snapshot": "309808da3cf19bf3837bfb668617f71939986b8a",
+          "type": "step-start",
+          "id": "prt_e077e939600177puxoYmjDl2Mu",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077e8e3d001RL1TAuM8JHVZwA"
+        },
+        {
+          "type": "reasoning",
+          "text": "The user wants me to read PROMPT.md and SPEC.md, then implement atomic_write.py per the spec. Let me start by readingboth files.",
+          "time": {
+            "start": 1778242196377,
+            "end": 1778242196937
+          },
+          "id": "prt_e077e93990010ZNqWCjKGSHIzz",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077e8e3d001RL1TAuM8JHVZwA"
+        },
+        {
+          "type": "tool",
+          "tool": "read",
+          "callID": "call_2174",
+          "state": {
+            "status": "completed",
+            "input": {
+              "filePath": "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08/PROMPT.md"
+            },
+            "output": "<path>/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08/PROMPT.md</path>\n<type>file</type>\n<content>\n1: # Task: implement `atomic_write.py`\n2: \n3: Read `SPEC.md` in this directory. Implement `atomic_write.py` exactly per\n4: spec: two library functions (`atomic_write_text`, `atomic_write_bytes`)\n5: plus a CLI entry point for use in shell pipelines.\n6: \n7: This task covers **only `atomic_write.py`**. Do not create helper modules,\n8: test files, or packaging metadata.\n9: \n10: ## Hard constraints\n11: \n12: - Python 3.10+, **stdlib only** \u2014 no `pip install`, no new dependencies.\n13: - The temp file must live in the **same directory** as the target so the\n14:   final `os.replace` is on the same filesystem (cross-fs renames are not\n15:   atomic on POSIX).\n16: - The file must be `fsync`'d before close, and the **parent directory**\n17:   must be `fsync`'d after the replace, so a power loss between writes\n18:   doesn't surface a missing or empty file.\n19: - On any error during the write (disk full, permission, interrupted\n20:   syscall, etc.) the temp file must be cleaned up \u2014 no `.tmp` residue\n21:   on disk after a failed call.\n22: - Concurrent writers to the same target must not corrupt each other:\n23:   the result must be the full content of one writer or the other, never\n24:   a mix.\n25: - The replace must be atomic from the perspective of any concurrent\n26:   reader: a reader either sees the old content in full, or the new\n27:   content in full \u2014 never a truncated intermediate.\n28: \n29: ## Deliverable\n30: \n31: A single file `atomic_write.py` at the worktree root that:\n32: \n33: 1. Exposes two top-level functions:\n34: \n35:    ```python\n36:    def atomic_write_text(path, data, *, encoding=\"utf-8\", mode=None) -> None: ...\n37:    def atomic_write_bytes(path, data, *, mode=None) -> None: ...\n38:    ```\n39: \n40: 2. Provides a CLI that reads stdin and writes atomically to a target\n41:    path:\n42: \n43:    ```\n44:    python atomic_write.py <path>\n45:    ```\n46: \n47: ## What to do when finished\n48: \n49: 1. Run a quick smoke test: write a small file, verify the target exists\n50:    and matches what you wrote, verify no `.tmp` files remain in the dir.\n51: 2. State: \"Done. Implementation in `atomic_write.py`.\"\n52: \n53: ## What NOT to do\n54: \n55: - Do not modify PROMPT.md or SPEC.md.\n56: - Do not add `requirements.txt`, `pyproject.toml`, or any other dependency manifest.\n57: - Do not write test files; the hidden tests are added later.\n\n(End of file - total 57 lines)\n</content>",
+            "metadata": {
+              "preview": "# Task: implement `atomic_write.py`\n\nRead `SPEC.md` in this directory. Implement `atomic_write.py` exactly per\nspec: two library functions (`atomic_write_text`, `atomic_write_bytes`)\nplus a CLI entry point for use in shell pipelines.\n\nThis task covers **only `atomic_write.py`**. Do not create helper modules,\ntest files, or packaging metadata.\n\n## Hard constraints\n\n- Python 3.10+, **stdlib only** \u2014 no `pip install`, no new dependencies.\n- The temp file must live in the **same directory** as the target so the\n  final `os.replace` is on the same filesystem (cross-fs renames are not\n  atomic on POSIX).\n- The file must be `fsync`'d before close, and the **parent directory**\n  must be `fsync`'d after the replace, so a power loss between writes\n  doesn't surface a missing or empty file.\n- On any error during the write (disk full, permission, interrupted\n  syscall, etc.) the temp file must be cleaned up \u2014 no `.tmp` residue",
+              "truncated": false,
+              "loaded": []
+            },
+            "title": "PROMPT.md",
+            "time": {
+              "start": 1778242196944,
+              "end": 1778242196957
+            }
+          },
+          "id": "prt_e077e95cb001ts5PiewZ3Cor4d",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077e8e3d001RL1TAuM8JHVZwA"
+        },
+        {
+          "type": "tool",
+          "tool": "read",
+          "callID": "call_6939",
+          "state": {
+            "status": "completed",
+            "input": {
+              "filePath": "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08/SPEC.md"
+            },
+            "output": "<path>/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08/SPEC.md</path>\n<type>file</type>\n<content>\n1: # `atomic_write.py` \u2014 implementation spec\n2: \n3: A single-file Python module providing crash-safe file writes that\n4: **either fully succeed or leave the previous contents intact** \u2014 no\n5: partial writes, no `.tmp` residue, no torn data visible to readers.\n6: \n7: ## Library API\n8: \n9: ### `atomic_write_text(path, data, *, encoding=\"utf-8\", mode=None) -> None`\n10: \n11: Atomically write the string `data` to `path`.\n12: \n13: | Parameter | Type | Default | Behaviour |\n14: |---|---|---|---|\n15: | `path` | `str` or `os.PathLike` | required | target path |\n16: | `data` | `str` | required | content to write |\n17: | `encoding` | `str` | `\"utf-8\"` | text encoding |\n18: | `mode` | `int` or `None` | `None` | if set, `chmod` the new file to this mode (octal). If `None` and the target already exists, preserve the target's existing mode; otherwise the new file gets the default umask-derived mode. |\n19: \n20: Raises:\n21: \n22: - `FileNotFoundError` \u2014 parent directory doesn't exist (no temp residue)\n23: - `IsADirectoryError` \u2014 `path` exists and is a directory\n24: - `PermissionError` \u2014 can't create temp file or replace target\n25: - `OSError` \u2014 any other I/O failure (disk full, etc.); temp file is cleaned up\n26: \n27: ### `atomic_write_bytes(path, data, *, mode=None) -> None`\n28: \n29: Same contract as `atomic_write_text` but for bytes. No `encoding` parameter.\n30: \n31: ## Durability requirements\n32: \n33: In order, every write must:\n34: \n35: 1. Open a temp file in the **same directory** as `path` (not `tempfile.gettempdir()` \u2014 cross-filesystem `os.replace` is not atomic).\n36: 2. Write all bytes.\n37: 3. `fsync` the file descriptor.\n38: 4. Close the temp file.\n39: 5. `os.replace(tmp, path)` \u2014 atomic rename.\n40: 6. `fsync` the **parent directory** (so the rename itself is durable).\n41: 7. If the target already existed and `mode is None`, the new file inherits the target's pre-existing mode bits.\n42: \n43: If any of steps 1\u20136 raise, the temp file (if it was created) must be removed before the exception propagates.\n44: \n45: ## CLI\n46: \n47: ```\n48: python atomic_write.py <path>\n49: ```\n50: \n51: Reads stdin (bytes mode, no decoding) and writes the contents to `path`\n52: atomically using the bytes API. Exits 0 on success, non-zero on any\n53: error with a message on stderr.\n54: \n55: ## Concurrency contract\n56: \n57: Two threads (or processes) calling `atomic_write_text(path, ...)` with\n58: different content must result in `path` containing **one writer's full\n59: content**, never a mix. No reader at any wall-clock instant sees a\n60: truncated or partially-written file.\n61: \n62: ## Symlinks\n63: \n64: If `path` is a symlink, write to the symlink **target**, not replace\n65: the symlink itself. (Common gotcha: naive `os.replace` would replace\n66: the symlink, breaking the link.) The temp file lives next to the\n67: resolved target so the rename stays on the same filesystem.\n68: \n69: ## Examples\n70: \n71: ```python\n72: from atomic_write import atomic_write_text, atomic_write_bytes\n73: \n74: atomic_write_text(\"config.json\", '{\"version\": 2}\\n')\n75: atomic_write_bytes(\"blob.dat\", b\"\\x00\\x01\\x02\")\n76: atomic_write_text(\"script.sh\", \"#!/bin/sh\\necho hi\\n\", mode=0o755)\n77: ```\n78: \n79: ```bash\n80: echo '{\"version\": 2}' | python atomic_write.py config.json\n81: ```\n82: \n83: ## Out of scope\n84: \n85: - Locking (advisory or mandatory) \u2014 readers see atomic transitions; coordination between writers is the caller's job.\n86: - Backup of previous contents \u2014 this is a write primitive, not a versioning system.\n87: - Append semantics \u2014 atomic appends are a separate problem.\n88: - Network filesystems \u2014 POSIX-atomic semantics on NFS/CIFS are filesystem-specific; we target local filesystems (ext4, APFS, btrfs, xfs).\n\n(End of file - total 88 lines)\n</content>",
+            "metadata": {
+              "preview": "# `atomic_write.py` \u2014 implementation spec\n\nA single-file Python module providing crash-safe file writes that\n**either fully succeed or leave the previous contents intact** \u2014 no\npartial writes, no `.tmp` residue, no torn data visible to readers.\n\n## Library API\n\n### `atomic_write_text(path, data, *, encoding=\"utf-8\", mode=None) -> None`\n\nAtomically write the string `data` to `path`.\n\n| Parameter | Type | Default | Behaviour |\n|---|---|---|---|\n| `path` | `str` or `os.PathLike` | required | target path |\n| `data` | `str` | required | content to write |\n| `encoding` | `str` | `\"utf-8\"` | text encoding |\n| `mode` | `int` or `None` | `None` | if set, `chmod` the new file to this mode (octal). If `None` and the target already exists, preserve the target's existing mode; otherwise the new file gets the default umask-derived mode. |\n\nRaises:",
+              "truncated": false,
+              "loaded": []
+            },
+            "title": "SPEC.md",
+            "time": {
+              "start": 1778242197909,
+              "end": 1778242197913
+            }
+          },
+          "id": "prt_e077e9992001Wz5v93Kd7KxnCY",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077e8e3d001RL1TAuM8JHVZwA"
+        },
+        {
+          "reason": "tool-calls",
+          "snapshot": "309808da3cf19bf3837bfb668617f71939986b8a",
+          "type": "step-finish",
+          "tokens": {
+            "total": 12909,
+            "input": 12689,
+            "output": 92,
+            "reasoning": 0,
+            "cache": {
+              "write": 0,
+              "read": 128
+            }
+          },
+          "cost": 0.01820268,
+          "id": "prt_e077e99e9001p1wjCC8fgHzv9X",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077e8e3d001RL1TAuM8JHVZwA"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_e077e8e19001a76f47l0YQHCWx",
+        "role": "assistant",
+        "mode": "build",
+        "agent": "build",
+        "path": {
+          "cwd": "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08",
+          "root": "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08"
+        },
+        "cost": 0.02666692,
+        "tokens": {
+          "total": 19436,
+          "input": 1909,
+          "output": 4695,
+          "reasoning": 0,
+          "cache": {
+            "write": 0,
+            "read": 12832
+          }
+        },
+        "modelID": "glm-5.1",
+        "providerID": "opencode-go",
+        "time": {
+          "created": 1778242198024,
+          "completed": 1778242283175
+        },
+        "finish": "tool-calls",
+        "id": "msg_e077e9a08002OsR6Jmn9ysPfpv",
+        "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ"
+      },
+      "parts": [
+        {
+          "snapshot": "309808da3cf19bf3837bfb668617f71939986b8a",
+          "type": "step-start",
+          "id": "prt_e077e9ce8001w2mmgwzZx5y5XD",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077e9a08002OsR6Jmn9ysPfpv"
+        },
+        {
+          "type": "reasoning",
+          "text": "Now I have a clear understanding of the spec. Let me implement `atomic_write.py`:\n\nKey requirements:\n1. Two functions: `atomic_write_text` and `atomic_write_bytes`\n2. CLI entry point that reads stdin and writes atomically\n3. Stdlib only\n4. Temp file in same directory as target\n5. fsync file before close, fsync parent dir after replace\n6. Clean up temp file on any error\n7. Symlink handling: resolve symlinks, write to target\n8. Mode handling: if mode is None and target exists, preserve existing mode; if mode is provided, chmod to that mode; otherwise umask-derived\n9. CLI: read stdin as bytes, write atomically, exit 0 on success, non-zero on error with stderr message\n\nLet me implement this carefully.\n\nFor symlinks: when path is a symlink, we need to resolve it and write to the resolved target. The temp file should live next to the resolved target.\n\nFor mode handling:\n- If mode is explicitly set \u2192 chmod to mode\n- If mode is None and target already exists \u2192 preserve target's existing mode\n- If mode is None and target doesn't exist \u2192 let umask decide (default)\n\nLet me write the implementation:\n\n```python\nimport os\nimport sys\nimport tempfile\n\ndef _atomic_write(path, data, *, encoding=None, mode=None):\n    path = os.fspath(path)\n    \n    # Resolve symlinks - write to the symlink target\n    real_path = os.path.realpath(path)\n    \n    parent = os.path.dirname(real_path)\n    if not os.path.isdir(parent):\n        raise FileNotFoundError(f\"Parent directory does not exist: {parent}\")\n    \n    # If target exists and is a directory, raise IsADirectoryError\n    if os.path.isdir(real_path):\n        raise IsADirectoryError(f\"Is a directory: {real_path}\")\n    \n    # Capture existing mode if needed\n    preserve_mode = None\n    if mode is None:\n        try:\n            preserve_mode = os.stat(real_path).st_mode & 0o7777\n        except FileNotFoundError:\n            pass\n    \n    tmp_fd = None\n    tmp_path = None\n    try:\n        # Create temp file in same directory\n        fd, tmp_path = tempfile.mkstemp(dir=parent)\n        tmp_fd = os.fdopen(fd, 'wb' if encoding is None else 'w', \n                           encoding=encoding if encoding else 'utf-8')\n        \n        tmp_fd.write(data)\n        tmp_fd.flush()\n        os.fsync(tmp_fd.fileno())\n        tmp_fd.close()\n        tmp_fd = None\n        \n        # Apply mode\n        if mode is not None:\n            os.chmod(tmp_path, mode)\n        elif preserve_mode is not None:\n            os.chmod(tmp_path, preserve_mode)\n        \n        # Atomic replace\n        os.replace(tmp_path, real_path)\n        tmp_path = None\n        \n        # fsync parent directory for durability\n        parent_fd = os.open(parent, os.O_RDONLY)\n        try:\n            os.fsync(parent_fd)\n        finally:\n            os.close(parent_fd)\n    except BaseException:\n        if tmp_fd is not None:\n            try:\n                tmp_fd.close()\n            except Exception:\n                pass\n        if tmp_path is not None:\n            try:\n                os.unlink(tmp_path)\n            except Exception:\n                pass\n        raise\n```\n\nWait, I need to be careful about a few things:\n\n1. `os.fdopen` returns a file object. When we call `tmp_fd.close()`, it also closes the underlying file descriptor. But we need to fsync before close. Let me adjust.\n\n2. For `atomic_write_text`, encoding is used. For `atomic_write_bytes`, no encoding.\n\n3. The `os.fdopen` call: we need to handle the encoding parameter correctly.\n\nLet me think about this more carefully.\n\nActually, `tempfile.mkstemp` returns a file descriptor and a path. The file descriptor is already open. We need to:\n1. Wrap it with `os.fdopen` for writing\n2. Write data\n3. Flush and fsync\n4. Close\n5. os.replace\n6. fsync parent dir\n\nLet me also handle the case where `path` is a symlink properly. The spec says: \"If path is a symlink, write to the symlink target, not replace the symlink itself.\" So we use `os.path.realpath(path)` to resolve symlinks.\n\nBut wait - there's a subtlety. When we do `os.replace(tmp_path, real_path)`, where real_path is the resolved path, this should work correctly. The temp file is created next to the resolved target, and we replace the resolved target.\n\nActually, let me reconsider. What if the path doesn't exist yet but the parent directory exists and is a symlink? `os.path.realpath` would resolve the parent directory symlink, which is fine.\n\nWhat about the `IsADirectoryError` check? We should check the resolved path.\n\nLet me refactor:\n\n```python\ndef _atomic_write(path, data, *, encoding=None, mode=None):\n    path = os.fspath(path)\n    real_path = os.path.realpath(path)\n    parent = os.path.dirname(real_path)\n    \n    # Check parent exists\n    if not os.path.isdir(parent):\n        raise FileNotFoundError(f\"Parent directory does not exist: {parent}\")\n    \n    # Check target is not a directory\n    try:\n        if os.path.isdir(real_path):\n            raise IsADirectoryError(f\"Is a directory: {real_path}\")\n    except FileNotFoundError:\n        pass  # Target doesn't exist yet, which is fine\n    \n    # Determine mode\n    apply_mode = mode\n    if apply_mode is None:\n        try:\n            apply_mode = os.stat(real_path).st_mode & 0o7777\n        except FileNotFoundError:\n            apply_mode = None  # Let umask decide\n    \n    tmp_path = None\n    file_obj = None\n    try:\n        fd, tmp_path = tempfile.mkstemp(dir=parent)\n        if encoding is not None:\n            file_obj = os.fdopen(fd, 'w', encoding=encoding)\n        else:\n            file_obj = os.fdopen(fd, 'wb')\n        \n        file_obj.write(data)\n        file_obj.flush()\n        os.fsync(file_obj.fileno())\n        file_obj.close()\n        file_obj = None\n        \n        if apply_mode is not None:\n            os.chmod(tmp_path, apply_mode)\n        \n        os.replace(tmp_path, real_path)\n        tmp_path = None  # Successfully replaced, don't clean up\n        \n        # fsync parent directory\n        parent_fd = os.open(parent, os.O_RDONLY)\n        try:\n            os.fsync(parent_fd)\n        finally:\n            os.close(parent_fd)\n    except BaseException:\n        if file_obj is not None:\n            try:\n                file_obj.close()\n            except Exception:\n                pass\n        if tmp_path is not None and os.path.exists(tmp_path):\n            try:\n                os.unlink(tmp_path)\n            except Exception:\n                pass\n        raise\n```\n\nWait, but there's a conflict with `os.path.isdir`. If the path exists and is a directory, `os.path.isdir` returns True. But what if the path doesn't exist? Then `os.path.isdir` returns False and we skip the check. But we should still check - if the path doesn't exist, that's fine. If it exists as a file, also fine. If it exists as a directory, raise IsADirectoryError.\n\nActually, I had it right. Let me re-check:\n\n```python\ntry:\n    if os.path.isdir(real_path):\n        raise IsADirectoryError(...)\nexcept FileNotFoundError:\n    pass\n```\n\nBut `os.path.isdir` won't raise FileNotFoundError - it just returns False if the path doesn't exist. So this simpler code works:\n\n```python\nif os.path.isdir(real_path):\n    raise IsADirectoryError(...)\n```\n\nThis handles all cases: if path doesn't exist, `isdir` returns False and we proceed. If path exists as file, `isdir` returns False and we proceed. If path exists as directory, we raise.\n\nActually wait, I need to be more careful. What if the path is a symlink pointing to a directory? `os.path.isdir` follows symlinks, so it would return True. But we've already resolved the symlink with `realpath`, so this should be fine.\n\nHmm, but actually the spec says \"If path is a symlink, write to the symlink target, not replace the symlink itself.\" So we resolve the path first, then check if it's a directory. That's what we're doing.\n\nLet me also think about the edge case where `path` doesn't exist but the parent does. In this case, `os.path.realpath(path)` would still resolve the parent directory part, but the final component wouldn't resolve. For example, if path is `/foo/bar` and `/foo` exists but `/foo/bar` doesn't, then `os.path.realpath(path)` returns `/foo/bar` (with the parent resolved). This is the correct behavior.\n\nBut wait, what if `path` is a symlink that points to a non-existent target? `os.path.realpath` resolves symlinks but doesn't check if the final target exists. So if `/foo/link` is a symlink to `/foo/nonexistent`, then `realpath` would resolve to `/foo/nonexistent`. That's fine - we'd check the parent directory and proceed.\n\nActually, I just realized there might be an issue. `os.path.realpath(path)` resolves symlinks in the path. But what if the path itself doesn't exist yet (we're creating a new file)? `realpath` still works - it resolves what it can and leaves the rest as-is.\n\nBut there's a subtle issue: what if `path` is `/some/dir/link/filename` where `link` is a symlink? `realpath` would resolve `link` to its target, which is correct.\n\nOK I think the implementation is sound. Let me also handle the case for the `os.path.isdir` check differently. Instead of calling `os.path.isdir` on `real_path`, I should handle the case where `path` itself (before resolving) might be a symlink pointing to a directory. But actually, since we've resolved with `realpath`, `real_path` is the actual path. If `real_path` is an existing directory, we should raise. If it doesn't exist, we should proceed. If it's an existing file, we should replace it.\n\nWait, but there's another subtlety. What about the check for `IsADirectoryError`? The spec says: \"IsADirectoryError \u2014 path exists and is a directory\". Note it says `path`, not `real_path`. But since we're writing to the resolved target, we should check `real_path`. I think the spec means that if the location we'd write to is a directory, we should error.\n\nOK, let me also think about the case where `path` is a dangling symlink. `os.path.realpath('/foo/dangling_link')` where `dangling_link` -> `/nonexistent`. In this case, `realpath` would return `/nonexistent`. Then we'd check if the parent directory of `/nonexistent` exists, which might not, so we'd get a FileNotFoundError. That's the correct behavior.\n\nBut wait, what if `path` is a symlink but the target exists and is a directory? `realpath` resolves to the directory, then `isdir` returns True, and we raise IsADirectoryError. Good.\n\nWhat if `path` itself is a directory (not a symlink)? Then `realpath` returns the same path (since it's not a symlink), `isdir` returns True, and we raise IsADirectoryError. Good.\n\nI think my implementation is solid. Let me also think about the `os.replace` step. `os.replace` is atomic on POSIX when source and destination are on the same filesystem. Since we create the temp file in the same directory as the target, they're on the same filesystem. Good.\n\nOne more thing: the spec says \"If the target already existed and mode is None, the new file inherits the target's pre-existing mode bits.\" My implementation handles this correctly - if mode is None, I look up the existing file's mode, and if the file exists, I apply that mode. If the file doesn't exist, I don't apply any mode (umask decides).\n\nLet me finalize the code now.\n\nActually, I want to also handle the `FileNotFoundError` case properly. When the parent directory doesn't exist, `os.path.isdir` returns False. But I want to distinguish between \"parent doesn't exist\" and \"parent exists but path's parent is not a directory\". Actually, `os.path.isdir` returns True only if the path exists AND is a directory. If the parent path doesn't exist, it returns False. So my check should be:\n\n```python\nif not os.path.isdir(parent):\n    raise FileNotFoundError(f\"Parent directory does not exist: {parent}\")\n```\n\nThis handles both cases: parent doesn't exist at all, or parent exists but is not a directory. Though the error message could be more precise, but FileNotFoundError is the right exception per spec.\n\nHmm, but actually if `parent` exists as a regular file, `os.path.isdir` returns False, and we'd raise FileNotFoundError. That's a bit misleading but per the spec, FileNotFoundError is the right exception for \"parent directory doesn't exist\". And if the parent is a file, the `mkstemp` would fail with a different error anyway. Let me simplify:\n\nActually wait, let me re-read the spec's error conditions:\n- `FileNotFoundError` \u2014 parent directory doesn't exist (no temp residue)\n- `IsADirectoryError` \u2014 `path` exists and is a directory\n- `PermissionError` \u2014 can't create temp file or replace target\n- `OSError` \u2014 any other I/O failure\n\nSo I should raise FileNotFoundError specifically when the parent directory doesn't exist. If the parent exists but is a file (not a directory), that's more of an OSError or NotADirectoryError. But since the spec only lists these specific exceptions, I'll just check for non-existence of parent directory:\n\nActually, I think the simplest approach is:\n1. If parent is not a directory (either doesn't exist or isn't a dir), the `tempfile.mkstemp` call will fail naturally with appropriate exceptions (FileNotFoundError if parent doesn't exist, or OSError).\n2. I just need to handle the IsADirectoryError case explicitly.\n\nHmm, but `tempfile.mkstemp(dir=parent)` will raise FileNotFoundError if parent doesn't exist, and that's the right error. But I want to ensure no temp residue in that case too. Since mkstemp fails before creating a file, there's nothing to clean up. So maybe I don't need the explicit check.\n\nBut actually, it's good practice to check upfront so we can give a clean error and ensure no temp residue. Let me keep the check.\n\nWait, there's actually a race condition here. Between checking `os.path.isdir(parent)` and calling `mkstemp`, the directory could be removed. But that's fine - `mkstemp` would fail and we'd raise FileNotFoundError. The check is just for early validation.\n\nActually, for robustness, I think I should let the natural exceptions propagate from `mkstemp` and focus on cleanup in the error handler. The explicit checks are nice for early errors but not strictly necessary.\n\nLet me simplify and not do the explicit checks, relying on the natural errors:\n\n```python\ndef _atomic_write(path, data, *, encoding=None, mode=None):\n    path = os.fspath(path)\n    real_path = os.path.realpath(path)\n    parent = os.path.dirname(real_path)\n    \n    # Determine mode to apply\n    apply_mode = mode\n    if apply_mode is None:\n        try:\n            st = os.stat(real_path)\n            apply_mode = st.st_mode & 0o7777\n        except FileNotFoundError:\n            pass\n    \n    # Check if target is a directory (by resolved path)\n    if os.path.isdir(real_path):\n        raise IsADirectoryError(f\"Is a directory: {real_path}\")\n    \n    tmp_path = None\n    file_obj = None\n    try:\n        fd, tmp_path = tempfile.mkstemp(dir=parent)\n        if encoding is not None:\n            file_obj = os.fdopen(fd, 'w', encoding=encoding)\n        else:\n            file_obj = os.fdopen(fd, 'wb')\n        \n        file_obj.write(data)\n        file_obj.flush()\n        os.fsync(file_obj.fileno())\n        file_obj.close()\n        file_obj = None\n        \n        if apply_mode is not None:\n            os.chmod(tmp_path, apply_mode)\n        \n        os.replace(tmp_path, real_path)\n        tmp_path = None\n        \n        parent_fd = os.open(parent, os.O_RDONLY)\n        try:\n            os.fsync(parent_fd)\n        finally:\n            os.close(parent_fd)\n    except BaseException:\n        if file_obj is not None:\n            try:\n                file_obj.close()\n            except Exception:\n                pass\n        if tmp_path is not None:\n            try:\n                os.unlink(tmp_path)\n            except Exception:\n                pass\n        raise\n```\n\nWait, I need to handle one more thing. The `os.stat(real_path)` call for mode detection happens before we create the temp file. If the target doesn't exist, we get FileNotFoundError (which is caught by the try/except), so `apply_mode` stays None. That's correct.\n\nBut there's a race: between `os.stat` and the `os.replace`, another process could delete the target file. In that case, we'd apply the old mode to the new file, which is the best we can do (we can't know the mode was changed between our check and the replace). This is fine per the spec.\n\nActually wait, there's another subtle issue. We check the mode with `os.stat(real_path)` before creating the temp file. But if `real_path` doesn't exist yet, `os.stat` raises `FileNotFoundError` which we catch, and `apply_mode` stays None (no explicit mode, letting umask decide). This is correct per the spec.\n\nBut also: what about the `IsADirectoryError` check? If `path` is a dangling symlink (pointing to non-existent target), then `real_path` won't be a directory, so we'd skip the check and proceed. When we do `os.replace(tmp_path, real_path)`, it would create the file at the resolved path. That... might not be what we want. Actually, it is what we want per the spec: \"write to the symlink target\".\n\nBut what about the case where `path` is a symlink AND the symlink target is a directory? Then `real_path` would be an actual directory path, and `os.path.isdir(real_path)` would return True, and we'd raise IsADirectoryError. Good.\n\nOne more edge case: what if `path` is a symlink to a symlink? `os.path.realpath` resolves all symlinks, so we'd get the final target. Good.\n\nOK, I think the implementation is solid. Let me also handle the CLI part:\n\n```python\nif __name__ == '__main__':\n    if len(sys.argv) != 2:\n        print(f\"Usage: {sys.argv[0]} <path>\", file=sys.stderr)\n        sys.exit(1)\n    try:\n        data = sys.stdin.buffer.read()\n        atomic_write_bytes(sys.argv[1], data)\n    except Exception as e:\n        print(f\"Error: {e}\", file=sys.stderr)\n        sys.exit(1)\n```\n\nLet me put it all together now.",
+          "time": {
+            "start": 1778242198761,
+            "end": 1778242282968
+          },
+          "id": "prt_e077e9ce9001hYuZQKdeDuFcV2",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077e9a08002OsR6Jmn9ysPfpv"
+        },
+        {
+          "type": "tool",
+          "tool": "write",
+          "callID": "call_5c13",
+          "state": {
+            "status": "completed",
+            "input": {
+              "filePath": "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08/atomic_write.py",
+              "content": "\"\"\"Atomic file writes: either fully succeed or leave previous contents intact.\"\"\"\n\nimport os\nimport sys\nimport tempfile\n\n\ndef _atomic_write(path, data, *, encoding=None, mode=None):\n    path = os.fspath(path)\n    real_path = os.path.realpath(path)\n    parent = os.path.dirname(real_path)\n\n    if os.path.isdir(real_path):\n        raise IsADirectoryError(f\"Is a directory: {real_path}\")\n\n    apply_mode = mode\n    if apply_mode is None:\n        try:\n            apply_mode = os.stat(real_path).st_mode & 0o7777\n        except FileNotFoundError:\n            pass\n\n    tmp_path = None\n    file_obj = None\n    try:\n        fd, tmp_path = tempfile.mkstemp(dir=parent)\n        try:\n            if encoding is not None:\n                file_obj = os.fdopen(fd, \"w\", encoding=encoding)\n            else:\n                file_obj = os.fdopen(fd, \"wb\")\n            file_obj.write(data)\n            file_obj.flush()\n            os.fsync(file_obj.fileno())\n            file_obj.close()\n        except BaseException:\n            os.close(fd)\n            raise\n        file_obj = None\n\n        if apply_mode is not None:\n            os.chmod(tmp_path, apply_mode)\n\n        os.replace(tmp_path, real_path)\n        tmp_path = None\n\n        parent_fd = os.open(parent, os.O_RDONLY)\n        try:\n            os.fsync(parent_fd)\n        finally:\n            os.close(parent_fd)\n    except BaseException:\n        if file_obj is not None:\n            try:\n                file_obj.close()\n            except Exception:\n                pass\n        if tmp_path is not None:\n            try:\n                os.unlink(tmp_path)\n            except Exception:\n                pass\n        raise\n\n\ndef atomic_write_text(path, data, *, encoding=\"utf-8\", mode=None) -> None:\n    _atomic_write(path, data, encoding=encoding, mode=mode)\n\n\ndef atomic_write_bytes(path, data, *, mode=None) -> None:\n    _atomic_write(path, data, encoding=None, mode=mode)\n\n\nif __name__ == \"__main__\":\n    if len(sys.argv) != 2:\n        print(f\"Usage: {sys.argv[0]} <path>\", file=sys.stderr)\n        sys.exit(1)\n    try:\n        data = sys.stdin.buffer.read()\n        atomic_write_bytes(sys.argv[1], data)\n    except Exception as e:\n        print(f\"Error: {e}\", file=sys.stderr)\n        sys.exit(1)"
+            },
+            "output": "Wrote file successfully.",
+            "metadata": {
+              "diagnostics": {},
+              "filepath": "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08/atomic_write.py",
+              "exists": false,
+              "truncated": false
+            },
+            "title": "atomic_write.py",
+            "time": {
+              "start": 1778242282978,
+              "end": 1778242282984
+            }
+          },
+          "id": "prt_e077fe5dd001I3N6InhewNco79",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077e9a08002OsR6Jmn9ysPfpv"
+        },
+        {
+          "reason": "tool-calls",
+          "snapshot": "6cc13da866a0319a1705b5c6231be1223ef54094",
+          "type": "step-finish",
+          "tokens": {
+            "total": 19436,
+            "input": 1909,
+            "output": 4695,
+            "reasoning": 0,
+            "cache": {
+              "write": 0,
+              "read": 12832
+            }
+          },
+          "cost": 0.02666692,
+          "id": "prt_e077fe678001QUKX0Z4jqPNQrF",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077e9a08002OsR6Jmn9ysPfpv"
+        },
+        {
+          "type": "patch",
+          "hash": "309808da3cf19bf3837bfb668617f71939986b8a",
+          "files": [
+            "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08/atomic_write.py"
+          ],
+          "id": "prt_e077fe6a50018u3w2HtrcD1F3J",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077e9a08002OsR6Jmn9ysPfpv"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_e077e8e19001a76f47l0YQHCWx",
+        "role": "assistant",
+        "mode": "build",
+        "agent": "build",
+        "path": {
+          "cwd": "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08",
+          "root": "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08"
+        },
+        "cost": 0.00820064,
+        "tokens": {
+          "total": 20155,
+          "input": 22,
+          "output": 709,
+          "reasoning": 0,
+          "cache": {
+            "write": 0,
+            "read": 19424
+          }
+        },
+        "modelID": "glm-5.1",
+        "providerID": "opencode-go",
+        "time": {
+          "created": 1778242283176,
+          "completed": 1778242292521
+        },
+        "finish": "tool-calls",
+        "id": "msg_e077fe6a8002Vq2KqRTuoXD46O",
+        "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ"
+      },
+      "parts": [
+        {
+          "snapshot": "6cc13da866a0319a1705b5c6231be1223ef54094",
+          "type": "step-start",
+          "id": "prt_e077fea31001GVX6JI7SuRJ3UM",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077fe6a8002Vq2KqRTuoXD46O"
+        },
+        {
+          "type": "reasoning",
+          "text": "Now let me run a smoke test: write a small file, verify it exists with the right content, and check no .tmp files remain.",
+          "time": {
+            "start": 1778242284083,
+            "end": 1778242292271
+          },
+          "id": "prt_e077fea33001289FxdDW6B9OE0",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077fe6a8002Vq2KqRTuoXD46O"
+        },
+        {
+          "type": "tool",
+          "tool": "bash",
+          "callID": "call_54de",
+          "state": {
+            "status": "completed",
+            "input": {
+              "command": "cd /Users/fole/Desktop/eval-atomic-write-glm-2026-05-08 && python3 -c \"\nfrom atomic_write import atomic_write_text, atomic_write_bytes\nimport tempfile, os, pathlib\n\ntmpdir = tempfile.mkdtemp()\n\n# Test 1: text write\np = os.path.join(tmpdir, 'hello.txt')\natomic_write_text(p, 'hello world\\n')\nassert open(p).read() == 'hello world\\n', f'text mismatch: {open(p).read()!r}'\n\n# Test 2: bytes write\np2 = os.path.join(tmpdir, 'blob.bin')\natomic_write_bytes(p2, b'\\x00\\x01\\x02')\nassert open(p2, 'rb').read() == b'\\x00\\x01\\x02', 'bytes mismatch'\n\n# Test 3: mode preservation\np3 = os.path.join(tmpdir, 'script.sh')\natomic_write_text(p3, '#!/bin/sh\\necho hi\\n', mode=0o755)\nst = os.stat(p3)\nassert (st.st_mode & 0o777) == 0o755, f'mode mismatch: {oct(st.st_mode)}'\n\n# Test 4: mode reuse on overwrite\np4 = os.path.join(tmpdir, 'keepmode.txt')\natomic_write_text(p4, 'first', mode=0o640)\natomic_write_text(p4, 'second')\nst4 = os.stat(p4)\nassert (st4.st_mode & 0o777) == 0o640, f'mode not preserved: {oct(st4.st_mode)}'\nassert open(p4).read() == 'second'\n\n# Test 5: no .tmp residue\ntmps = [f for f in os.listdir(tmpdir) if f.endswith('.tmp')]\nassert tmps == [], f'tmp residue: {tmps}'\n\n# Test 6: symlink handling\ntarget = os.path.join(tmpdir, 'real.txt')\nlink = os.path.join(tmpdir, 'link.txt')\natomic_write_text(target, 'original\\n')\nos.symlink(target, link)\natomic_write_text(link, 'via_symlink\\n')\nassert os.path.islink(link), 'symlink was replaced, not followed'\nassert open(link).read() == 'via_symlink\\n', 'symlink target not written'\nassert open(target).read() == 'via_symlink\\n', 'target not updated'\n\n# Test 7: CLI\nimport subprocess, sys\ncli_target = os.path.join(tmpdir, 'cli_out.txt')\nresult = subprocess.run(\n    [sys.executable, 'atomic_write.py', cli_target],\n    input=b'from cli\\n', check=True, capture_output=True\n)\nassert open(cli_target).read() == 'from cli\\n', 'CLI write mismatch'\n\n# Test 8: CLI error exit\nresult = subprocess.run(\n    [sys.executable, 'atomic_write.py'],\n    capture_output=True\n)\nassert result.returncode != 0, 'CLI should fail without path arg'\n\nimport shutil\nshutil.rmtree(tmpdir)\nprint('ALL SMOKE TESTS PASSED')\n\"",
+              "description": "Run smoke tests for atomic_write.py"
+            },
+            "output": "ALL SMOKE TESTS PASSED\n",
+            "metadata": {
+              "output": "ALL SMOKE TESTS PASSED\n",
+              "exit": 0,
+              "description": "Run smoke tests for atomic_write.py",
+              "truncated": false
+            },
+            "title": "Run smoke tests for atomic_write.py",
+            "time": {
+              "start": 1778242292439,
+              "end": 1778242292446
+            }
+          },
+          "id": "prt_e07800a32001jSsGK8tszjpHDf",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077fe6a8002Vq2KqRTuoXD46O"
+        },
+        {
+          "reason": "tool-calls",
+          "snapshot": "6cc13da866a0319a1705b5c6231be1223ef54094",
+          "type": "step-finish",
+          "tokens": {
+            "total": 20155,
+            "input": 22,
+            "output": 709,
+            "reasoning": 0,
+            "cache": {
+              "write": 0,
+              "read": 19424
+            }
+          },
+          "cost": 0.00820064,
+          "id": "prt_e07800b05001mmiY2qZDopB6Uz",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e077fe6a8002Vq2KqRTuoXD46O"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_e077e8e19001a76f47l0YQHCWx",
+        "role": "assistant",
+        "mode": "build",
+        "agent": "build",
+        "path": {
+          "cwd": "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08",
+          "root": "/Users/fole/Desktop/eval-atomic-write-glm-2026-05-08"
+        },
+        "cost": 0.00533468,
+        "tokens": {
+          "total": 20179,
+          "input": 41,
+          "output": 10,
+          "reasoning": 0,
+          "cache": {
+            "write": 0,
+            "read": 20128
+          }
+        },
+        "modelID": "glm-5.1",
+        "providerID": "opencode-go",
+        "time": {
+          "created": 1778242292523,
+          "completed": 1778242293931
+        },
+        "finish": "stop",
+        "id": "msg_e07800b2b001FaqIYnN3ER1vRH",
+        "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ"
+      },
+      "parts": [
+        {
+          "snapshot": "6cc13da866a0319a1705b5c6231be1223ef54094",
+          "type": "step-start",
+          "id": "prt_e07800fcd001m3kXgHsq6HUkVT",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e07800b2b001FaqIYnN3ER1vRH"
+        },
+        {
+          "type": "text",
+          "text": "Done. Implementation in `atomic_write.py`.",
+          "time": {
+            "start": 1778242293711,
+            "end": 1778242293848
+          },
+          "id": "prt_e07800fcf0013wKbf9tlUEFuA4",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e07800b2b001FaqIYnN3ER1vRH"
+        },
+        {
+          "reason": "stop",
+          "snapshot": "6cc13da866a0319a1705b5c6231be1223ef54094",
+          "type": "step-finish",
+          "tokens": {
+            "total": 20179,
+            "input": 41,
+            "output": 10,
+            "reasoning": 0,
+            "cache": {
+              "write": 0,
+              "read": 20128
+            }
+          },
+          "cost": 0.00533468,
+          "id": "prt_e078010870019B87w4v4U5M1u6",
+          "sessionID": "ses_1f88171ffffefBbYNd41qJAIVJ",
+          "messageID": "msg_e07800b2b001FaqIYnN3ER1vRH"
+        }
+      ]
+    }
+  ]
+}
