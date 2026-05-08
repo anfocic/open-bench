@@ -23,7 +23,7 @@ const { entries, date } = Astro.props;
         <h3>
           <a href={`#impl-${detail.impl}`} class="anchor-link">#</a>
           {detail.impl}
-          <a href={`/round/${date}/${detail.impl}`} class="impl-view-run">view full run &rarr;</a>
+          <a href={`/model-royale/round/${date}/${detail.impl}`} class="impl-view-run">view full run &rarr;</a>
         </h3>
         <p class="muted section-subtitle" style="font-family:var(--mono)">{detail.runPath}</p>
         {detail.scores.length > 0 && (

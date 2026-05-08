@@ -4,11 +4,9 @@
 
 html.deck-on,
 html.deck-on body {
-  overflow: hidden;
   overscroll-behavior: none;
-  height: 100%;
 }
-html.deck-on body { touch-action: none; }
+html.deck-on body { touch-action: pan-y; }
 
 .deck-toc {
   display: flex;
@@ -40,15 +38,15 @@ html.deck-on body { touch-action: none; }
 
 .deck {
   position: relative;
-  height: calc(100vh - 130px);
+  height: clamp(360px, calc(100vh - 380px), 640px);
   overflow: hidden;
 }
 .deck-section {
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: center;
-  padding: 24px 0;
+  align-items: flex-start;
+  padding: 8px 0 16px;
   opacity: 0;
   pointer-events: none;
 }
@@ -142,20 +140,17 @@ html.deck-on body { touch-action: none; }
 .deck-links a { color: var(--accent); }
 
 .deck-hint {
-  position: fixed;
-  bottom: 14px;
-  left: 0;
-  right: 0;
   text-align: center;
   font-size: 13.2px;
   pointer-events: none;
   letter-spacing: 0.06em;
+  padding: 10px 0 4px;
 }
 
 @media (max-width: 600px) {
   .deck-defs > div { grid-template-columns: 1fr; gap: 4px; }
   .deck-section h2 { font-size: 22px; }
-  .deck { height: calc(100vh - 110px); }
+  .deck { height: clamp(320px, calc(100vh - 340px), 560px); }
 }
 
 /* Push transition: outgoing and incoming move in lockstep at full width.

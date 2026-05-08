@@ -106,7 +106,13 @@ body {
   max-width: var(--max-content);
   line-height: 1.55;
   font-feature-settings: 'liga' 0, 'calt' 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
+
+body > .site-footer { margin-top: auto; }
 
 @media (max-width: 600px) {
   html { font-size: 15.6px; }

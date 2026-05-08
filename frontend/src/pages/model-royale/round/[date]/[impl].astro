@@ -1,15 +1,16 @@
 ---
-import BaseLayout from '../../../layouts/BaseLayout.astro';
-import Header from '../../../components/Header.astro';
-import Footer from '../../../components/Footer.astro';
-import Masthead from '../../../components/Masthead.astro';
-import BackToTop from '../../../components/BackToTop.astro';
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import Header from '../../../../components/Header.astro';
+import RoyaleNav from "../../../../components/RoyaleNav.astro";
+import Footer from '../../../../components/Footer.astro';
+import Masthead from '../../../../components/Masthead.astro';
+import BackToTop from '../../../../components/BackToTop.astro';
 import { getCollection } from 'astro:content';
-import { pickCanonicalRun, type RunArtifacts } from '../../../lib/runs';
-import { highlight } from '../../../lib/highlight';
-import { fmtCost, fmtSec, fmtTok, fmtDate, passFailIcon, passFailClass } from '../../../lib/format';
-import { renderMarkdown } from '../../../lib/markdown';
-import { templateSeo } from '../../../lib/seo';
+import { pickCanonicalRun, type RunArtifacts } from '../../../../lib/runs';
+import { highlight } from '../../../../lib/highlight';
+import { fmtCost, fmtSec, fmtTok, fmtDate, passFailIcon, passFailClass } from '../../../../lib/format';
+import { renderMarkdown } from '../../../../lib/markdown';
+import { templateSeo } from '../../../../lib/seo';
 
 export const prerender = true;
 
@@ -51,10 +52,10 @@ const sandboxLineCount = artifacts.sandboxPy?.split('\n').length ?? 0;
 const transcriptByteSize = artifacts.transcript ? new TextEncoder().encode(artifacts.transcript).length : 0;
 const firstTab = sandboxHtml ? 'code' : diffHtml ? 'diff' : testHtml ? 'tests' : transcriptHtml ? 'transcript' : 'code';
 
-const canonicalPath = `/round/${date}/${impl}`;
+const canonicalPath = `/model-royale/round/${date}/${impl}`;
 const trail = [
   { name: 'open-bench', path: '/' },
-  { name: `round ${date}`, path: `/round/${date}` },
+  { name: `round ${date}`, path: `/model-royale/round/${date}` },
   { name: impl, path: canonicalPath },
 ];
 const seo = templateSeo(
@@ -68,15 +69,16 @@ const seo = templateSeo(
 
 <BaseLayout seo={seo}>
   <Header subtitle={`${impl} / ${fmtDate(date)}`} />
+  <RoyaleNav />
 
   <div style="margin:12px 0 0">
-    <a href={`/round/${date}`} class="back-link-arrow">&larr; back to round {fmtDate(date)}</a>
+    <a href={`/model-royale/round/${date}`} class="back-link-arrow">&larr; back to round {fmtDate(date)}</a>
   </div>
 
   <nav class="model-tabs" aria-label="Models in round">
     {allImpls.map(name => (
       <a
-        href={`/round/${date}/${name}`}
+        href={`/model-royale/round/${date}/${name}`}
         class:list={['model-tab', { active: name === impl }]}
         aria-current={name === impl ? 'page' : undefined}
         data-impl={name}
@@ -144,7 +146,7 @@ const seo = templateSeo(
   </div>
 
   <script>
-    import { initTabs } from '../../../scripts/tabs';
+    import { initTabs } from '../../../../scripts/tabs';
     initTabs();
   </script>
 

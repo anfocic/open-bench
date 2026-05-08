@@ -24,6 +24,18 @@ const dateFromRoundUrl = (url) => {
 export default defineConfig({
   site: 'https://openbenchmark.dev',
   trailingSlash: 'never',
+  redirects: {
+    '/round': '/model-royale/round',
+    '/round/[date]': '/model-royale/round/[date]',
+    '/round/[date]/[impl]': '/model-royale/round/[date]/[impl]',
+    '/leaderboard': '/model-royale/leaderboard',
+    '/notes': '/model-royale/writeups',
+    '/notes/[slug]': '/model-royale/writeups/[slug]',
+    '/compare': '/model-royale/compare',
+    '/compare/[a]/vs/[b]': '/model-royale/compare/[a]/vs/[b]',
+    '/model/[impl]': '/model-royale/model/[impl]',
+    '/changelog': '/model-royale/changelog',
+  },
   integrations: [
     ogIntegration,
     mdx(),
@@ -52,10 +64,10 @@ export default defineConfig({
         } else if (u.includes('/model/')) {
           item.changefreq = 'weekly';
           item.priority = 0.6;
-        } else if (u.endsWith('/notes')) {
+        } else if (u.endsWith('/writeups')) {
           item.changefreq = 'weekly';
           item.priority = 0.8;
-        } else if (u.includes('/notes/')) {
+        } else if (u.includes('/writeups/')) {
           item.changefreq = 'monthly';
           item.priority = 0.7;
         } else if (u.endsWith('/dataset')) {

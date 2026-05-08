@@ -25,7 +25,7 @@ const seo: SeoProps = {
 
 <BaseLayout seo={seo}>
   <Header subtitle="404" />
-  <Masthead title="404" subtitle={latestRound ? `no such round, page, or path. try <a href="/round/${latestRound.date}">round ${latestRound.date}</a> or <a href="/">home</a>.` : 'no such round, page, or path.'} />
+  <Masthead title="404" subtitle={latestRound ? `no such round, page, or path. try <a href="/model-royale/round/${latestRound.date}">round ${latestRound.date}</a> or <a href="/">home</a>.` : 'no such round, page, or path.'} />
   {rounds.length > 0 && (
     <section>
       <h2>rounds</h2>
@@ -33,7 +33,7 @@ const seo: SeoProps = {
         {rounds.slice(0, 5).map(r => {
           const c = findChampion(r.scoreboard);
           return (
-            <a href={`/round/${r.date}`}>
+            <a href={`/model-royale/round/${r.date}`}>
               <div class="row">
                 <span class="date">{r.date}</span>
                 <span class="winner">{c.impl}</span>
