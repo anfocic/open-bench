@@ -57,6 +57,15 @@ const fmtDelta = (v: number | null): string => {
   const sign = v > 0 ? '+' : '';
   return `${sign}${v.toFixed(1)}`;
 };
+
+const finished = standing.history.filter(h => !h.dnf);
+const hardFailCount = standing.history.length - finished.length;
+const bestRound = finished.length
+  ? finished.reduce((best, h) => (h.score > best.score ? h : best))
+  : null;
+const worstRound = finished.length
+  ? finished.reduce((worst, h) => (h.score < worst.score ? h : worst))
+  : null;
 ---
 
 <BaseLayout seo={seo}>
@@ -75,6 +84,21 @@ const fmtDelta = (v: number | null): string => {
       </span>
       <span>last {fmtDate(standing.lastSeen)}</span>
       <span class="trend">{sparkline(standing.history)}</span>
+    </div>
+    <div class="masthead-meta">
+      {bestRound && (
+        <span title={`Best score: ${fmtNum(bestRound.score, 1)}/30 in ${fmtDate(bestRound.date)}.`}>
+          best {fmtNum(bestRound.score, 1)} ({fmtDate(bestRound.date)})
+        </span>
+      )}
+      {worstRound && worstRound.date !== bestRound?.date && (
+        <span title={`Worst non-DNF score: ${fmtNum(worstRound.score, 1)}/30 in ${fmtDate(worstRound.date)}.`}>
+          worst {fmtNum(worstRound.score, 1)} ({fmtDate(worstRound.date)})
+        </span>
+      )}
+      <span title="Hidden-test failures across all rounds — model produced something the hidden tests rejected.">
+        hard-fails {hardFailCount}/{standing.history.length}
+      </span>
     </div>
   </Masthead>
 
