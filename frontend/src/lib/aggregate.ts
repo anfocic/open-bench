@@ -234,6 +234,44 @@ export function compareModels(a: string, b: string, rounds: Round[]): CompareSum
   };
 }
 
+export interface BiasRoundEntry {
+  date: string;
+  deltaSpec: number | null;
+  deltaQual: number | null;
+}
+
+export interface BiasSummary {
+  perRound: BiasRoundEntry[];
+  avgDeltaSpec: number | null;
+  avgDeltaQual: number | null;
+}
+
+function avgOrNull(xs: number[]): number | null {
+  if (xs.length === 0) return null;
+  return xs.reduce((s, x) => s + x, 0) / xs.length;
+}
+
+export function computeBias(impl: string, rounds: Round[]): BiasSummary {
+  const sorted = [...rounds].sort((a, b) => a.date.localeCompare(b.date));
+  const perRound: BiasRoundEntry[] = [];
+  for (const round of sorted) {
+    const entry = round.selfBias.find(b => b.impl === impl);
+    if (!entry) continue;
+    perRound.push({
+      date: round.date,
+      deltaSpec: entry.deltaSpec,
+      deltaQual: entry.deltaQual,
+    });
+  }
+  const specs = perRound.map(r => r.deltaSpec).filter((x): x is number => x !== null);
+  const quals = perRound.map(r => r.deltaQual).filter((x): x is number => x !== null);
+  return {
+    perRound,
+    avgDeltaSpec: avgOrNull(specs),
+    avgDeltaQual: avgOrNull(quals),
+  };
+}
+
 const SPARKS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 export function sparkline(history: ModelHistoryEntry[]): string {
   if (history.length === 0) return '';
