@@ -1,0 +1,104 @@
+
+
+diff --git a/Users/fole/Desktop/eval-atomic-write-kimi-2026-05-08/atomic_write.py b/Users/fole/Desktop/eval-atomic-write-kimi-2026-05-08/atomic_write.py
+new file mode 100644
+index 0000000..efef1b5
+--- /dev/null
++++ b/Users/fole/Desktop/eval-atomic-write-kimi-2026-05-08/atomic_write.py
+@@ -0,0 +1,96 @@
++import errno
++import os
++import stat
++import sys
++import uuid
++
++
++def _atomic_write(path, data, mode, is_text=False, encoding="utf-8"):
++    real_path = os.path.realpath(path)
++
++    if os.path.isdir(real_path):
++        raise IsADirectoryError(errno.EISDIR, os.strerror(errno.EISDIR), path)
++
++    dir_name = os.path.dirname(real_path) or "."
++
++    if not os.path.isdir(dir_name):
++        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
++
++    old_mode = None
++    if mode is None and os.path.exists(real_path):
++        old_mode = stat.S_IMODE(os.stat(real_path).st_mode)
++
++    tmp_path = os.path.join(dir_name, f".atomic_write_{uuid.uuid4().hex}")
++    fd = None
++
++    try:
++        fd = os.open(tmp_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666)
++
++        if is_text:
++            with os.fdopen(fd, "w", encoding=encoding, closefd=False) as f:
++                f.write(data)
++        else:
++            with os.fdopen(fd, "wb", closefd=False) as f:
++                f.write(data)
++
++        os.fsync(fd)
++        os.close(fd)
++        fd = None
++
++        if mode is not None:
++            os.chmod(tmp_path, mode)
++
++        os.replace(tmp_path, real_path)
++        tmp_path = None
++
++        dir_fd = os.open(dir_name, os.O_RDONLY | os.O_DIRECTORY)
++        try:
++            os.fsync(dir_fd)
++        finally:
++            os.close(dir_fd)
++
++        if old_mode is not None:
++            os.chmod(real_path, old_mode)
++
++    except Exception:
++        if fd is not None:
++            try:
++                os.close(fd)
++            except OSError:
++                pass
++        if tmp_path is not None and os.path.exists(tmp_path):
++            try:
++                os.unlink(tmp_path)
++            except OSError:
++                pass
++        raise
++
++
++def atomic_write_text(path, data, *, encoding="utf-8", mode=None):
++    if not isinstance(data, str):
++        raise TypeError("data must be str")
++    _atomic_write(path, data, mode, is_text=True, encoding=encoding)
++
++
++def atomic_write_bytes(path, data, *, mode=None):
++    if not isinstance(data, (bytes, bytearray)):
++        raise TypeError("data must be bytes-like")
++    _atomic_write(path, data, mode, is_text=False)
++
++
++def main():
++    if len(sys.argv) != 2:
++        print("Usage: python atomic_write.py <path>", file=sys.stderr)
++        sys.exit(1)
++
++    path = sys.argv[1]
++    try:
++        data = sys.stdin.buffer.read()
++        atomic_write_bytes(path, data)
++    except Exception as e:
++        print(f"atomic_write: {e}", file=sys.stderr)
++        sys.exit(1)
++
++
++if __name__ == "__main__":
++    main()

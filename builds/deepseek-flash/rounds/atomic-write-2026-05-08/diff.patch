@@ -1,0 +1,86 @@
+
+
+diff --git a/Users/fole/Desktop/eval-atomic-write-deepseek-flash-2026-05-08/atomic_write.py b/Users/fole/Desktop/eval-atomic-write-deepseek-flash-2026-05-08/atomic_write.py
+new file mode 100644
+index 0000000..fb58ba7
+--- /dev/null
++++ b/Users/fole/Desktop/eval-atomic-write-deepseek-flash-2026-05-08/atomic_write.py
+@@ -0,0 +1,78 @@
++import os
++import stat
++import sys
++import tempfile
++
++
++def atomic_write_text(path, data, *, encoding="utf-8", mode=None):
++    _atomic_write(path, data.encode(encoding), mode=mode)
++
++
++def atomic_write_bytes(path, data, *, mode=None):
++    _atomic_write(path, data, mode=mode)
++
++
++def _atomic_write(path, data, *, mode):
++    real_path = os.path.realpath(path)
++    parent = os.path.dirname(real_path)
++
++    existing_mode = None
++    if mode is None:
++        try:
++            existing_mode = stat.S_IMODE(os.stat(real_path).st_mode)
++        except FileNotFoundError:
++            pass
++
++    tmp_fd = None
++    tmp_path = None
++    try:
++        tmp_fd, tmp_path = tempfile.mkstemp(dir=parent)
++        with os.fdopen(tmp_fd, "wb") as f:
++            f.write(data)
++            f.flush()
++            os.fsync(f.fileno())
++        tmp_fd = None
++
++        if mode is not None:
++            os.chmod(tmp_path, mode)
++        elif existing_mode is not None:
++            os.chmod(tmp_path, existing_mode)
++
++        os.replace(tmp_path, real_path)
++        tmp_path = None
++
++        dir_fd = os.open(parent, os.O_RDONLY)
++        try:
++            os.fsync(dir_fd)
++        finally:
++            os.close(dir_fd)
++    except BaseException:
++        if tmp_fd is not None:
++            try:
++                os.close(tmp_fd)
++            except OSError:
++                pass
++        if tmp_path is not None:
++            try:
++                os.unlink(tmp_path)
++            except OSError:
++                pass
++        raise
++
++
++def main():
++    if len(sys.argv) != 2:
++        print(f"Usage: {sys.argv[0]} <path>", file=sys.stderr)
++        sys.exit(1)
++
++    path = sys.argv[1]
++    data = sys.stdin.buffer.read()
++    try:
++        atomic_write_bytes(path, data)
++    except Exception as exc:
++        print(f"Error: {exc}", file=sys.stderr)
++        sys.exit(1)
++
++
++if __name__ == "__main__":
++    main()
