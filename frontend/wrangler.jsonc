@@ -1,5 +1,10 @@
 {
   "name": "open-bench",
   "compatibility_date": "2026-05-06",
-  "pages_build_output_dir": "./dist"
+  "main": "./worker/index.ts",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page"
+  }
 }
