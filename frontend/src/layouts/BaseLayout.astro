@@ -25,15 +25,7 @@ const { seo } = Astro.props;
   <script is:inline>
     (function(){var t=localStorage.getItem('theme');if(t){document.documentElement.setAttribute('data-theme',t)}else if(window.matchMedia('(prefers-color-scheme:light)').matches){document.documentElement.setAttribute('data-theme','light')}})();
   </script>
-  <script>
-    import { Analytics } from "pagetally";
-    const analytics = new Analytics({
-      siteId: "openbenchmark",
-      endpoint: "https://analytics.openbenchmark.dev/collect",
-      respectDNT: true,
-    });
-    document.addEventListener("astro:after-swap", () => analytics.page());
-  </script>
+  <script type="module" src="/scripts/analytics-init.js" is:inline></script>
 </head>
 <body>
   <a href="#main" class="skip-link">skip to content</a>
