@@ -3,9 +3,18 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import Masthead from "../components/Masthead.astro";
-import { pageSeo } from "../lib/seo";
+import type { SeoProps } from "../lib/seo";
 
-const seo = pageSeo("stats", "/stats");
+const seo: SeoProps = {
+  title: "Stats · open-bench",
+  description: "Traffic and performance analytics for open-bench. Updated in real time from pagetally.",
+  ogImage: "/og-default.png",
+  ogImageAlt: "open-bench — stats",
+  ogType: "website",
+  canonicalPath: "/stats",
+  jsonLd: [],
+  noindex: true,
+};
 
 const STATS_SCRIPT = `
 (function(){
