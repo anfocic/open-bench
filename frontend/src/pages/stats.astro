@@ -1,0 +1,319 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import Masthead from "../components/Masthead.astro";
+import { pageSeo } from "../lib/seo";
+
+const seo = pageSeo("stats", "/stats");
+
+const STATS_SCRIPT = `
+(function(){
+  var API="/api";
+  var SITE="openbenchmark";
+  var currentDays=30;
+  function fmt(n){if(n==null)return"\\u2014";if(n>=1e6)return(n/1e6).toFixed(1)+"M";if(n>=1e3)return(n/1e3).toFixed(1)+"k";return n.toLocaleString()}
+  function fmtMs(ms){if(ms==null)return"\\u2014";if(ms<1e3)return ms+"ms";return(ms/1e3).toFixed(1)+"s"}
+  function fmtPct(p){if(p==null)return"\\u2014";return p.toFixed(1)+"%"}
+  function err(id,msg){var el=document.getElementById(id);if(el)el.textContent=msg||"error"}
+  function loadSummary(days){
+    return fetch(API+"/stats/summary?site="+SITE+"&days="+days).then(function(r){
+      if(!r.ok){err("s-pageviews",r.status+" "+r.statusText);return Promise.resolve()}
+      return r.json()
+    }).then(function(d){
+      if(!d)return;
+      document.getElementById("s-pageviews").textContent=fmt(d.pageviews);
+      document.getElementById("s-visitors").textContent=fmt(d.visitors);
+      document.getElementById("s-avgtime").textContent=fmtMs(d.avgTimeOnPageMs);
+      document.getElementById("s-bounce").textContent=fmtPct(d.bounceRate)
+    }).catch(function(e){console.error("summary:",e);err("s-pageviews","fetch error")})
+  }
+  function loadTimeseries(days){
+    return fetch(API+"/stats/timeseries?site="+SITE+"&days="+days+"&bucket=day").then(function(r){
+      if(!r.ok) return Promise.resolve();
+      return r.json()
+    }).then(function(d){
+      if(!d)return;
+      var pts=d.points||[];
+      var max=Math.max.apply(null,pts.map(function(p){return p.views}).concat([1]));
+      var container=document.getElementById("ts-chart");
+      container.innerHTML="";
+      for(var i=0;i<pts.length;i++){
+        var p=pts[i];
+        var g=document.createElement("div");g.className="bar-group";
+        var b=document.createElement("div");b.className="bar";
+        b.style.height=((p.views/max)*150)+"px";
+        b.title=p.date+": "+p.views+" views";
+        var l=document.createElement("div");l.className="bar-label";
+        l.textContent=p.date.slice(5);
+        g.appendChild(b);g.appendChild(l);
+        container.appendChild(g)
+      }
+    }).catch(function(e){console.error("timeseries:",e)})
+  }
+  function loadTopPaths(days){
+    return fetch(API+"/stats/top?site="+SITE+"&dim=path&limit=15&days="+days).then(function(r){
+      if(!r.ok)return Promise.resolve();
+      return r.json()
+    }).then(function(d){
+      if(!d)return;
+      var rows=d.rows||d.top||d;
+      var tbody=document.getElementById("top-paths-body");tbody.innerHTML="";
+      for(var i=0;i<rows.length;i++){
+        var row=rows[i];var tr=document.createElement("tr");
+        tr.innerHTML="<td>"+(row.path||row.dim)+"</td><td>"+fmt(row.views)+"</td><td>"+fmt(row.visitors)+"</td><td>"+fmtMs(row.avgDurMs)+"</td>";
+        tbody.appendChild(tr)
+      }
+    }).catch(function(e){console.error("top-paths:",e)})
+  }
+  function loadReferrers(days){
+    return fetch(API+"/stats/top?site="+SITE+"&dim=referrer&limit=10&days="+days).then(function(r){
+      if(!r.ok)return Promise.resolve();
+      return r.json()
+    }).then(function(d){
+      if(!d)return;
+      var rows=d.rows||d.top||d;
+      var tbody=document.getElementById("ref-body");tbody.innerHTML="";
+      for(var i=0;i<rows.length;i++){
+        var row=rows[i];var tr=document.createElement("tr");
+        tr.innerHTML="<td>"+(row.referrer||row.dim||"(direct)")+"</td><td>"+fmt(row.views)+"</td>";
+        tbody.appendChild(tr)
+      }
+    }).catch(function(e){console.error("referrers:",e)})
+  }
+  function loadVitals(days){
+    return fetch(API+"/stats/vitals?site="+SITE+"&days="+days).then(function(r){
+      if(!r.ok)return Promise.resolve();
+      return r.json()
+    }).then(function(d){
+      if(!d)return;
+      var p75=d.p75||d;
+      document.getElementById("v-lcp").textContent=fmtMs(p75.lcp);
+      document.getElementById("v-fcp").textContent=fmtMs(p75.fcp);
+      document.getElementById("v-cls").textContent=p75.cls!=null?p75.cls.toFixed(3):"\\u2014";
+      document.getElementById("v-inp").textContent=fmtMs(p75.inp);
+      document.getElementById("v-ttfb").textContent=fmtMs(p75.ttfb)
+    }).catch(function(e){console.error("vitals:",e)})
+  }
+  function loadAll(days){
+    Promise.all([loadSummary(days),loadTimeseries(days),loadTopPaths(days),loadReferrers(days),loadVitals(days)])
+  }
+  document.querySelectorAll(".range-toggle").forEach(function(el){
+    el.addEventListener("click",function(){
+      document.querySelectorAll(".range-toggle").forEach(function(t){t.classList.remove("active")});
+      el.classList.add("active");
+      currentDays=Number(el.dataset.range);
+      loadAll(currentDays)
+    })
+  });
+  loadAll(currentDays)
+})();
+`;
+---
+
+<BaseLayout seo={seo}>
+  <Header subtitle="stats" />
+  <Masthead
+    title="stats"
+    subtitle="Traffic and performance analytics. Updated in real time from pagetally."
+  />
+
+  <main id="stats-app">
+    <section class="stats-section" id="summary">
+      <h2><span class="num">[01]</span> overview</h2>
+      <div class="card-row" id="summary-cards">
+        <div class="card"><div class="card-label">pageviews</div><div class="card-value" id="s-pageviews">&mdash;</div></div>
+        <div class="card"><div class="card-label">visitors</div><div class="card-value" id="s-visitors">&mdash;</div></div>
+        <div class="card"><div class="card-label">avg time on page</div><div class="card-value" id="s-avgtime">&mdash;</div></div>
+        <div class="card"><div class="card-label">bounce rate</div><div class="card-value" id="s-bounce">&mdash;</div></div>
+      </div>
+    </section>
+
+    <section class="stats-section" id="timeseries">
+      <h2><span class="num">[02]</span> pageviews <span class="range-toggle" data-range="7">7d</span> <span class="range-toggle active" data-range="30">30d</span> <span class="range-toggle" data-range="90">90d</span></h2>
+      <div class="chart-container" id="ts-chart"></div>
+    </section>
+
+    <section class="stats-section" id="top-paths">
+      <h2><span class="num">[03]</span> top paths</h2>
+      <table id="top-paths-table">
+        <thead>
+          <tr><th>path</th><th>views</th><th>visitors</th><th>avg duration</th></tr>
+        </thead>
+        <tbody id="top-paths-body"></tbody>
+      </table>
+    </section>
+
+    <section class="stats-section" id="sources">
+      <h2><span class="num">[04]</span> top referrers</h2>
+      <table id="ref-table">
+        <thead>
+          <tr><th>source</th><th>views</th></tr>
+        </thead>
+        <tbody id="ref-body"></tbody>
+      </table>
+    </section>
+
+    <section class="stats-section" id="vitals">
+      <h2><span class="num">[05]</span> web vitals</h2>
+      <div class="card-row" id="vitals-cards">
+        <div class="card"><div class="card-label">LCP</div><div class="card-value" id="v-lcp">&mdash;</div></div>
+        <div class="card"><div class="card-label">FCP</div><div class="card-value" id="v-fcp">&mdash;</div></div>
+        <div class="card"><div class="card-label">CLS</div><div class="card-value" id="v-cls">&mdash;</div></div>
+        <div class="card"><div class="card-label">INP</div><div class="card-value" id="v-inp">&mdash;</div></div>
+        <div class="card"><div class="card-label">TTFB</div><div class="card-value" id="v-ttfb">&mdash;</div></div>
+      </div>
+    </section>
+
+    <section class="stats-section" id="devices">
+      <h2><span class="num">[06]</span> devices</h2>
+      <div class="card-row" id="device-cards">
+        <div class="card"><div class="card-label">mobile</div><div class="card-value" id="d-mobile">&mdash;</div></div>
+        <div class="card"><div class="card-label">tablet</div><div class="card-value" id="d-tablet">&mdash;</div></div>
+        <div class="card"><div class="card-label">desktop</div><div class="card-value" id="d-desktop">&mdash;</div></div>
+      </div>
+    </section>
+  </main>
+
+  <script set:html={STATS_SCRIPT} is:inline></script>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .stats-section {
+    padding: 24px 0;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .stats-section:last-of-type {
+    border-bottom: none;
+  }
+  .stats-section h2 {
+    font-size: 26px;
+    margin: 0 0 14px;
+    color: var(--fg-bright);
+    text-transform: lowercase;
+    letter-spacing: -0.01em;
+  }
+  .num {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 15px;
+    margin-right: 8px;
+  }
+
+  .card-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .card {
+    background: var(--bg-alt);
+    border: 1px dashed var(--rule);
+    padding: 14px 16px;
+    border-radius: 3px;
+  }
+  .card-label {
+    font-size: var(--font-xs);
+    text-transform: lowercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-family: var(--mono);
+  }
+  .card-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--fg-bright);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .range-toggle {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--dim);
+    cursor: pointer;
+    padding: 2px 8px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    margin-left: 8px;
+    user-select: none;
+  }
+  .range-toggle:hover {
+    color: var(--fg-bright);
+    border-color: var(--muted);
+  }
+  .range-toggle.active {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .chart-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 180px;
+    padding: 8px 0;
+    overflow-x: auto;
+  }
+  .bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-width: 28px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .bar {
+    width: 100%;
+    max-width: 36px;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+    min-height: 2px;
+    transition: height 0.3s ease;
+  }
+  .bar-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--dim);
+    margin-top: 4px;
+    white-space: nowrap;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-sm);
+  }
+  th {
+    text-align: left;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-weight: 400;
+    text-transform: lowercase;
+    font-size: var(--font-xs);
+    padding: 6px 8px;
+    border-bottom: 1px dashed var(--rule);
+  }
+  td {
+    padding: 6px 8px;
+    border-bottom: 1px dashed var(--rule);
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+  td:first-child {
+    color: var(--fg-bright);
+    font-family: var(--mono);
+  }
+
+  @media (max-width: 600px) {
+    .card-row {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .stats-section h2 {
+      font-size: 22px;
+    }
+  }
+</style>
