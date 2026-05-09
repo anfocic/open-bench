@@ -11,8 +11,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "test": "node --experimental-strip-types --test src/lib/*.test.ts",
-    "og": "node scripts/gen-og.mjs",
-    "deploy": "npm run build && wrangler pages deploy dist"
+    "og": "node scripts/gen-og.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.4",
