@@ -26,6 +26,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260509.1",
     "@fontsource/inter": "^5.2.8",
     "@types/markdown-it": "^14.1.2"
   }
