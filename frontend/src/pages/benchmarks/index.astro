@@ -70,7 +70,11 @@ const tasks = taskNames.map(name => {
     pitch: specPitch(spec),
     rounds: taskRounds.length,
     latestDate: latest?.date ?? null,
-    roundLink: latest ? `/model-royale/round/${latest.date}` : null,
+    roundLink: latest
+      ? (name === ROYALE_TASK
+        ? `/model-royale/round/${latest.date}`
+        : `/benchmarks/${name}/${latest.date}`)
+      : null,
     champ,
     latestModelCount,
     latestCost,

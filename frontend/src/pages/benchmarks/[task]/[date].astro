@@ -1,0 +1,139 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Header from '../../../components/Header.astro';
+import Footer from '../../../components/Footer.astro';
+import Masthead from '../../../components/Masthead.astro';
+import Scoreboard from '../../../components/Scoreboard.astro';
+import RunsTable from '../../../components/RunsTable.astro';
+import SelfBias from '../../../components/SelfBias.astro';
+import JudgeRanking from '../../../components/JudgeRanking.astro';
+import Agreement from '../../../components/Agreement.astro';
+import PerImplDetail from '../../../components/PerImplDetail.astro';
+import CostEfficiency from '../../../components/CostEfficiency.astro';
+import { getCollection, getEntry } from 'astro:content';
+import { ROYALE_TASK } from '../../../lib/royale';
+import { fmtNum, fmtCost, fmtDate } from '../../../lib/format';
+import { findChampion, uniqueModelCount, totalCost } from '../../../lib/scoreboard';
+import { templateSeo } from '../../../lib/seo';
+import { loadSlugs } from '../../../lib/slugs';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const entries = await getCollection('rounds');
+  return entries
+    .filter(e => e.data.task !== ROYALE_TASK)
+    .map(e => ({
+      params: { task: e.data.task, date: e.id },
+      props: { roundId: e.id },
+    }));
+}
+
+const { task, date } = Astro.params;
+const { roundId } = Astro.props;
+const entry = await getEntry('rounds', roundId);
+if (!entry) return Astro.redirect('/404');
+
+const round = entry.data;
+const champ = findChampion(round.scoreboard);
+const champEntry = round.scoreboard.find(e => e.impl === champ.impl);
+const modelCount = uniqueModelCount(round.samples);
+const roundCost = totalCost(round.samples);
+const allPassed = round.samples.length > 0 && round.samples.every(s => s.testExitCode === 0);
+const slugs = loadSlugs();
+
+const canonicalPath = `/benchmarks/${task}/${date}`;
+const roundLite = {
+  date: round.date,
+  modelCount,
+  cost: roundCost,
+  winner: champ.impl,
+  winnerScore: Number(fmtNum(champ.score, 1)),
+  task: task!,
+  scoreboard: round.scoreboard.map(e => ({ impl: e.impl, score: (e.specPeer ?? 0) + (e.qualityPeer ?? 0) })),
+};
+const seo = templateSeo(
+  'round',
+  canonicalPath,
+  {
+    date: round.date,
+    winnerSuffix: champ.score > 0 ? ` — ${champ.impl} wins` : '',
+    winner: champ.impl,
+    score: fmtNum(champ.score, 1),
+    modelCount,
+    cost: fmtNum(roundCost, 2),
+    task: task!,
+  },
+  { round: roundLite, canonicalPath, trail: [
+    { name: 'open-bench', path: '/' },
+    { name: 'benchmarks', path: '/benchmarks' },
+    { name: task!, path: `/task/${task}` },
+    { name: `round ${round.date}`, path: canonicalPath },
+  ] },
+  round.date,
+);
+---
+
+<BaseLayout seo={seo}>
+  <Header subtitle={`${task} · round ${fmtDate(round.date)}`} />
+
+  <nav class="crumb">
+    <a href="/benchmarks">benchmarks</a>
+    <span class="sep">/</span>
+    <a href={`/task/${task}`}>{task}</a>
+    <span class="sep">/</span>
+    <span>round {fmtDate(round.date)}</span>
+  </nav>
+
+  <Masthead
+    title={`${task} · ${fmtDate(round.date)}`}
+    subtitle={champ.score > 0 ? `<strong style="color:var(--accent)">${champ.impl}</strong> takes the round with <strong>${fmtNum(champ.score, 1)}/30</strong> &mdash; spec ${fmtNum(champEntry?.specPeer ?? 0, 1)}, quality ${fmtNum(champEntry?.qualityPeer ?? 0, 1)}. ${modelCount} models, ${fmtCost(roundCost)} spent on outputs. Hidden tests: <span class="${allPassed ? 'win' : 'fail'}">${allPassed ? 'all passed' : 'some failures'}</span>.` : undefined}
+  />
+
+  <div class="tabs" role="tablist" aria-label="Round sections">
+    <button class="tab" role="tab" id="tab-scoreboard" data-tab="scoreboard" aria-selected="true" aria-controls="panel-scoreboard">scoreboard</button>
+    <button class="tab" role="tab" id="tab-runs" data-tab="runs" aria-selected="false" aria-controls="panel-runs">runs</button>
+    <button class="tab" role="tab" id="tab-self-bias" data-tab="self-bias" aria-selected="false" aria-controls="panel-self-bias">self-bias</button>
+    <button class="tab" role="tab" id="tab-judges" data-tab="judges" aria-selected="false" aria-controls="panel-judges">judges</button>
+    <button class="tab" role="tab" id="tab-agreement" data-tab="agreement" aria-selected="false" aria-controls="panel-agreement">agreement</button>
+    <button class="tab" role="tab" id="tab-per-impl" data-tab="per-impl" aria-selected="false" aria-controls="panel-per-impl">per-impl</button>
+    <button class="tab" role="tab" id="tab-cost" data-tab="cost" aria-selected="false" aria-controls="panel-cost">cost</button>
+  </div>
+
+  <div class="tab-panels">
+    <div class="tab-panel" role="tabpanel" id="panel-scoreboard" data-panel="scoreboard" aria-labelledby="tab-scoreboard">
+      <Scoreboard entries={round.scoreboard} champion={champ.impl} slugs={slugs} />
+    </div>
+    <div class="tab-panel" role="tabpanel" id="panel-runs" data-panel="runs" hidden aria-labelledby="tab-runs">
+      <RunsTable runs={round.samples} slugs={slugs} />
+    </div>
+    <div class="tab-panel" role="tabpanel" id="panel-self-bias" data-panel="self-bias" hidden aria-labelledby="tab-self-bias">
+      <SelfBias entries={round.selfBias} slugs={slugs} />
+    </div>
+    <div class="tab-panel" role="tabpanel" id="panel-judges" data-panel="judges" hidden aria-labelledby="tab-judges">
+      <JudgeRanking entries={round.judgeRanking} slugs={slugs} />
+    </div>
+    <div class="tab-panel" role="tabpanel" id="panel-agreement" data-panel="agreement" hidden aria-labelledby="tab-agreement">
+      <Agreement entries={round.agreement} slugs={slugs} />
+    </div>
+    <div class="tab-panel" role="tabpanel" id="panel-per-impl" data-panel="per-impl" hidden aria-labelledby="tab-per-impl">
+      <PerImplDetail entries={round.perImplDetail} date={round.date} slugs={slugs} />
+    </div>
+    <div class="tab-panel" role="tabpanel" id="panel-cost" data-panel="cost" hidden aria-labelledby="tab-cost">
+      <CostEfficiency entries={round.costEfficiency} />
+    </div>
+  </div>
+
+  <script>
+    import { initTabs } from '../../../scripts/tabs';
+    initTabs('scoreboard');
+  </script>
+  <Footer />
+</BaseLayout>
+
+<style>
+  .crumb { margin: 12px 0 0; font-size: var(--font-sm); color: var(--muted); }
+  .crumb a { color: var(--muted); }
+  .crumb a:hover { color: var(--accent); }
+  .crumb .sep { margin: 0 0.4rem; opacity: 0.6; }
+</style>

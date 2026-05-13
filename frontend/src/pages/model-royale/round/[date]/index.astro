@@ -14,6 +14,7 @@ import Agreement from '../../../../components/Agreement.astro';
 import PerImplDetail from '../../../../components/PerImplDetail.astro';
 import CostEfficiency from '../../../../components/CostEfficiency.astro';
 import { getCollection, getEntry } from 'astro:content';
+import { getRoyaleRounds } from '../../../../lib/royale';
 import { fmtNum, fmtCost, fmtDate } from '../../../../lib/format';
 import { findChampion, uniqueModelCount, totalCost } from '../../../../lib/scoreboard';
 import { templateSeo } from '../../../../lib/seo';
@@ -22,7 +23,7 @@ import { loadSlugs } from '../../../../lib/slugs';
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const entries = await getCollection('rounds');
+  const entries = await getRoyaleRounds();
   const sorted = [...entries].sort((a, b) => a.id.localeCompare(b.id));
   return sorted.map((e, i) => ({
     params: { date: e.id },
