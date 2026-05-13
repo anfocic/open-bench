@@ -1,7 +1,7 @@
 interface Env {
   ASSETS: Fetcher;
   ANALYTICS_HOST?: string;
-  ANALYTICS_ADMIN_TOKEN?: string;
+  ADMIN_TOKEN?: string;
 }
 
 const DEFAULT_HOST = "https://analytics.openbenchmark.dev";
@@ -17,7 +17,7 @@ export default {
     }
 
     if (url.pathname.startsWith("/api/stats/") && request.method === "GET") {
-      return proxyStats(request, url, host, env.ANALYTICS_ADMIN_TOKEN);
+      return proxyStats(request, url, host, env.ADMIN_TOKEN);
     }
 
     return env.ASSETS.fetch(request);
