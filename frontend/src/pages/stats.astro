@@ -99,6 +99,38 @@ const STATS_SCRIPT = `
       }
     }).catch(function(e){console.error("referrers:",e)})
   }
+  function fillTopList(tbody, rows, keyFmt){
+    tbody.innerHTML="";
+    if(!rows||rows.length===0){tbody.innerHTML='<tr><td colspan="2" class="muted">no data</td></tr>';return}
+    for(var i=0;i<rows.length;i++){
+      var row=rows[i];var tr=document.createElement("tr");
+      var key=keyFmt?keyFmt(row.key):(row.key||"\\u2014");
+      var count=row.count!=null?row.count:row.views;
+      tr.innerHTML="<td>"+key+"</td><td>"+fmt(count)+"</td>";
+      tbody.appendChild(tr)
+    }
+  }
+  var COUNTRY_NAMES={US:"United States",GB:"United Kingdom",DE:"Germany",FR:"France",NL:"Netherlands",CA:"Canada",AU:"Australia",JP:"Japan",CN:"China",IN:"India",BR:"Brazil",RU:"Russia",HR:"Croatia",FI:"Finland",SE:"Sweden",NO:"Norway",DK:"Denmark",IT:"Italy",ES:"Spain",PL:"Poland",UA:"Ukraine",IE:"Ireland",CH:"Switzerland",AT:"Austria",BE:"Belgium",CZ:"Czechia",PT:"Portugal",GR:"Greece",TR:"Turkey",IL:"Israel",MX:"Mexico",AR:"Argentina",KR:"South Korea",SG:"Singapore",HK:"Hong Kong",TW:"Taiwan"};
+  function flag(cc){if(!cc||cc.length!==2)return"";return String.fromCodePoint(0x1F1E6+cc.charCodeAt(0)-65)+String.fromCodePoint(0x1F1E6+cc.charCodeAt(1)-65)}
+  function fmtCountry(cc){if(!cc)return"unknown";var name=COUNTRY_NAMES[cc]||cc;return flag(cc)+" "+name+" <span class=\\"muted\\">("+cc+")</span>"}
+  function loadCountries(days){
+    return fetch(API+"/stats/top?site="+SITE+"&dim=country&limit=15&days="+days).then(function(r){
+      if(!r.ok)return Promise.resolve();return r.json()
+    }).then(function(d){
+      if(!d)return;
+      var rows=Array.isArray(d)?d:(d.rows||d.top||[]);
+      fillTopList(document.getElementById("country-body"),rows,fmtCountry)
+    }).catch(function(e){console.error("countries:",e)})
+  }
+  function loadDevices(days){
+    return fetch(API+"/stats/top?site="+SITE+"&dim=device&limit=5&days="+days).then(function(r){
+      if(!r.ok)return Promise.resolve();return r.json()
+    }).then(function(d){
+      if(!d)return;
+      var rows=Array.isArray(d)?d:(d.rows||d.top||[]);
+      fillTopList(document.getElementById("device-body"),rows)
+    }).catch(function(e){console.error("devices:",e)})
+  }
   function loadVitals(days){
     return fetch(API+"/stats/vitals?site="+SITE+"&days="+days).then(function(r){
       if(!r.ok)return Promise.resolve();
@@ -118,7 +150,7 @@ const STATS_SCRIPT = `
     }).catch(function(e){console.error("vitals:",e)})
   }
   function loadAll(days){
-    Promise.all([loadSummary(days),loadTimeseries(days),loadTopPaths(days),loadReferrers(days),loadVitals(days)])
+    Promise.all([loadSummary(days),loadTimeseries(days),loadTopPaths(days),loadReferrers(days),loadCountries(days),loadDevices(days),loadVitals(days)])
   }
   document.querySelectorAll(".range-toggle").forEach(function(el){
     el.addEventListener("click",function(){
@@ -176,8 +208,28 @@ const STATS_SCRIPT = `
       </table>
     </section>
 
+    <section class="stats-section" id="countries">
+      <h2><span class="num">[05]</span> top countries</h2>
+      <table id="country-table">
+        <thead>
+          <tr><th>country</th><th>views</th></tr>
+        </thead>
+        <tbody id="country-body"></tbody>
+      </table>
+    </section>
+
+    <section class="stats-section" id="devices">
+      <h2><span class="num">[06]</span> devices</h2>
+      <table id="device-table">
+        <thead>
+          <tr><th>device</th><th>views</th></tr>
+        </thead>
+        <tbody id="device-body"></tbody>
+      </table>
+    </section>
+
     <section class="stats-section" id="vitals">
-      <h2><span class="num">[05]</span> web vitals</h2>
+      <h2><span class="num">[07]</span> web vitals</h2>
       <div class="card-row" id="vitals-cards">
         <div class="card"><div class="card-label">LCP</div><div class="card-value" id="v-lcp">&mdash;</div></div>
         <div class="card"><div class="card-label">FCP</div><div class="card-value" id="v-fcp">&mdash;</div></div>
