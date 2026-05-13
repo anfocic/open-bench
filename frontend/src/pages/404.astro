@@ -3,12 +3,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Masthead from '../components/Masthead.astro';
-import { getCollection } from 'astro:content';
 import { fmtDate } from '../lib/format';
 import { findChampion } from '../lib/scoreboard';
+import { getRoyaleRounds } from '../lib/royale';
 import type { SeoProps } from '../lib/seo';
 
-const entries = await getCollection('rounds');
+const entries = await getRoyaleRounds();
 const rounds = entries.sort((a, b) => b.id.localeCompare(a.id)).map(e => e.data);
 const latestRound = rounds[0];
 
