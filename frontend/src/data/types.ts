@@ -5,6 +5,7 @@ import { z } from 'zod';
 export const RunSchema = z.object({
   model: z.string(),
   round: z.string(),
+  task: z.string(),
   sample: z.number(),
   wallSec: z.number().nullable(),
   costUsd: z.number().nullable(),
@@ -101,6 +102,7 @@ export const JudgingCostSchema = z.object({
 
 export const RoundSchema = z.object({
   date: z.string(),
+  task: z.string(),
   samples: z.array(RunSchema),
   scoreboard: z.array(ScoreboardEntrySchema),
   judgeRanking: z.array(JudgeRankingEntrySchema),

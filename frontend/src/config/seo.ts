@@ -109,6 +109,12 @@ export const seoPages = {
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'collectionPage'],
   },
+  benchmarks: {
+    title: 'Benchmarks · open-bench',
+    description: 'Every task in the open-bench corpus. Each one is a SPEC plus a hidden test suite — the contract models are graded against.',
+    ogImage: '/og-default.png',
+    jsonLd: ['organization', 'collectionPage'],
+  },
 } as const satisfies Record<string, StaticPageSeo>;
 
 export type StaticPageKey = keyof typeof seoPages;

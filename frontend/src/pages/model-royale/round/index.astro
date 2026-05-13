@@ -4,12 +4,12 @@ import Header from '../../../components/Header.astro';
 import RoyaleNav from "../../../components/RoyaleNav.astro";
 import Footer from '../../../components/Footer.astro';
 import Masthead from '../../../components/Masthead.astro';
-import { getCollection } from 'astro:content';
+import { getRoyaleRounds } from '../../../lib/royale';
 import { fmtCost, fmtNum, fmtDate } from '../../../lib/format';
 import { findChampion, uniqueModelCount, totalCost } from '../../../lib/scoreboard';
 import { pageSeo } from '../../../lib/seo';
 
-const entries = await getCollection('rounds');
+const entries = await getRoyaleRounds();
 const rounds = entries.sort((a, b) => b.id.localeCompare(a.id)).map(e => e.data);
 const totalSamples = rounds.reduce((sum, r) => sum + r.samples.length, 0);
 const totalSpend = rounds.reduce((sum, r) => sum + totalCost(r.samples), 0);

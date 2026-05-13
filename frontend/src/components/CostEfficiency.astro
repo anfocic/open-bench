@@ -3,6 +3,7 @@ import type { CostEfficiencyEntry } from '../data/types';
 import { fmtCost, fmtTok, fmtOr } from '../lib/format';
 import SectionHeader from './SectionHeader.astro';
 import DataTable from './DataTable.astro';
+import { displaySlug } from '../lib/slugs';
 
 export interface Props {
   entries: CostEfficiencyEntry[];
@@ -37,7 +38,7 @@ const cheapest = sorted[0]?.impl;
             return (
               <tr class:list={{ 'cheapest-row': isCheapest }}>
                 <td class="model">{isCheapest && <span class="leader-mark" title="cheapest">$</span>}{e.impl}</td>
-                <td class="num" style="font-size:var(--font-sm)">{e.modelSlug}</td>
+                <td class="num" style="font-size:var(--font-sm)">{displaySlug(e.modelSlug)}</td>
                 <td class="num">{fmtOr(e.loc, 0)}</td>
                 <td class="num">{e.wallClock}</td>
                 <td class="num">{fmtTok(e.tokens)}</td>

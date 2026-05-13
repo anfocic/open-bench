@@ -1,0 +1,15 @@
+{
+  "task_kind": "code",
+  "entrypoint": "apply_edit.py",
+  "language": "python",
+  "test_runner": "pytest",
+  "test_invocation": [
+    "python3",
+    "-m",
+    "pytest",
+    "_eval_tests/",
+    "-v",
+    "--tb=short"
+  ],
+  "loc_method": "non_blank_non_comment_lines"
+}

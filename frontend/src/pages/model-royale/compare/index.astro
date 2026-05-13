@@ -4,16 +4,18 @@ import Header from '../../../components/Header.astro';
 import RoyaleNav from "../../../components/RoyaleNav.astro";
 import Footer from '../../../components/Footer.astro';
 import Masthead from '../../../components/Masthead.astro';
-import { getCollection } from 'astro:content';
+import { getRoyaleRounds } from '../../../lib/royale';
 import { computeStandings } from '../../../lib/aggregate';
 import { pageSeo } from '../../../lib/seo';
+import { loadSlugs } from '../../../lib/slugs';
 
 export const prerender = true;
 
-const entries = await getCollection('rounds');
+const entries = await getRoyaleRounds();
 const rounds = entries.map(e => e.data);
 const standings = computeStandings(rounds);
 const impls = standings.map(s => s.impl);
+const slugs = loadSlugs();
 
 const seo = pageSeo('compareIndex', '/model-royale/compare');
 ---
@@ -33,13 +35,21 @@ const seo = pageSeo('compareIndex', '/model-royale/compare');
           <thead>
             <tr>
               <th></th>
-              {impls.map(b => <th class="diag"><span>{b}</span></th>)}
+              {impls.map(b => (
+                <th class="diag">
+                  <span>{b}</span>
+                  {slugs[b] && <span class="diag-slug">{slugs[b]}</span>}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {impls.map(a => (
               <tr>
-                <th class="row-label">{a}</th>
+                <th class="row-label">
+                  <span class="row-name">{a}</span>
+                  {slugs[a] && <span class="row-slug">{slugs[a]}</span>}
+                </th>
                 {impls.map(b => {
                   if (a === b) return <td class="self">—</td>;
                   const [x, y] = a < b ? [a, b] : [b, a];
@@ -60,8 +70,10 @@ const seo = pageSeo('compareIndex', '/model-royale/compare');
   .matrix-wrap { overflow-x: auto; }
   .matrix { border-collapse: collapse; font-variant-numeric: tabular-nums; }
   .matrix th, .matrix td { padding: 6px 10px; border: 1px solid var(--rule); text-align: center; min-width: 60px; }
-  .matrix .row-label { text-align: left; font-weight: normal; }
-  .matrix .diag { writing-mode: sideways-lr; vertical-align: bottom; height: 110px; padding: 4px; font-weight: normal; }
+  .matrix .row-label { text-align: left; font-weight: normal; display: flex; flex-direction: column; line-height: 1.1; }
+  .matrix .row-slug { font-family: var(--mono); font-size: var(--font-xs); color: var(--muted); margin-top: 2px; }
+  .matrix .diag { writing-mode: sideways-lr; vertical-align: bottom; height: 130px; padding: 4px; font-weight: normal; }
+  .matrix .diag-slug { display: block; font-family: var(--mono); font-size: var(--font-xs); color: var(--muted); margin-top: 2px; }
   .matrix .self { color: var(--muted); background: var(--bg-alt); }
   .matrix tbody tr:hover { background: var(--bg-alt); }
   .matrix a { display: block; }

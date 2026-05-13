@@ -1,12 +1,14 @@
 ---
 import type { JudgeRankingEntry } from '../data/types';
 import DataTable from './DataTable.astro';
+import ModelLabel from './ModelLabel.astro';
 
 export interface Props {
   entries: JudgeRankingEntry[];
+  slugs?: Record<string, string>;
 }
 
-const { entries } = Astro.props;
+const { entries, slugs = {} } = Astro.props;
 ---
 
 {entries.length > 0 && (
@@ -25,10 +27,10 @@ const { entries } = Astro.props;
         <tbody>
           {entries.map(e => (
             <tr>
-              <td class="model">{e.judge}</td>
-              <td class="num">{e.first}</td>
-              <td class="num">{e.second}</td>
-              <td class="num">{e.third}</td>
+              <td class="model"><ModelLabel impl={e.judge} slug={slugs[e.judge]} /></td>
+              <td><ModelLabel impl={e.first} slug={slugs[e.first]} /></td>
+              <td><ModelLabel impl={e.second} slug={slugs[e.second]} /></td>
+              <td><ModelLabel impl={e.third} slug={slugs[e.third]} /></td>
             </tr>
           ))}
         </tbody>

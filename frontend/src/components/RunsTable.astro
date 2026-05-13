@@ -2,12 +2,15 @@
 import type { Run } from '../data/types';
 import { fmtSec, fmtCost, fmtTok, passFailIcon, passFailClass } from '../lib/format';
 import DataTable from './DataTable.astro';
+import ModelLabel from './ModelLabel.astro';
+import { displaySlug } from '../lib/slugs';
 
 export interface Props {
   runs: Run[];
+  slugs?: Record<string, string>;
 }
 
-const { runs } = Astro.props;
+const { runs, slugs = {} } = Astro.props;
 
 function medByModel(runs: Run[]) {
   const groups = new Map<string, Run[]>();
@@ -23,6 +26,7 @@ function medByModel(runs: Run[]) {
     };
     return {
       model,
+      modelSlug: rs[0]?.modelSlug ?? null,
       wallSec: mid(rs.map(r => r.wallSec)),
       costUsd: mid(rs.map(r => r.costUsd)),
       tokensTotal: mid(rs.map(r => r.tokensTotal)),
@@ -34,6 +38,11 @@ function medByModel(runs: Run[]) {
 }
 
 const medians = medByModel(runs);
+
+function slugFor(impl: string, runSlug?: string | null): string | undefined {
+  const raw = runSlug ?? slugs[impl];
+  return raw ? displaySlug(raw) : undefined;
+}
 ---
 
 {runs.length > 0 && (
@@ -67,7 +76,7 @@ const medians = medByModel(runs);
               data-loc={r.loc ?? ''}
               data-exit={r.testExitCode ?? ''}
               data-idx={i}>
-              <td class="model">{r.model}</td>
+              <td class="model"><ModelLabel impl={r.model} slug={slugFor(r.model, r.modelSlug)} /></td>
               <td class="num">{r.sample}</td>
               <td class="num">{fmtSec(r.wallSec)}</td>
               <td class="num">{fmtCost(r.costUsd)}</td>
@@ -85,7 +94,10 @@ const medians = medByModel(runs);
               data-loc={m.loc ?? ''}
               data-exit={m.testExitCode ?? ''}
               data-idx={i}>
-              <td class="model">{m.model} <span class="muted" style="font-size:var(--font-xs)">(n={m.n})</span></td>
+              <td class="model">
+                <ModelLabel impl={m.model} slug={slugFor(m.model, m.modelSlug)} />
+                <span class="muted" style="font-size:var(--font-xs); margin-left: 0.4rem">(n={m.n})</span>
+              </td>
               <td class="num muted">&mdash;</td>
               <td class="num">{fmtSec(m.wallSec)}</td>
               <td class="num">{fmtCost(m.costUsd)}</td>

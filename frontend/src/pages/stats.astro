@@ -32,9 +32,9 @@ const STATS_SCRIPT = `
     }).then(function(d){
       if(!d)return;
       document.getElementById("s-pageviews").textContent=fmt(d.pageviews);
-      document.getElementById("s-visitors").textContent=fmt(d.visitors);
+      document.getElementById("s-events").textContent=fmt(d.events);
       document.getElementById("s-avgtime").textContent=fmtMs(d.avgTimeOnPageMs);
-      document.getElementById("s-bounce").textContent=fmtPct(d.bounceRate)
+      document.getElementById("s-toppath").textContent=d.top_path||"\\u2014"
     }).catch(function(e){console.error("summary:",e);err("s-pageviews","fetch error")})
   }
   function loadTimeseries(days){
@@ -43,18 +43,21 @@ const STATS_SCRIPT = `
       return r.json()
     }).then(function(d){
       if(!d)return;
-      var pts=d.points||[];
-      var max=Math.max.apply(null,pts.map(function(p){return p.views}).concat([1]));
+      var pts=Array.isArray(d)?d:(d.points||[]);
+      var max=Math.max.apply(null,pts.map(function(p){return p.pageviews||p.views||0}).concat([1]));
       var container=document.getElementById("ts-chart");
       container.innerHTML="";
+      if(pts.length===0){container.innerHTML='<div class="muted" style="padding:1rem">no data</div>';return}
       for(var i=0;i<pts.length;i++){
         var p=pts[i];
+        var views=p.pageviews||p.views||0;
+        var date=(p.bucket||p.date||"").slice(0,10);
         var g=document.createElement("div");g.className="bar-group";
         var b=document.createElement("div");b.className="bar";
-        b.style.height=((p.views/max)*150)+"px";
-        b.title=p.date+": "+p.views+" views";
+        b.style.height=((views/max)*150)+"px";
+        b.title=date+": "+views+" views";
         var l=document.createElement("div");l.className="bar-label";
-        l.textContent=p.date.slice(5);
+        l.textContent=date.slice(5);
         g.appendChild(b);g.appendChild(l);
         container.appendChild(g)
       }
@@ -66,11 +69,14 @@ const STATS_SCRIPT = `
       return r.json()
     }).then(function(d){
       if(!d)return;
-      var rows=d.rows||d.top||d;
+      var rows=Array.isArray(d)?d:(d.rows||d.top||[]);
       var tbody=document.getElementById("top-paths-body");tbody.innerHTML="";
+      if(rows.length===0){tbody.innerHTML='<tr><td colspan="3" class="muted">no data</td></tr>';return}
       for(var i=0;i<rows.length;i++){
         var row=rows[i];var tr=document.createElement("tr");
-        tr.innerHTML="<td>"+(row.path||row.dim)+"</td><td>"+fmt(row.views)+"</td><td>"+fmt(row.visitors)+"</td><td>"+fmtMs(row.avgDurMs)+"</td>";
+        var key=row.key||row.path||row.dim||"\\u2014";
+        var count=row.count!=null?row.count:row.views;
+        tr.innerHTML="<td>"+key+"</td><td>"+fmt(count)+"</td><td>"+fmtMs(row.avgDurMs)+"</td>";
         tbody.appendChild(tr)
       }
     }).catch(function(e){console.error("top-paths:",e)})
@@ -81,11 +87,14 @@ const STATS_SCRIPT = `
       return r.json()
     }).then(function(d){
       if(!d)return;
-      var rows=d.rows||d.top||d;
+      var rows=Array.isArray(d)?d:(d.rows||d.top||[]);
       var tbody=document.getElementById("ref-body");tbody.innerHTML="";
+      if(rows.length===0){tbody.innerHTML='<tr><td colspan="2" class="muted">no data</td></tr>';return}
       for(var i=0;i<rows.length;i++){
         var row=rows[i];var tr=document.createElement("tr");
-        tr.innerHTML="<td>"+(row.referrer||row.dim||"(direct)")+"</td><td>"+fmt(row.views)+"</td>";
+        var key=row.key||row.referrer||row.dim||"(direct)";
+        var count=row.count!=null?row.count:row.views;
+        tr.innerHTML="<td>"+key+"</td><td>"+fmt(count)+"</td>";
         tbody.appendChild(tr)
       }
     }).catch(function(e){console.error("referrers:",e)})
@@ -96,12 +105,16 @@ const STATS_SCRIPT = `
       return r.json()
     }).then(function(d){
       if(!d)return;
-      var p75=d.p75||d;
-      document.getElementById("v-lcp").textContent=fmtMs(p75.lcp);
-      document.getElementById("v-fcp").textContent=fmtMs(p75.fcp);
-      document.getElementById("v-cls").textContent=p75.cls!=null?p75.cls.toFixed(3):"\\u2014";
-      document.getElementById("v-inp").textContent=fmtMs(p75.inp);
-      document.getElementById("v-ttfb").textContent=fmtMs(p75.ttfb)
+      var lcp=d.lcpP75!=null?d.lcpP75:(d.p75&&d.p75.lcp);
+      var fcp=d.fcpP75!=null?d.fcpP75:(d.p75&&d.p75.fcp);
+      var ttfb=d.ttfbP75!=null?d.ttfbP75:(d.p75&&d.p75.ttfb);
+      var cls=d.clsP75!=null?d.clsP75:(d.p75&&d.p75.cls);
+      var inp=d.inpP75!=null?d.inpP75:(d.p75&&d.p75.inp);
+      document.getElementById("v-lcp").textContent=fmtMs(lcp);
+      document.getElementById("v-fcp").textContent=fmtMs(fcp);
+      document.getElementById("v-cls").textContent=cls!=null?cls.toFixed(3):"\\u2014";
+      document.getElementById("v-inp").textContent=fmtMs(inp);
+      document.getElementById("v-ttfb").textContent=fmtMs(ttfb)
     }).catch(function(e){console.error("vitals:",e)})
   }
   function loadAll(days){
@@ -132,9 +145,9 @@ const STATS_SCRIPT = `
       <h2><span class="num">[01]</span> overview</h2>
       <div class="card-row" id="summary-cards">
         <div class="card"><div class="card-label">pageviews</div><div class="card-value" id="s-pageviews">&mdash;</div></div>
-        <div class="card"><div class="card-label">visitors</div><div class="card-value" id="s-visitors">&mdash;</div></div>
+        <div class="card"><div class="card-label">events</div><div class="card-value" id="s-events">&mdash;</div></div>
         <div class="card"><div class="card-label">avg time on page</div><div class="card-value" id="s-avgtime">&mdash;</div></div>
-        <div class="card"><div class="card-label">bounce rate</div><div class="card-value" id="s-bounce">&mdash;</div></div>
+        <div class="card"><div class="card-label">top path</div><div class="card-value" id="s-toppath" style="font-size:14px">&mdash;</div></div>
       </div>
     </section>
 
@@ -147,7 +160,7 @@ const STATS_SCRIPT = `
       <h2><span class="num">[03]</span> top paths</h2>
       <table id="top-paths-table">
         <thead>
-          <tr><th>path</th><th>views</th><th>visitors</th><th>avg duration</th></tr>
+          <tr><th>path</th><th>views</th><th>avg duration</th></tr>
         </thead>
         <tbody id="top-paths-body"></tbody>
       </table>
@@ -174,14 +187,6 @@ const STATS_SCRIPT = `
       </div>
     </section>
 
-    <section class="stats-section" id="devices">
-      <h2><span class="num">[06]</span> devices</h2>
-      <div class="card-row" id="device-cards">
-        <div class="card"><div class="card-label">mobile</div><div class="card-value" id="d-mobile">&mdash;</div></div>
-        <div class="card"><div class="card-label">tablet</div><div class="card-value" id="d-tablet">&mdash;</div></div>
-        <div class="card"><div class="card-label">desktop</div><div class="card-value" id="d-desktop">&mdash;</div></div>
-      </div>
-    </section>
   </main>
 
   <script set:html={STATS_SCRIPT} is:inline></script>

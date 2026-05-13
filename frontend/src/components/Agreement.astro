@@ -2,12 +2,14 @@
 import type { AgreementEntry } from '../data/types';
 import { fmtOr } from '../lib/format';
 import DataTable from './DataTable.astro';
+import ModelLabel from './ModelLabel.astro';
 
 export interface Props {
   entries: AgreementEntry[];
+  slugs?: Record<string, string>;
 }
 
-const { entries } = Astro.props;
+const { entries, slugs = {} } = Astro.props;
 ---
 
 {entries.length > 0 && (
@@ -28,7 +30,7 @@ const { entries } = Astro.props;
         <tbody>
           {entries.map(e => (
             <tr>
-              <td class="model">{e.impl}</td>
+              <td class="model"><ModelLabel impl={e.impl} slug={slugs[e.impl]} /></td>
               <td class="num">{fmtOr(e.minSpec, 1)}</td>
               <td class="num">{fmtOr(e.maxSpec, 1)}</td>
               <td class="num">{fmtOr(e.range, 1)}</td>

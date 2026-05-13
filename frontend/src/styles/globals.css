@@ -662,35 +662,7 @@ tr.cheapest-row td.model::before { content: '$ '; color: var(--green); font-weig
   color: var(--muted);
   font-size: 14.4px;
 }
-.footer-grid {
-  display: grid;
-  grid-template-columns: repeat(3, max-content);
-  gap: 24px 64px;
-  margin-bottom: 24px;
-  justify-content: center;
-}
-@media (max-width: 700px) {
-  .footer-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    justify-content: stretch;
-  }
-}
-.footer-col { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.footer-col a { color: var(--muted); text-decoration: none; }
-.footer-col a:hover { color: var(--accent); }
-.footer-col a::before { content: '> '; color: var(--dim); }
-.footer-tag { color: var(--muted); margin: 6px 0; max-width: 220px; }
-.footer-heading {
-  color: var(--fg-bright);
-  font-weight: 700;
-  margin-bottom: 4px;
-  text-transform: lowercase;
-}
-.footer-heading::before { content: '// '; color: var(--dim); font-weight: 400; }
 .footer-base {
-  padding-top: 12px;
-  border-top: 1px dashed var(--rule);
   display: flex;
   gap: 8px;
   color: var(--dim);

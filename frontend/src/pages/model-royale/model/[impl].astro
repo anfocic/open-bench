@@ -4,7 +4,7 @@ import Header from '../../../components/Header.astro';
 import RoyaleNav from "../../../components/RoyaleNav.astro";
 import Footer from '../../../components/Footer.astro';
 import Masthead from '../../../components/Masthead.astro';
-import { getCollection } from 'astro:content';
+import { getRoyaleRounds } from '../../../lib/royale';
 import { fmtCost, fmtNum, fmtDate } from '../../../lib/format';
 import { computeStandings, computeBias, sparkline } from '../../../lib/aggregate';
 import { templateSeo } from '../../../lib/seo';
@@ -13,7 +13,7 @@ import Term from '../../../components/Term.astro';
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const entries = await getCollection('rounds');
+  const entries = await getRoyaleRounds();
   const rounds = entries.map(e => e.data);
   const impls = new Set<string>();
   for (const r of rounds) for (const e of r.scoreboard) impls.add(e.impl);
@@ -21,7 +21,7 @@ export async function getStaticPaths() {
 }
 
 const { impl } = Astro.props;
-const entries = await getCollection('rounds');
+const entries = await getRoyaleRounds();
 const rounds = entries.map(e => e.data);
 const standings = computeStandings(rounds);
 const standing = standings.find(s => s.impl === impl);

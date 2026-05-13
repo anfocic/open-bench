@@ -28,8 +28,10 @@ const rules = [
     <ol class="rules">
       {rules.map(([k, v]) => (
         <li>
-          <h3>{k}</h3>
-          <p>{v}</p>
+          <div class="rule-body">
+            <h3>{k}</h3>
+            <p>{v}</p>
+          </div>
         </li>
       ))}
     </ol>

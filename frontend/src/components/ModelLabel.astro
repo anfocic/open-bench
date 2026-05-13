@@ -1,0 +1,42 @@
+---
+export interface Props {
+  impl: string;
+  slug?: string | null;
+  href?: string;
+  rank?: number | null;
+  transitionName?: string;
+  block?: boolean;
+}
+
+const { impl, slug, href, rank, transitionName, block = true } = Astro.props;
+const Tag = href ? 'a' : 'span';
+---
+
+<span class:list={['model-label', { 'model-label-block': block }]}>
+  {rank != null && <span class="model-label-rank">{String(rank).padStart(2, '0')}</span>}
+  <span class="model-label-text">
+    <Tag
+      class="model-label-name"
+      {...(href ? { href } : {})}
+      {...(transitionName ? { 'transition:name': transitionName } : {})}
+    >{impl}</Tag>
+    {slug && <span class="model-label-slug" title={slug}>{slug}</span>}
+  </span>
+</span>
+
+<style>
+  .model-label { display: inline-flex; align-items: baseline; gap: 0.5rem; }
+  .model-label-block { display: inline-grid; grid-template-columns: auto 1fr; align-items: center; }
+  .model-label-rank { color: var(--muted); font-family: var(--mono); font-size: var(--font-xs); }
+  .model-label-text { display: flex; flex-direction: column; line-height: 1.15; }
+  .model-label-name { font-weight: 600; }
+  .model-label-slug {
+    font-family: var(--mono);
+    font-size: var(--font-xs);
+    color: var(--muted);
+    margin-top: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+</style>
