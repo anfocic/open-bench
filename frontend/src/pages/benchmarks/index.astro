@@ -10,6 +10,7 @@ import { listDirs, readJsonOptional, readOptional } from '../../lib/io';
 import { fmtDate, fmtCost, fmtNum } from '../../lib/format';
 import { findChampion, totalCost, uniqueModelCount } from '../../lib/scoreboard';
 import { loadSlugs, displaySlug } from '../../lib/slugs';
+import { ROYALE_TASK } from '../../lib/royale';
 import { pageSeo } from '../../lib/seo';
 
 interface TaskMeta {
@@ -69,6 +70,7 @@ const tasks = taskNames.map(name => {
     pitch: specPitch(spec),
     rounds: taskRounds.length,
     latestDate: latest?.date ?? null,
+    roundLink: latest && name === ROYALE_TASK ? `/model-royale/round/${latest.date}` : null,
     champ,
     latestModelCount,
     latestCost,
@@ -127,7 +129,7 @@ const seo = pageSeo('benchmarks', '/benchmarks');
             ) : (
               <>
                 {t.champ && t.champ.score > 0 && t.latestDate && (
-                  <a href={`/model-royale/round/${t.latestDate}`} class="task-winner">
+                  <a href={t.roundLink ?? `/task/${t.name}`} class="task-winner">
                     <span class="task-winner-label">latest winner</span>
                     <span class="task-winner-impl">{t.champ.impl}</span>
                     {slugs[t.champ.impl] && <span class="task-winner-slug">{displaySlug(slugs[t.champ.impl])}</span>}
@@ -150,7 +152,7 @@ const seo = pageSeo('benchmarks', '/benchmarks');
 
             <footer class="task-foot">
               <a href={`/task/${t.name}`}>full spec &rarr;</a>
-              {t.latestDate && <a href={`/model-royale/round/${t.latestDate}`}>latest round &rarr;</a>}
+              {t.roundLink && <a href={t.roundLink}>latest round &rarr;</a>}
             </footer>
           </article>
         ))}
