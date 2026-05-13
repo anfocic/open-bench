@@ -1,0 +1,252 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import Masthead from '../../components/Masthead.astro';
+import { resolve } from 'node:path';
+import { getCollection } from 'astro:content';
+import { repoRoot } from '../../lib/paths';
+import { listDirs, readJsonOptional, readOptional } from '../../lib/io';
+import { fmtDate, fmtCost, fmtNum } from '../../lib/format';
+import { findChampion, totalCost, uniqueModelCount } from '../../lib/scoreboard';
+import { loadSlugs, displaySlug } from '../../lib/slugs';
+import { pageSeo } from '../../lib/seo';
+
+interface TaskMeta {
+  task_kind?: string;
+  entrypoint?: string;
+  language?: string;
+  test_runner?: string;
+}
+
+function specPitch(raw: string): string {
+  const lines = raw.split('\n');
+  const out: string[] = [];
+  let started = false;
+  for (const ln of lines) {
+    if (!started) {
+      if (!ln.trim() || ln.startsWith('#')) continue;
+      started = true;
+    }
+    if (!ln.trim()) break;
+    out.push(ln.trim());
+  }
+  return out.join(' ');
+}
+
+const slugs = loadSlugs();
+const roundEntries = await getCollection('rounds');
+const rounds = roundEntries.map(e => e.data);
+
+const taskNames = listDirs(resolve(repoRoot, 'bench/tasks')).sort();
+const tasks = taskNames.map(name => {
+  const meta = readJsonOptional<TaskMeta>(
+    resolve(repoRoot, 'bench/tasks', name, 'task.json'),
+  ) ?? {};
+  const spec = readOptional(resolve(repoRoot, 'bench/tasks', name, 'SPEC.md')) ?? '';
+  const taskRounds = rounds
+    .filter(r => r.task === name)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const latest = taskRounds[0];
+  const champ = latest ? findChampion(latest.scoreboard) : null;
+  const latestModelCount = latest ? uniqueModelCount(latest.samples) : 0;
+  const latestCost = latest ? totalCost(latest.samples) : 0;
+  const totalSamples = taskRounds.reduce((sum, r) => sum + r.samples.length, 0);
+  const totalSpend = taskRounds.reduce((sum, r) => sum + totalCost(r.samples), 0);
+  const passRate = (() => {
+    let total = 0, pass = 0;
+    for (const r of taskRounds) for (const s of r.samples) {
+      total++;
+      if (s.testExitCode === 0) pass++;
+    }
+    return total > 0 ? pass / total : null;
+  })();
+
+  return {
+    name,
+    language: meta.language ?? '—',
+    kind: meta.task_kind ?? 'code',
+    pitch: specPitch(spec),
+    rounds: taskRounds.length,
+    latestDate: latest?.date ?? null,
+    champ,
+    latestModelCount,
+    latestCost,
+    totalSamples,
+    totalSpend,
+    passRate,
+  };
+});
+
+tasks.sort((a, b) => {
+  if (a.rounds === 0 && b.rounds === 0) return a.name.localeCompare(b.name);
+  if (a.rounds === 0) return 1;
+  if (b.rounds === 0) return -1;
+  return (b.latestDate ?? '').localeCompare(a.latestDate ?? '');
+});
+
+const totalRounds = tasks.reduce((s, t) => s + t.rounds, 0);
+const totalSamples = tasks.reduce((s, t) => s + t.totalSamples, 0);
+const totalSpend = tasks.reduce((s, t) => s + t.totalSpend, 0);
+
+const seo = pageSeo('benchmarks', '/benchmarks');
+---
+
+<BaseLayout seo={seo}>
+  <Header subtitle="benchmarks" />
+  <Masthead
+    title="benchmarks"
+    subtitle="Every task in the open-bench corpus. Each one is a SPEC.md plus a hidden test suite — the contract models are graded against. Tasks are versioned and live in <code>bench/tasks/</code>."
+  />
+
+  <section class="hero-stats">
+    <div class="stat"><span class="stat-num">{tasks.length}</span><span class="stat-label">tasks</span></div>
+    <div class="stat"><span class="stat-num">{totalRounds}</span><span class="stat-label">rounds</span></div>
+    <div class="stat"><span class="stat-num">{totalSamples}</span><span class="stat-label">samples</span></div>
+    <div class="stat"><span class="stat-num">{fmtCost(totalSpend)}</span><span class="stat-label">total spend</span></div>
+  </section>
+
+  <section>
+    {tasks.length === 0 ? (
+      <p class="muted">No tasks yet.</p>
+    ) : (
+      <div class="task-grid">
+        {tasks.map(t => (
+          <article class={`task-card ${t.rounds === 0 ? 'task-empty' : ''}`}>
+            <header class="task-head">
+              <a href={`/task/${t.name}`} class="task-name">{t.name}</a>
+              <span class="task-meta">
+                <span class="task-tag">{t.language}</span>
+                {t.kind && t.kind !== 'code' && <span class="task-tag">{t.kind}</span>}
+              </span>
+            </header>
+            {t.pitch && <p class="task-pitch">{t.pitch}</p>}
+
+            {t.rounds === 0 ? (
+              <p class="task-empty-msg">no runs yet &mdash; lineup not exercised against this task</p>
+            ) : (
+              <>
+                {t.champ && t.champ.score > 0 && t.latestDate && (
+                  <a href={`/model-royale/round/${t.latestDate}`} class="task-winner">
+                    <span class="task-winner-label">latest winner</span>
+                    <span class="task-winner-impl">{t.champ.impl}</span>
+                    {slugs[t.champ.impl] && <span class="task-winner-slug">{displaySlug(slugs[t.champ.impl])}</span>}
+                    <span class="task-winner-score">
+                      <strong>{fmtNum(t.champ.score, 1)}</strong>
+                      <span class="muted">/30</span>
+                    </span>
+                  </a>
+                )}
+                <dl class="task-stats">
+                  <div><dt>rounds</dt><dd>{t.rounds}</dd></div>
+                  <div><dt>models</dt><dd>{t.latestModelCount}</dd></div>
+                  <div><dt>samples</dt><dd>{t.totalSamples}</dd></div>
+                  <div><dt>tests pass</dt><dd>{t.passRate === null ? '—' : `${Math.round(t.passRate * 100)}%`}</dd></div>
+                  <div><dt>spend</dt><dd>{fmtCost(t.totalSpend)}</dd></div>
+                  <div><dt>last run</dt><dd>{t.latestDate ? fmtDate(t.latestDate) : '—'}</dd></div>
+                </dl>
+              </>
+            )}
+
+            <footer class="task-foot">
+              <a href={`/task/${t.name}`}>full spec &rarr;</a>
+              {t.latestDate && <a href={`/model-royale/round/${t.latestDate}`}>latest round &rarr;</a>}
+            </footer>
+          </article>
+        ))}
+      </div>
+    )}
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin: 1.5rem 0 2rem;
+  }
+  .stat { background: var(--bg); padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.25rem; }
+  .stat-num { font-family: var(--mono); font-size: 1.4rem; color: var(--fg-bright); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat-label { font-size: var(--font-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .task-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+  }
+  .task-card {
+    border: 1px solid var(--rule);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .task-card.task-empty { opacity: 0.7; }
+  .task-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+  .task-name { font-family: var(--mono); font-size: 1.15rem; font-weight: 700; color: var(--fg-bright); text-decoration: none; }
+  .task-name:hover { color: var(--accent); }
+  .task-meta { display: flex; gap: 0.5rem; }
+  .task-tag {
+    font-family: var(--mono);
+    font-size: var(--font-xs);
+    color: var(--muted);
+    border: 1px solid var(--rule);
+    padding: 1px 6px;
+    text-transform: lowercase;
+  }
+  .task-pitch { margin: 0; color: var(--fg); font-size: var(--font-sm); }
+  .task-empty-msg { margin: 0; color: var(--muted); font-style: italic; font-size: var(--font-sm); }
+
+  .task-winner {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: 'label impl score' 'label slug score';
+    gap: 2px 0.75rem;
+    align-items: center;
+    padding: 10px 12px;
+    border-left: 3px solid var(--accent);
+    background: var(--bg-alt);
+    text-decoration: none;
+    color: var(--fg);
+  }
+  .task-winner:hover { background: var(--code-bg); }
+  .task-winner-label {
+    grid-area: label;
+    font-size: var(--font-xs);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+  .task-winner-impl { grid-area: impl; font-weight: 700; color: var(--accent); }
+  .task-winner-slug { grid-area: slug; font-family: var(--mono); font-size: var(--font-xs); color: var(--muted); }
+  .task-winner-score { grid-area: score; font-family: var(--mono); font-size: 1.3rem; color: var(--fg-bright); font-variant-numeric: tabular-nums; }
+  .task-winner-score .muted { font-size: 0.85rem; color: var(--muted); }
+
+  .task-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem 1rem;
+    margin: 0;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--rule);
+  }
+  .task-stats div { display: flex; flex-direction: column; line-height: 1.2; }
+  .task-stats dt { font-size: var(--font-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .task-stats dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-bright); }
+
+  .task-foot {
+    display: flex;
+    gap: 1rem;
+    font-size: var(--font-sm);
+    margin-top: auto;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--rule);
+  }
+</style>

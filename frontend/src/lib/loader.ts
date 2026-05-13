@@ -29,11 +29,11 @@ function loadRuns(): Map<string, ReturnType<typeof parseMeta>[]> {
   return byDate;
 }
 
-function loadReview(date: string) {
-  const mdPath = resolve(repoRoot, `results/reviews/sandbox-${date}.md`);
+function loadReview(task: string, date: string) {
+  const mdPath = resolve(repoRoot, `results/reviews/${task}-${date}.md`);
   try {
     const md = readFileSync(mdPath, 'utf-8');
-    return { review: parseReview(md), filePath: `../results/reviews/sandbox-${date}.md` };
+    return { review: parseReview(md), filePath: `../results/reviews/${task}-${date}.md` };
   } catch {
     return null;
   }
@@ -49,10 +49,12 @@ export const roundsLoader: Loader = {
 
     for (const date of dates) {
       const samples = runsByDate.get(date)!;
-      const rev = loadReview(date);
+      const task = samples[0]?.task ?? 'sandbox';
+      const rev = loadReview(task, date);
 
       const roundData = {
         date,
+        task,
         samples,
         scoreboard: rev?.review?.scoreboard ?? [],
         judgeRanking: rev?.review?.judgeRanking ?? [],

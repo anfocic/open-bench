@@ -1,10 +1,10 @@
-import { getCollection } from 'astro:content';
+import { getRoyaleRounds } from '../../../lib/royale';
 import { roundsToRows, SCHEMA_VERSION } from '../../../lib/dataset';
 
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const entries = await getCollection('rounds');
+  const entries = await getRoyaleRounds();
   return entries.map(e => ({ params: { date: e.data.date }, props: { round: e.data } }));
 }
 

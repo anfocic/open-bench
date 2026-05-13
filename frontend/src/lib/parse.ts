@@ -16,6 +16,7 @@ export function parseMeta(json: unknown): Run | null {
   return {
     model: m.model as string,
     round: date,
+    task: typeof m.task === 'string' ? m.task : 'sandbox',
     sample,
     wallSec: typeof m.model_wall_clock_seconds === 'number' ? m.model_wall_clock_seconds : null,
     costUsd: typeof m.cost_usd === 'number' ? m.cost_usd : null,

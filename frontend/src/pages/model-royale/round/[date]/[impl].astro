@@ -5,17 +5,18 @@ import RoyaleNav from "../../../../components/RoyaleNav.astro";
 import Footer from '../../../../components/Footer.astro';
 import Masthead from '../../../../components/Masthead.astro';
 import BackToTop from '../../../../components/BackToTop.astro';
-import { getCollection } from 'astro:content';
+import { getRoyaleRounds } from '../../../../lib/royale';
 import { pickCanonicalRun, type RunArtifacts } from '../../../../lib/runs';
 import { highlight } from '../../../../lib/highlight';
 import { fmtCost, fmtSec, fmtTok, fmtDate, passFailIcon, passFailClass } from '../../../../lib/format';
 import { renderMarkdown } from '../../../../lib/markdown';
 import { templateSeo } from '../../../../lib/seo';
+import { displaySlug } from '../../../../lib/slugs';
 
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const entries = await getCollection('rounds');
+  const entries = await getRoyaleRounds();
   const out: Array<{ params: { date: string; impl: string }; props: { artifacts: RunArtifacts; date: string; impl: string; runPathHint: string | null; allImpls: string[] } }> = [];
   for (const entry of entries) {
     const r = entry.data;
@@ -96,7 +97,7 @@ const seo = templateSeo(
     });
   </script>
 
-  <Masthead title={impl} titleTransitionName={`impl-${date}-${impl}`} subtitle={`<span class="muted" style="font-size:var(--font-sm)">${artifacts.runPath}</span>${meta?.modelSlug ? `<div style="margin-top:4px;font-size:var(--font-sm)"><span class="muted">model:</span> <code>${meta.modelSlug}</code></div>` : ''}`} />
+  <Masthead title={impl} titleTransitionName={`impl-${date}-${impl}`} subtitle={`<span class="muted" style="font-size:var(--font-sm)">${artifacts.runPath}</span>${meta?.modelSlug ? `<div style="margin-top:4px;font-size:var(--font-sm)"><span class="muted">model:</span> <code>${displaySlug(meta.modelSlug)}</code></div>` : ''}`} />
 
   <div class="run-stats">
     <div class="run-stat"><div class="run-stat-label">wall</div><div class="run-stat-val">{fmtSec(meta?.wallSec ?? null)}</div></div>

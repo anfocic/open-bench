@@ -4,16 +4,19 @@ import Header from '../../components/Header.astro';
 import RoyaleNav from "../../components/RoyaleNav.astro";
 import Footer from '../../components/Footer.astro';
 import Masthead from '../../components/Masthead.astro';
-import { getCollection } from 'astro:content';
+import { getRoyaleRounds } from '../../lib/royale';
 import { fmtCost, fmtNum } from '../../lib/format';
 import { computeStandings, sparkline } from '../../lib/aggregate';
 import { pageSeo } from '../../lib/seo';
 import Term from '../../components/Term.astro';
+import ModelLabel from '../../components/ModelLabel.astro';
+import { loadSlugs } from '../../lib/slugs';
 
-const entries = await getCollection('rounds');
+const entries = await getRoyaleRounds();
 const rounds = entries.map(e => e.data);
 const standings = computeStandings(rounds);
 const totalRounds = rounds.length;
+const slugs = loadSlugs();
 
 const seo = pageSeo('leaderboard', '/model-royale/leaderboard', {
   standings: standings.map(s => ({ impl: s.impl, elo: s.elo })),
@@ -49,7 +52,7 @@ const seo = pageSeo('leaderboard', '/model-royale/leaderboard', {
           {standings.map((s, i) => (
             <tr>
               <td class="num">{i + 1}</td>
-              <td><a href={`/model-royale/model/${s.impl}`} transition:name={`model-${s.impl}`}>{s.impl}</a></td>
+              <td><ModelLabel impl={s.impl} slug={slugs[s.impl]} href={`/model-royale/model/${s.impl}`} transitionName={`model-${s.impl}`} /></td>
               <td class="num"><strong>{Math.round(s.elo)}</strong></td>
               <td class="num">{s.rounds}</td>
               <td class="num">{s.wins}</td>

@@ -4,16 +4,17 @@ import Header from '../../../../../components/Header.astro';
 import RoyaleNav from '../../../../../components/RoyaleNav.astro';
 import Footer from '../../../../../components/Footer.astro';
 import Masthead from '../../../../../components/Masthead.astro';
-import { getCollection } from 'astro:content';
+import { getRoyaleRounds } from '../../../../../lib/royale';
 import { fmtCost, fmtNum, fmtDate } from '../../../../../lib/format';
 import { compareModels, allPairs, computeStandings, sparkline } from '../../../../../lib/aggregate';
 import { templateSeo } from '../../../../../lib/seo';
 import Term from '../../../../../components/Term.astro';
+import { loadSlugs } from '../../../../../lib/slugs';
 
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const entries = await getCollection('rounds');
+  const entries = await getRoyaleRounds();
   const rounds = entries.map(e => e.data);
   const impls = new Set<string>();
   for (const r of rounds) for (const e of r.scoreboard) impls.add(e.impl);
@@ -21,7 +22,7 @@ export async function getStaticPaths() {
 }
 
 const { a, b } = Astro.props;
-const entries = await getCollection('rounds');
+const entries = await getRoyaleRounds();
 const rounds = entries.map(e => e.data);
 const standings = computeStandings(rounds);
 const cmp = compareModels(a, b, rounds, standings);
@@ -29,6 +30,9 @@ if (!cmp) return Astro.redirect('/404');
 
 const aRank = standings.findIndex(s => s.impl === a) + 1;
 const bRank = standings.findIndex(s => s.impl === b) + 1;
+const slugs = loadSlugs();
+const aSlug = slugs[a];
+const bSlug = slugs[b];
 
 const canonicalPath = `/model-royale/compare/${a}/vs/${b}`;
 const seo = templateSeo(
@@ -67,7 +71,13 @@ const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.dat
 
   <section class="cards">
     <article class={`card ${eloLeader === a ? 'card-lead' : ''}`}>
-      <header><a href={`/model-royale/model/${a}`} transition:name={`model-${a}`}>{a}</a> <span class="rank">#{aRank}</span></header>
+      <header>
+        <span class="head-id">
+          <a href={`/model-royale/model/${a}`} transition:name={`model-${a}`}>{a}</a>
+          {aSlug && <span class="head-slug">{aSlug}</span>}
+        </span>
+        <span class="rank">#{aRank}</span>
+      </header>
       <dl>
         <div><dt><Term k="elo">ELO</Term></dt><dd>{Math.round(cmp.a.elo)}</dd></div>
         <div><dt>rounds</dt><dd>{cmp.a.rounds}</dd></div>
@@ -79,7 +89,13 @@ const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.dat
       </dl>
     </article>
     <article class={`card ${eloLeader === b ? 'card-lead' : ''}`}>
-      <header><a href={`/model-royale/model/${b}`} transition:name={`model-${b}`}>{b}</a> <span class="rank">#{bRank}</span></header>
+      <header>
+        <span class="head-id">
+          <a href={`/model-royale/model/${b}`} transition:name={`model-${b}`}>{b}</a>
+          {bSlug && <span class="head-slug">{bSlug}</span>}
+        </span>
+        <span class="rank">#{bRank}</span>
+      </header>
       <dl>
         <div><dt><Term k="elo">ELO</Term></dt><dd>{Math.round(cmp.b.elo)}</dd></div>
         <div><dt>rounds</dt><dd>{cmp.b.rounds}</dd></div>
@@ -108,8 +124,14 @@ const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.dat
         <thead>
           <tr>
             <th>round</th>
-            <th class="num">{a}</th>
-            <th class="num">{b}</th>
+            <th class="num">
+              {a}
+              {aSlug && <div class="th-slug">{aSlug}</div>}
+            </th>
+            <th class="num">
+              {b}
+              {bSlug && <div class="th-slug">{bSlug}</div>}
+            </th>
             <th><Term k="winner">winner</Term></th>
             <th class="num"><Term k="deltaScore">Δ score</Term></th>
             <th class="num"><Term k="deltaCost">Δ cost</Term></th>
@@ -152,8 +174,11 @@ const allRows = [...cmp.common, ...cmp.aOnly, ...cmp.bOnly].sort((x, y) => y.dat
   @media (max-width: 600px) { .cards { grid-template-columns: 1fr; } }
   .card { border: 1px solid var(--rule); padding: 12px 16px; border-radius: 4px; }
   .card-lead { border-color: var(--accent); }
-  .card header { font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .card header { font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: baseline; }
+  .card .head-id { display: flex; flex-direction: column; line-height: 1.15; }
+  .card .head-slug { font-family: var(--mono); font-size: var(--font-xs); color: var(--muted); font-weight: 400; }
   .card .rank { color: var(--muted); font-weight: normal; }
+  .th-slug { font-family: var(--mono); font-size: var(--font-xs); color: var(--muted); font-weight: 400; margin-top: 2px; }
   .card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin: 0; }
   .card dl div { display: flex; justify-content: space-between; }
   .card dt { color: var(--muted); }

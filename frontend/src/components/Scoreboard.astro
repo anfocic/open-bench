@@ -4,13 +4,15 @@ import { fmtNum, fmtOr, passFailClass } from '../lib/format';
 import SectionHeader from './SectionHeader.astro';
 import DataTable from './DataTable.astro';
 import Term from './Term.astro';
+import ModelLabel from './ModelLabel.astro';
 
 export interface Props {
   entries: ScoreboardEntry[];
   champion?: string;
+  slugs?: Record<string, string>;
 }
 
-const { entries, champion } = Astro.props;
+const { entries, champion, slugs = {} } = Astro.props;
 
 function verdictClass(v: string): string {
   const s = v.toLowerCase();
@@ -50,8 +52,7 @@ const sorted = [...entries].sort((a, b) => {
             return (
               <tr class:list={{ champion: isChamp }}>
                 <td class="model">
-                  <span class="rank">{String(idx + 1).padStart(2, '0')}</span>
-                  {e.impl}
+                  <ModelLabel impl={e.impl} slug={slugs[e.impl]} rank={idx + 1} />
                 </td>
                 <td class="num"><strong>{fmtNum(total, 1)}</strong></td>
                 <td class="num">{fmtOr(e.specPeer, 1)}</td>

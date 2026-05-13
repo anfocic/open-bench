@@ -14,14 +14,16 @@ import Agreement from '../../../../components/Agreement.astro';
 import PerImplDetail from '../../../../components/PerImplDetail.astro';
 import CostEfficiency from '../../../../components/CostEfficiency.astro';
 import { getCollection, getEntry } from 'astro:content';
+import { getRoyaleRounds } from '../../../../lib/royale';
 import { fmtNum, fmtCost, fmtDate } from '../../../../lib/format';
 import { findChampion, uniqueModelCount, totalCost } from '../../../../lib/scoreboard';
 import { templateSeo } from '../../../../lib/seo';
+import { loadSlugs } from '../../../../lib/slugs';
 
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const entries = await getCollection('rounds');
+  const entries = await getRoyaleRounds();
   const sorted = [...entries].sort((a, b) => a.id.localeCompare(b.id));
   return sorted.map((e, i) => ({
     params: { date: e.id },
@@ -49,6 +51,7 @@ const roundCost = totalCost(round.samples);
 const allPassed = round.samples.length > 0 && round.samples.every(s => s.testExitCode === 0);
 
 const taskName = 'sandbox';
+const slugs = loadSlugs();
 
 const roundLite = {
   date: round.date,
@@ -116,25 +119,25 @@ const seo = templateSeo(
 
   <div class="tab-panels">
     <div class="tab-panel" role="tabpanel" id="panel-scoreboard" data-panel="scoreboard" aria-labelledby="tab-scoreboard">
-      <Scoreboard entries={round.scoreboard} champion={champ.impl} />
+      <Scoreboard entries={round.scoreboard} champion={champ.impl} slugs={slugs} />
       <div class="chart-block">
         <RoundBars date={round.date} />
       </div>
     </div>
     <div class="tab-panel" role="tabpanel" id="panel-runs" data-panel="runs" hidden aria-labelledby="tab-runs">
-      <RunsTable runs={round.samples} />
+      <RunsTable runs={round.samples} slugs={slugs} />
     </div>
     <div class="tab-panel" role="tabpanel" id="panel-self-bias" data-panel="self-bias" hidden aria-labelledby="tab-self-bias">
-      <SelfBias entries={round.selfBias} />
+      <SelfBias entries={round.selfBias} slugs={slugs} />
     </div>
     <div class="tab-panel" role="tabpanel" id="panel-judges" data-panel="judges" hidden aria-labelledby="tab-judges">
-      <JudgeRanking entries={round.judgeRanking} />
+      <JudgeRanking entries={round.judgeRanking} slugs={slugs} />
     </div>
     <div class="tab-panel" role="tabpanel" id="panel-agreement" data-panel="agreement" hidden aria-labelledby="tab-agreement">
-      <Agreement entries={round.agreement} />
+      <Agreement entries={round.agreement} slugs={slugs} />
     </div>
     <div class="tab-panel" role="tabpanel" id="panel-per-impl" data-panel="per-impl" hidden aria-labelledby="tab-per-impl">
-      <PerImplDetail entries={round.perImplDetail} date={round.date} />
+      <PerImplDetail entries={round.perImplDetail} date={round.date} slugs={slugs} />
     </div>
     <div class="tab-panel" role="tabpanel" id="panel-cost" data-panel="cost" hidden aria-labelledby="tab-cost">
       <CostEfficiency entries={round.costEfficiency} />

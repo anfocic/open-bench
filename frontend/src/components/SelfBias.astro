@@ -3,12 +3,14 @@ import type { SelfBiasEntry } from '../data/types';
 import { fmtNum, fmtOr } from '../lib/format';
 import SectionHeader from './SectionHeader.astro';
 import DataTable from './DataTable.astro';
+import ModelLabel from './ModelLabel.astro';
 
 export interface Props {
   entries: SelfBiasEntry[];
+  slugs?: Record<string, string>;
 }
 
-const { entries } = Astro.props;
+const { entries, slugs = {} } = Astro.props;
 
 const maxAbs = Math.max(
   1,
@@ -47,7 +49,7 @@ function deltaCell(v: number | null) {
             const dq = deltaCell(e.deltaQual);
             return (
               <tr>
-                <td class="model">{e.impl}</td>
+                <td class="model"><ModelLabel impl={e.impl} slug={slugs[e.impl]} /></td>
                 <td class="num">{fmtOr(e.selfSpec, 1)}</td>
                 <td class="num">{fmtOr(e.peerMedSpec, 1)}</td>
                 <td class={`num delta-cell ${ds?.cls ?? ''}`}>
