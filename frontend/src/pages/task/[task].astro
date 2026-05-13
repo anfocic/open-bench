@@ -5,10 +5,23 @@ import Footer from '../../components/Footer.astro';
 import Masthead from '../../components/Masthead.astro';
 import BackToTop from '../../components/BackToTop.astro';
 import { resolve } from 'node:path';
+import { getCollection } from 'astro:content';
 import { repoRoot } from '../../lib/paths';
-import { readOptional, listDirs } from '../../lib/io';
+import { readOptional, listDirs, readJsonOptional } from '../../lib/io';
 import { renderMarkdown } from '../../lib/markdown';
+import { findChampion, totalCost, uniqueModelCount } from '../../lib/scoreboard';
+import { loadSlugs, displaySlug } from '../../lib/slugs';
+import { ROYALE_TASK } from '../../lib/royale';
+import { fmtCost, fmtNum, fmtDate } from '../../lib/format';
 import { templateSeo } from '../../lib/seo';
+
+interface TaskMeta {
+  task_kind?: string;
+  entrypoint?: string;
+  language?: string;
+  test_runner?: string;
+  test_invocation?: string[];
+}
 
 export async function getStaticPaths() {
   const tasksDir = resolve(repoRoot, 'bench/tasks');
@@ -21,9 +34,75 @@ const taskDir = resolve(repoRoot, 'bench/tasks', task!);
 const specRaw = readOptional(resolve(taskDir, 'SPEC.md'));
 const promptRaw = readOptional(resolve(taskDir, 'PROMPT.md'));
 const rubricRaw = readOptional(resolve(taskDir, 'JUDGE_RUBRIC.md'));
+const meta = readJsonOptional<TaskMeta>(resolve(taskDir, 'task.json')) ?? {};
+
+function pitch(raw: string | null): string {
+  if (!raw) return '';
+  const lines = raw.split('\n');
+  const out: string[] = [];
+  let started = false;
+  for (const ln of lines) {
+    if (!started) {
+      if (!ln.trim() || ln.startsWith('#')) continue;
+      started = true;
+    }
+    if (!ln.trim()) break;
+    out.push(ln.trim());
+  }
+  return out.join(' ').replace(/\*\*/g, '');
+}
+
+function extractSection(raw: string | null, headingRe: RegExp): string | null {
+  if (!raw) return null;
+  const lines = raw.split('\n');
+  let inSec = false;
+  const out: string[] = [];
+  for (const ln of lines) {
+    if (/^##\s/.test(ln)) {
+      if (inSec) break;
+      if (headingRe.test(ln)) { inSec = true; continue; }
+    }
+    if (inSec) out.push(ln);
+  }
+  return out.join('\n').trim() || null;
+}
+
+function bullets(text: string | null, limit = 8): string[] {
+  if (!text) return [];
+  return text
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => /^[-*]\s/.test(l))
+    .map(l => l.replace(/^[-*]\s+/, '').replace(/`([^`]+)`/g, '$1').replace(/\*\*/g, ''))
+    .slice(0, limit);
+}
+
+const specPitch = pitch(specRaw);
+const hardConstraints = bullets(extractSection(promptRaw, /Hard constraints/i));
+const outOfScope = bullets(extractSection(specRaw, /Out of scope/i));
+const durability = bullets(extractSection(specRaw, /Durability/i));
+
 const specHtml = specRaw ? renderMarkdown(specRaw) : null;
 const promptHtml = promptRaw ? renderMarkdown(promptRaw) : null;
 const rubricHtml = rubricRaw ? renderMarkdown(rubricRaw) : null;
+
+const slugs = loadSlugs();
+const roundEntries = await getCollection('rounds');
+const rounds = roundEntries
+  .map(e => e.data)
+  .filter(r => r.task === task)
+  .sort((a, b) => b.date.localeCompare(a.date));
+const latest = rounds[0] ?? null;
+const champ = latest ? findChampion(latest.scoreboard) : null;
+const champEntry = latest && champ ? latest.scoreboard.find(e => e.impl === champ.impl) : null;
+const latestCost = latest ? totalCost(latest.samples) : 0;
+const latestModels = latest ? uniqueModelCount(latest.samples) : 0;
+const allPassed = latest ? latest.samples.length > 0 && latest.samples.every(s => s.testExitCode === 0) : false;
+const totalSamples = rounds.reduce((s, r) => s + r.samples.length, 0);
+const totalSpend = rounds.reduce((s, r) => s + totalCost(r.samples), 0);
+const roundLink = latest
+  ? (task === ROYALE_TASK ? `/model-royale/round/${latest.date}` : `/benchmarks/${task}/${latest.date}`)
+  : null;
 
 const canonicalPath = `/task/${task}`;
 const seo = templateSeo(
@@ -34,7 +113,8 @@ const seo = templateSeo(
     task: task!,
     trail: [
       { name: 'open-bench', path: '/' },
-      { name: `task ${task}`, path: canonicalPath },
+      { name: 'benchmarks', path: '/benchmarks' },
+      { name: task!, path: canonicalPath },
     ],
   },
 );
@@ -43,33 +123,251 @@ const seo = templateSeo(
 <BaseLayout seo={seo}>
   <Header subtitle={`task / ${task}`} />
 
-  <Masthead title={task!} subtitle="The spec each model is given, plus the rubric judges use to score. Read it as a contract: what counts as done, what counts as good." />
+  <nav class="crumb">
+    <a href="/benchmarks">benchmarks</a>
+    <span class="sep">/</span>
+    <span>{task}</span>
+  </nav>
 
-  <div class="section-nav">
-    {specHtml && <a href="#spec">spec</a>}
-    {promptHtml && <a href="#prompt">prompt</a>}
-    {rubricHtml && <a href="#rubric">rubric</a>}
-  </div>
+  <Masthead title={task!} subtitle={specPitch || 'A task spec each model implements blind. Hidden tests gate the verdict; peer judges score spec compliance and code quality.'} />
 
-  {specHtml && (
+  <section class="quick-facts">
+    <div class="fact"><span class="fact-label">language</span><span class="fact-val">{meta.language ?? '—'}</span></div>
+    <div class="fact"><span class="fact-label">entrypoint</span><span class="fact-val">{meta.entrypoint ?? '—'}</span></div>
+    <div class="fact"><span class="fact-label">test runner</span><span class="fact-val">{meta.test_runner ?? '—'}</span></div>
+    <div class="fact"><span class="fact-label">kind</span><span class="fact-val">{meta.task_kind ?? 'code'}</span></div>
+  </section>
+
+  {latest && champ && champ.score > 0 && roundLink && (
     <section>
-      <h2 id="spec">spec.md</h2>
-      <div class="prose" set:html={specHtml} />
+      <h2 class="section-title">latest run</h2>
+      <a href={roundLink} class="latest-card">
+        <div class="latest-when">
+          <span class="lbl">round</span>
+          <span class="when">{fmtDate(latest.date)}</span>
+        </div>
+        <div class="latest-winner">
+          <span class="lbl">winner</span>
+          <span class="impl">{champ.impl}</span>
+          {slugs[champ.impl] && <span class="slug">{displaySlug(slugs[champ.impl])}</span>}
+        </div>
+        <div class="latest-score">
+          <strong>{fmtNum(champ.score, 1)}</strong><span class="muted">/30</span>
+          <span class="breakdown">spec {fmtNum(champEntry?.specPeer ?? 0, 1)} · qual {fmtNum(champEntry?.qualityPeer ?? 0, 1)}</span>
+        </div>
+        <dl class="latest-meta">
+          <div><dt>models</dt><dd>{latestModels}</dd></div>
+          <div><dt>samples</dt><dd>{latest.samples.length}</dd></div>
+          <div><dt>tests</dt><dd>{allPassed ? 'all pass' : 'some fail'}</dd></div>
+          <div><dt>spend</dt><dd>{fmtCost(latestCost)}</dd></div>
+        </dl>
+      </a>
+      {rounds.length > 1 && (
+        <p class="muted hist">
+          history: {rounds.length} rounds · {totalSamples} samples · {fmtCost(totalSpend)} total
+        </p>
+      )}
     </section>
   )}
-  {promptHtml && (
+
+  {!latest && (
     <section>
-      <h2 id="prompt">prompt.md</h2>
-      <div class="prose" set:html={promptHtml} />
+      <p class="muted">No runs yet — lineup hasn't been exercised against this task.</p>
     </section>
   )}
-  {rubricHtml && (
+
+  {(hardConstraints.length > 0 || durability.length > 0 || outOfScope.length > 0) && (
     <section>
-      <h2 id="rubric">judge_rubric.md</h2>
-      <div class="prose" set:html={rubricHtml} />
+      <h2 class="section-title">contract</h2>
+      <div class="contract-grid">
+        {hardConstraints.length > 0 && (
+          <div class="contract-card">
+            <h3>must</h3>
+            <ul>{hardConstraints.map(b => <li>{b}</li>)}</ul>
+          </div>
+        )}
+        {durability.length > 0 && (
+          <div class="contract-card">
+            <h3>steps</h3>
+            <ol>{durability.map(b => <li>{b}</li>)}</ol>
+          </div>
+        )}
+        {outOfScope.length > 0 && (
+          <div class="contract-card">
+            <h3>out of scope</h3>
+            <ul>{outOfScope.map(b => <li>{b}</li>)}</ul>
+          </div>
+        )}
+      </div>
     </section>
   )}
+
+  <section>
+    <h2 class="section-title">full contract</h2>
+    <p class="muted">The raw documents handed to every model and every judge. Read these as the source of truth.</p>
+
+    {specHtml && (
+      <details class="doc">
+        <summary>
+          <span class="doc-icon">SPEC</span>
+          <span class="doc-title">spec.md</span>
+          <span class="doc-hint">what done looks like</span>
+        </summary>
+        <div class="prose" set:html={specHtml} />
+      </details>
+    )}
+    {promptHtml && (
+      <details class="doc">
+        <summary>
+          <span class="doc-icon">PRMT</span>
+          <span class="doc-title">prompt.md</span>
+          <span class="doc-hint">what the model reads</span>
+        </summary>
+        <div class="prose" set:html={promptHtml} />
+      </details>
+    )}
+    {rubricHtml && (
+      <details class="doc">
+        <summary>
+          <span class="doc-icon">RUBR</span>
+          <span class="doc-title">judge_rubric.md</span>
+          <span class="doc-hint">how judges score</span>
+        </summary>
+        <div class="prose" set:html={rubricHtml} />
+      </details>
+    )}
+  </section>
 
   <BackToTop />
   <Footer />
 </BaseLayout>
+
+<style>
+  .crumb { margin: 12px 0 0; font-size: var(--font-sm); color: var(--muted); }
+  .crumb a { color: var(--muted); }
+  .crumb a:hover { color: var(--accent); }
+  .crumb .sep { margin: 0 0.4rem; opacity: 0.6; }
+
+  .quick-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin: 1.5rem 0 2rem;
+  }
+  .fact { background: var(--bg); padding: 0.85rem 1.1rem; display: flex; flex-direction: column; gap: 0.2rem; }
+  .fact-label { font-size: var(--font-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .fact-val { font-family: var(--mono); color: var(--fg-bright); font-weight: 600; }
+
+  .section-title {
+    font-family: var(--mono);
+    font-size: var(--font-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin: 1.5rem 0 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .latest-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: 'when winner score' 'meta meta meta';
+    gap: 0.75rem 1.5rem;
+    padding: 14px 18px;
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    text-decoration: none;
+    color: var(--fg);
+    align-items: center;
+  }
+  .latest-card:hover { background: var(--bg-alt); }
+  .latest-when { grid-area: when; display: flex; flex-direction: column; line-height: 1.2; }
+  .latest-winner { grid-area: winner; display: flex; flex-direction: column; line-height: 1.2; }
+  .latest-score { grid-area: score; text-align: right; font-family: var(--mono); }
+  .latest-score strong { font-size: 1.5rem; color: var(--fg-bright); font-variant-numeric: tabular-nums; }
+  .latest-score .muted { color: var(--muted); }
+  .latest-score .breakdown { display: block; font-size: var(--font-xs); color: var(--muted); margin-top: 2px; }
+  .latest-card .lbl { font-size: var(--font-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .latest-card .when { font-family: var(--mono); font-size: 1.05rem; font-weight: 600; color: var(--fg-bright); }
+  .latest-card .impl { font-weight: 700; color: var(--accent); font-size: 1.05rem; }
+  .latest-card .slug { font-family: var(--mono); font-size: var(--font-xs); color: var(--muted); }
+  .latest-meta {
+    grid-area: meta;
+    margin: 0;
+    padding-top: 0.6rem;
+    border-top: 1px dashed var(--rule);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+  .latest-meta div { display: flex; flex-direction: column; line-height: 1.2; }
+  .latest-meta dt { font-size: var(--font-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .latest-meta dd { margin: 0; font-family: var(--mono); color: var(--fg-bright); font-variant-numeric: tabular-nums; }
+  @media (max-width: 600px) {
+    .latest-card { grid-template-columns: 1fr; grid-template-areas: 'when' 'winner' 'score' 'meta'; }
+    .latest-score { text-align: left; }
+    .latest-meta { grid-template-columns: repeat(2, 1fr); }
+  }
+  .hist { margin: 0.5rem 0 0; font-size: var(--font-sm); }
+
+  .contract-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .contract-card {
+    border: 1px solid var(--rule);
+    padding: 12px 14px;
+  }
+  .contract-card h3 {
+    margin: 0 0 0.5rem;
+    font-family: var(--mono);
+    font-size: var(--font-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+  }
+  .contract-card ul,
+  .contract-card ol { margin: 0; padding-left: 1.2rem; }
+  .contract-card li { font-size: var(--font-sm); margin: 0.25rem 0; line-height: 1.4; }
+
+  .doc {
+    border: 1px solid var(--rule);
+    margin: 8px 0;
+  }
+  .doc summary {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 10px 14px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+  .doc summary::-webkit-details-marker { display: none; }
+  .doc summary::after {
+    content: '+';
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 1.2rem;
+    grid-column: 4;
+  }
+  .doc[open] summary::after { content: '−'; }
+  .doc:hover summary { background: var(--bg-alt); }
+  .doc-icon {
+    font-family: var(--mono);
+    font-size: var(--font-xs);
+    color: var(--accent);
+    background: var(--bg-alt);
+    padding: 2px 6px;
+    border: 1px solid var(--rule);
+    letter-spacing: 0.04em;
+  }
+  .doc-title { font-family: var(--mono); color: var(--fg-bright); font-weight: 600; }
+  .doc-hint { font-size: var(--font-xs); color: var(--muted); }
+  .doc[open] .prose { padding: 0 18px 18px; }
+</style>
