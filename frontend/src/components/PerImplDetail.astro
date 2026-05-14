@@ -5,11 +5,12 @@ import DataTable from './DataTable.astro';
 
 export interface Props {
   entries: PerImplDetail[];
+  task: string;
   date: string;
   slugs?: Record<string, string>;
 }
 
-const { entries, date, slugs = {} } = Astro.props;
+const { entries, task, date, slugs = {} } = Astro.props;
 ---
 
 {entries.length > 0 && (
@@ -25,7 +26,7 @@ const { entries, date, slugs = {} } = Astro.props;
           <a href={`#impl-${detail.impl}`} class="anchor-link">#</a>
           {detail.impl}
           {slugs[detail.impl] && <span class="impl-slug">{slugs[detail.impl]}</span>}
-          <a href={`/model-royale/round/${date}/${detail.impl}`} class="impl-view-run">view full run &rarr;</a>
+          <a href={`/benchmarks/${task}/${date}/${detail.impl}`} class="impl-view-run">view full run &rarr;</a>
         </h3>
         <p class="muted section-subtitle" style="font-family:var(--mono)">{detail.runPath}</p>
         {detail.scores.length > 0 && (

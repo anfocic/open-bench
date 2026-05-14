@@ -89,7 +89,7 @@ function leaderboard(d: { round: RoundLite; canonicalPath: string }): Json {
       '@type': 'ListItem',
       position: i + 1,
       name: row.impl,
-      url: url(`/model-royale/round/${r.date}/${row.impl}`),
+      url: url(`/benchmarks/${r.task}/${r.date}/${row.impl}`),
     })),
   };
 }
@@ -107,7 +107,7 @@ function aboutPage(d: { canonicalPath: string }): Json {
 const seoPagesAboutDescription =
   'How the open-bench harness works: identical SPEC.md, identical sandbox, identical budget. Hidden pytest gate, peer + expert review, self-bias measured.';
 
-function softwareSourceCode(d: { impl: string; date: string; canonicalPath: string }): Json {
+function softwareSourceCode(d: { impl: string; date: string; task?: string; canonicalPath: string }): Json {
   return {
     '@context': 'https://schema.org',
     '@type': 'SoftwareSourceCode',
@@ -116,7 +116,7 @@ function softwareSourceCode(d: { impl: string; date: string; canonicalPath: stri
     programmingLanguage: 'Python',
     codeRepository: seoSite.url,
     creator: { '@type': 'Organization', name: d.impl },
-    isPartOf: { '@type': 'Dataset', name: `open-bench round ${d.date}`, url: url(`/model-royale/round/${d.date}`) },
+    isPartOf: { '@type': 'Dataset', name: `open-bench round ${d.date}`, url: url(d.task ? `/benchmarks/${d.task}/${d.date}` : d.canonicalPath) },
   };
 }
 
@@ -169,7 +169,7 @@ function blog(d: { notes: { slug: string; title: string; publishedAt: string }[]
     blogPost: d.notes.map((n) => ({
       '@type': 'BlogPosting',
       headline: n.title,
-      url: url(`/model-royale/writeups/${n.slug}`),
+      url: url(`/writeups/${n.slug}`),
       datePublished: n.publishedAt,
     })),
   };

@@ -1,11 +1,10 @@
 ---
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import Header from '../../../../components/Header.astro';
-import RoyaleNav from "../../../../components/RoyaleNav.astro";
 import Footer from '../../../../components/Footer.astro';
 import Masthead from '../../../../components/Masthead.astro';
 import BackToTop from '../../../../components/BackToTop.astro';
-import { getRoyaleRounds } from '../../../../lib/royale';
+import { getCollection } from 'astro:content';
 import { pickCanonicalRun, type RunArtifacts } from '../../../../lib/runs';
 import { highlight } from '../../../../lib/highlight';
 import { fmtCost, fmtSec, fmtTok, fmtDate, passFailIcon, passFailClass } from '../../../../lib/format';
@@ -16,32 +15,32 @@ import { displaySlug } from '../../../../lib/slugs';
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const entries = await getRoyaleRounds();
-  const out: Array<{ params: { date: string; impl: string }; props: { artifacts: RunArtifacts; date: string; impl: string; runPathHint: string | null; allImpls: string[] } }> = [];
+  const entries = await getCollection('rounds');
+  const out: Array<{ params: { task: string; date: string; impl: string }; props: { artifacts: RunArtifacts; task: string; date: string; impl: string; allImpls: string[] } }> = [];
   for (const entry of entries) {
     const r = entry.data;
-    const collected = new Map<string, { artifacts: RunArtifacts; runPathHint: string | null }>();
+    const collected = new Map<string, RunArtifacts>();
     for (const detail of r.perImplDetail) {
       if (collected.has(detail.impl)) continue;
       const artifacts = pickCanonicalRun(detail.impl, r.date, detail.runPath);
       if (!artifacts) continue;
-      collected.set(detail.impl, { artifacts, runPathHint: detail.runPath });
+      collected.set(detail.impl, artifacts);
     }
     for (const sample of r.samples) {
       if (collected.has(sample.model)) continue;
       const artifacts = pickCanonicalRun(sample.model, r.date);
       if (!artifacts) continue;
-      collected.set(sample.model, { artifacts, runPathHint: null });
+      collected.set(sample.model, artifacts);
     }
     const allImpls = [...collected.keys()];
-    for (const [impl, { artifacts, runPathHint }] of collected) {
-      out.push({ params: { date: r.date, impl }, props: { artifacts, date: r.date, impl, runPathHint, allImpls } });
+    for (const [impl, artifacts] of collected) {
+      out.push({ params: { task: r.task, date: r.date, impl }, props: { artifacts, task: r.task, date: r.date, impl, allImpls } });
     }
   }
   return out;
 }
 
-const { artifacts, date, impl, allImpls } = Astro.props;
+const { artifacts, task, date, impl, allImpls } = Astro.props;
 const meta = artifacts.meta;
 
 const sandboxHtml = artifacts.sandboxPy ? await highlight(artifacts.sandboxPy, 'python') : null;
@@ -53,33 +52,35 @@ const sandboxLineCount = artifacts.sandboxPy?.split('\n').length ?? 0;
 const transcriptByteSize = artifacts.transcript ? new TextEncoder().encode(artifacts.transcript).length : 0;
 const firstTab = sandboxHtml ? 'code' : diffHtml ? 'diff' : testHtml ? 'tests' : transcriptHtml ? 'transcript' : 'code';
 
-const canonicalPath = `/model-royale/round/${date}/${impl}`;
+const roundPath = `/benchmarks/${task}/${date}`;
+const canonicalPath = `${roundPath}/${impl}`;
 const trail = [
   { name: 'open-bench', path: '/' },
-  { name: `round ${date}`, path: `/model-royale/round/${date}` },
+  { name: 'benchmarks', path: '/benchmarks' },
+  { name: task, path: `/task/${task}` },
+  { name: `round ${date}`, path: roundPath },
   { name: impl, path: canonicalPath },
 ];
 const seo = templateSeo(
   'impl',
   canonicalPath,
   { date, impl },
-  { impl, date, canonicalPath, trail },
+  { impl, date, task, canonicalPath, trail },
   date,
 );
 ---
 
 <BaseLayout seo={seo}>
   <Header subtitle={`${impl} / ${fmtDate(date)}`} />
-  <RoyaleNav />
 
   <div style="margin:12px 0 0">
-    <a href={`/model-royale/round/${date}`} class="back-link-arrow">&larr; back to round {fmtDate(date)}</a>
+    <a href={roundPath} class="back-link-arrow">&larr; back to {task} {fmtDate(date)}</a>
   </div>
 
   <nav class="model-tabs" aria-label="Models in round">
     {allImpls.map(name => (
       <a
-        href={`/model-royale/round/${date}/${name}`}
+        href={`${roundPath}/${name}`}
         class:list={['model-tab', { active: name === impl }]}
         aria-current={name === impl ? 'page' : undefined}
         data-impl={name}

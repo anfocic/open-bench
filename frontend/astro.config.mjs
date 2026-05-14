@@ -25,16 +25,9 @@ export default defineConfig({
   site: 'https://openbenchmark.dev',
   trailingSlash: 'never',
   redirects: {
-    '/round': '/model-royale/round',
-    '/round/[date]': '/model-royale/round/[date]',
-    '/round/[date]/[impl]': '/model-royale/round/[date]/[impl]',
-    '/leaderboard': '/model-royale/leaderboard',
-    '/notes': '/model-royale/writeups',
-    '/notes/[slug]': '/model-royale/writeups/[slug]',
-    '/compare': '/model-royale/compare',
-    '/compare/[a]/vs/[b]': '/model-royale/compare/[a]/vs/[b]',
-    '/model/[impl]': '/model-royale/model/[impl]',
-    '/changelog': '/model-royale/changelog',
+    // short aliases for the writeups section
+    '/notes': '/writeups',
+    '/notes/[slug]': '/writeups/[slug]',
   },
   integrations: [
     ogIntegration,

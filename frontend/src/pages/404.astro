@@ -5,10 +5,10 @@ import Footer from '../components/Footer.astro';
 import Masthead from '../components/Masthead.astro';
 import { fmtDate } from '../lib/format';
 import { findChampion } from '../lib/scoreboard';
-import { getRoyaleRounds } from '../lib/royale';
+import { getCollection } from 'astro:content';
 import type { SeoProps } from '../lib/seo';
 
-const entries = await getRoyaleRounds();
+const entries = await getCollection('rounds');
 const rounds = entries.sort((a, b) => b.id.localeCompare(a.id)).map(e => e.data);
 const latestRound = rounds[0];
 
@@ -25,18 +25,19 @@ const seo: SeoProps = {
 
 <BaseLayout seo={seo}>
   <Header subtitle="404" />
-  <Masthead title="404" subtitle={latestRound ? `no such round, page, or path. try <a href="/model-royale/round/${latestRound.date}">round ${latestRound.date}</a> or <a href="/">home</a>.` : 'no such round, page, or path.'} />
+  <Masthead title="404" subtitle={latestRound ? `no such round, page, or path. try <a href="/benchmarks/${latestRound.task}/${latestRound.date}">${latestRound.task} ${latestRound.date}</a> or <a href="/">home</a>.` : 'no such round, page, or path.'} />
   {rounds.length > 0 && (
     <section>
-      <h2>rounds</h2>
+      <h2>recent rounds</h2>
       <div class="archive-list">
         {rounds.slice(0, 5).map(r => {
           const c = findChampion(r.scoreboard);
           return (
-            <a href={`/model-royale/round/${r.date}`}>
+            <a href={`/benchmarks/${r.task}/${r.date}`}>
               <div class="row">
-                <span class="date">{r.date}</span>
-                <span class="winner">{c.impl}</span>
+                <span class="date">{fmtDate(r.date)}</span>
+                <span class="winner">{r.task}</span>
+                <span class="meta">{c.impl !== '—' ? c.impl : ''}</span>
               </div>
             </a>
           );

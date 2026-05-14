@@ -10,7 +10,6 @@ import { listDirs, readJsonOptional, readOptional } from '../../lib/io';
 import { fmtDate, fmtCost, fmtNum } from '../../lib/format';
 import { findChampion, totalCost, uniqueModelCount } from '../../lib/scoreboard';
 import { loadSlugs, displaySlug } from '../../lib/slugs';
-import { isRoyaleTask } from '../../lib/royale';
 import { pageSeo } from '../../lib/seo';
 
 interface TaskMeta {
@@ -70,11 +69,7 @@ const tasks = taskNames.map(name => {
     pitch: specPitch(spec),
     rounds: taskRounds.length,
     latestDate: latest?.date ?? null,
-    roundLink: latest
-      ? (isRoyaleTask(name)
-        ? `/model-royale/round/${latest.date}`
-        : `/benchmarks/${name}/${latest.date}`)
-      : null,
+    roundLink: latest ? `/benchmarks/${name}/${latest.date}` : null,
     champ,
     latestModelCount,
     latestCost,
