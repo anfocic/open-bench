@@ -14,6 +14,10 @@ dist/
 results/judgments/*
 !results/judgments/.gitkeep
 
+# Round-2 attack matrix: per-pair raw pytest output is noisy; the
+# aggregated matrix.json captures the signal and IS committed.
+results/attacks/*/pair-*.txt
+
 # blog drafts and working notes are author-local; not part of the public
 # repo. Published, public-facing writeups live in /blog/ at the repo root.
 bench/blog/

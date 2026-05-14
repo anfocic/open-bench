@@ -19,6 +19,8 @@ bench-run-all      = "bench.scripts.run_all:main"
 bench-judgments    = "bench.scripts.start_judgments:main"
 bench-aggregate    = "bench.scripts.aggregate_judges:main"
 bench-perf         = "bench.scripts.perf_bench:main"
+bench-attacks      = "bench.scripts.run_attacks:main"
+bench-aggregate-attacks = "bench.scripts.aggregate_attacks:main"
 
 [project.urls]
 Homepage = "https://github.com/anfocic/open-bench"
