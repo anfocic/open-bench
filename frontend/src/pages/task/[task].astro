@@ -11,7 +11,6 @@ import { readOptional, listDirs, readJsonOptional } from '../../lib/io';
 import { renderMarkdown } from '../../lib/markdown';
 import { findChampion, totalCost, uniqueModelCount } from '../../lib/scoreboard';
 import { loadSlugs, displaySlug } from '../../lib/slugs';
-import { isRoyaleTask } from '../../lib/royale';
 import { fmtCost, fmtNum, fmtDate } from '../../lib/format';
 import { templateSeo } from '../../lib/seo';
 
@@ -100,9 +99,7 @@ const latestModels = latest ? uniqueModelCount(latest.samples) : 0;
 const allPassed = latest ? latest.samples.length > 0 && latest.samples.every(s => s.testExitCode === 0) : false;
 const totalSamples = rounds.reduce((s, r) => s + r.samples.length, 0);
 const totalSpend = rounds.reduce((s, r) => s + totalCost(r.samples), 0);
-const roundLink = latest
-  ? (isRoyaleTask(task) ? `/model-royale/round/${latest.date}` : `/benchmarks/${task}/${latest.date}`)
-  : null;
+const roundLink = latest ? `/benchmarks/${task}/${latest.date}` : null;
 
 const canonicalPath = `/task/${task}`;
 const seo = templateSeo(

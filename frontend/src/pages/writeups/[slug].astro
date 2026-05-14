@@ -1,13 +1,12 @@
 ---
-import BaseLayout from '../../../layouts/BaseLayout.astro';
-import Header from '../../../components/Header.astro';
-import RoyaleNav from "../../../components/RoyaleNav.astro";
-import Footer from '../../../components/Footer.astro';
-import Masthead from '../../../components/Masthead.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import Masthead from '../../components/Masthead.astro';
 import { getCollection, render } from 'astro:content';
-import { fmtDate } from '../../../lib/format';
-import { templateSeo } from '../../../lib/seo';
-import '../../../styles/prose.css';
+import { fmtDate } from '../../lib/format';
+import { templateSeo } from '../../lib/seo';
+import '../../styles/prose.css';
 
 export const prerender = true;
 
@@ -28,7 +27,7 @@ const { entry, prevSlug, nextSlug } = Astro.props;
 const note = entry.data;
 const slug = entry.id;
 const { Content } = await render(entry);
-const canonicalPath = `/model-royale/writeups/${slug}`;
+const canonicalPath = `/writeups/${slug}`;
 
 const seo = templateSeo(
   'note',
@@ -42,23 +41,22 @@ const seo = templateSeo(
     note: { title: note.title, summary: note.summary, publishedAt: note.publishedAt, author: note.author, slug },
     trail: [
       { name: 'open-bench', path: '/' },
-      { name: 'writeups', path: '/model-royale/writeups' },
+      { name: 'writeups', path: '/writeups' },
       { name: note.title, path: canonicalPath },
     ],
   },
   note.publishedAt,
   {
-    prevPath: prevSlug ? `/model-royale/writeups/${prevSlug}` : undefined,
-    nextPath: nextSlug ? `/model-royale/writeups/${nextSlug}` : undefined,
+    prevPath: prevSlug ? `/writeups/${prevSlug}` : undefined,
+    nextPath: nextSlug ? `/writeups/${nextSlug}` : undefined,
   },
 );
 
-const subtitle = `by <strong>${note.author}</strong> · ${fmtDate(note.publishedAt)}${note.round ? ` · round <a href="/model-royale/round/${note.round}">${note.round}</a>` : ''}${note.draft ? ' · <span style="color:var(--red)">DRAFT</span>' : ''}`;
+const subtitle = `by <strong>${note.author}</strong> · ${fmtDate(note.publishedAt)}${note.round ? ` · round ${note.round}` : ''}${note.draft ? ' · <span style="color:var(--red)">DRAFT</span>' : ''}`;
 ---
 
 <BaseLayout seo={seo}>
   <Header subtitle="writeup" />
-  <RoyaleNav />
   <Masthead title={note.title} subtitle={subtitle}>
     <p class="masthead-lede" style="margin-top: 12px; color: var(--muted);">{note.summary}</p>
   </Masthead>
@@ -70,9 +68,9 @@ const subtitle = `by <strong>${note.author}</strong> · ${fmtDate(note.published
   <section class="prose">
     <hr>
     <nav class="note-nav">
-      {prevSlug && <a href={`/model-royale/writeups/${prevSlug}`}>← previous</a>}
-      <a href="/model-royale/writeups">all writeups</a>
-      {nextSlug && <a href={`/model-royale/writeups/${nextSlug}`}>next →</a>}
+      {prevSlug && <a href={`/writeups/${prevSlug}`}>← previous</a>}
+      <a href="/writeups">all writeups</a>
+      {nextSlug && <a href={`/writeups/${nextSlug}`}>next →</a>}
     </nav>
   </section>
 

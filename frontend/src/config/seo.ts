@@ -2,14 +2,14 @@ export const seoSite = {
   name: 'open-bench',
   url: 'https://openbenchmark.dev',
   defaultOgImage: '/og-default.png',
-  defaultOgImageAlt: 'open-bench — weekly LLM coding battle royale',
+  defaultOgImageAlt: 'open-bench — a transparent benchmark for coding LLMs',
   ogImageWidth: 1200,
   ogImageHeight: 630,
   twitterHandle: '@folezof',
   locale: 'en',
   brand: 'open-bench',
   brandSuffix: ' · open-bench',
-  description: 'Weekly battle royale benchmark for open-weight coding LLMs. Hidden tests, peer review, cost and wall-clock tracked.',
+  description: 'A transparent benchmark for coding LLMs. Real agent loops, hidden tests, full artifacts — every diff, transcript, and cost committed.',
   keywords: [
     'LLM benchmark',
     'coding benchmark',
@@ -57,7 +57,7 @@ export interface TemplateSeo {
 export const seoPages = {
   home: {
     title: 'open-bench — a benchmark harness for coding LLMs',
-    description: 'open-bench is the engine: a SPEC, a hidden test suite, an agent loop, peer judges, and the full artifact set committed back to the repo. Model Royale is the flagship consumer.',
+    description: 'open-bench is the engine: a SPEC, a hidden test suite, an agent loop, and the full artifact set committed back to the repo. A set of standalone, transparent benchmarks for coding LLMs.',
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'website', 'datasetSite'],
   },
@@ -68,22 +68,10 @@ export const seoPages = {
     jsonLd: ['organization', 'aboutPage'],
   },
   modelRoyale: {
-    title: 'Model Royale · open-bench',
-    description: 'Model Royale: weekly elimination-style coding tournament between selected open-source coding models, run on the open-bench harness. Lineup, rules, current task, lineage.',
+    title: 'Model Royale (retired) · open-bench',
+    description: 'Model Royale was the first format on open-bench — a weekly elimination tournament between coding models. It is paused: it surfaced the methodology problems it was meant to. open-bench is now a set of standalone benchmarks.',
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'website'],
-  },
-  roundIndex: {
-    title: 'Rounds · open-bench',
-    description: 'Every round of open-bench, newest first. Weekly LLM coding battle royale archive — winners, scoreboards, full artifacts.',
-    ogImage: '/og-default.png',
-    jsonLd: ['organization', 'collectionPage', 'roundList'],
-  },
-  leaderboard: {
-    title: 'Leaderboard · open-bench',
-    description: 'Cumulative standings across every round. ELO, win rate, podium count, cost per round.',
-    ogImage: '/og/leaderboard.png',
-    jsonLd: ['organization', 'collectionPage', 'leaderboardCumulative'],
   },
   dataset: {
     title: 'Dataset · open-bench',
@@ -91,23 +79,11 @@ export const seoPages = {
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'datasetSite'],
   },
-  changelog: {
-    title: 'Methodology changelog · open-bench',
-    description: 'What changed and when: spec edits, lineup additions and eliminations, rubric tweaks. Round-to-round comparability, made auditable.',
-    ogImage: '/og-default.png',
-    jsonLd: ['organization', 'collectionPage'],
-  },
   notesIndex: {
     title: 'Writeups · open-bench',
-    description: 'Round retrospectives, model behaviour notes, and post-mortems from open-bench.',
+    description: 'Benchmark retrospectives, model behaviour notes, and post-mortems from open-bench.',
     ogImage: '/og-default.png',
     jsonLd: ['organization', 'collectionPage', 'blog'],
-  },
-  compareIndex: {
-    title: 'Compare models · open-bench',
-    description: 'Pick any two models and compare them head-to-head: ELO, scores per round, win/loss record, total spend.',
-    ogImage: '/og-default.png',
-    jsonLd: ['organization', 'collectionPage'],
   },
   benchmarks: {
     title: 'Benchmarks · open-bench',
