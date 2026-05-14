@@ -9,12 +9,12 @@ const sections = [
   {
     id: 'what',
     title: 'what',
-    body: `<p><strong>open-bench</strong> is a benchmark harness for coding LLMs. It drops a task spec into a fresh repo, drives every model through a real agent loop, runs a hidden test suite as the objective gate, has the models score each other, and commits the full artifact set — transcripts, diffs, judge rubrics, scores — to the repository. One round, one ranked review.</p><p>The engine is provider-agnostic: tasks, runs, judging, and aggregation work without any specific agent harness. The bundled <code>--auto</code> driver shells out to <a href="https://opencode.ai">opencode</a> today; replacing it with Claude Code, Aider, or anything that can take a prompt and write to a worktree is a single-module swap. Manual flow needs no driver at all.</p><p>The flagship format on top of it is <a href="/model-royale">Model Royale</a>: a weekly elimination tournament between selected open-source coding models. The harness is general; the tournament is one thing you can run on it.</p>`,
+    body: `<p><strong>open-bench</strong> is a benchmark harness for coding LLMs. It drops a task spec into a fresh repo, drives every model through a real agent loop, runs a hidden test suite as the objective gate, and commits the full artifact set — transcripts, diffs, scores, costs — to the repository. One run, one reviewable record, everything auditable.</p><p>The engine is provider-agnostic: tasks, runs, scoring, and aggregation work without any specific agent harness. The bundled <code>--auto</code> driver shells out to <a href="https://opencode.ai">opencode</a> today; replacing it with Claude Code, Aider, or anything that can take a prompt and write to a worktree is a single-module swap. Manual flow needs no driver at all.</p><p>What it produces is a set of <a href="/benchmarks">standalone benchmarks</a> — each task run across a model lineup, with the full receipts committed. It is not a leaderboard service and not a tournament: <a href="/model-royale">Model Royale</a>, the first format that ran on it, has been retired. The artifacts are the product; the reader is the judge.</p>`,
   },
   {
     id: 'why',
     title: 'why',
-    body: `<p>open-bench captures four numbers per implementation: hidden-test pass rate, blinded peer scores from the other models in the lineup, model wall-clock, and dollar cost. Vendor leaderboards report only the first, against synthetic problems, on the vendor's release schedule. open-bench reports all four, against tasks you author, every round, with the full transcript and diff committed alongside.</p>`,
+    body: `<p>Vendor leaderboards give you one number, against synthetic problems, on the vendor's release schedule. open-bench gives you the receipts: the actual code each model wrote, the actual transcript, the actual cost — against tasks you author.</p><p>The objective signal is the hidden-test result, the dollar cost, and the wall-clock. Peer review — models scoring each other — is kept as a softer second read, not a verdict. You don't take a ranking on faith; you open the diff and judge for yourself.</p>`,
   },
   {
     id: 'how',
@@ -23,18 +23,19 @@ const sections = [
       'Every model in the lineup gets the same task and an isolated git worktree.',
       'Each writes its implementation through an agent harness (opencode by default, swappable) under a fixed wall-clock budget.',
       'A hidden pytest battery runs against each output — the objective gate.',
-      'Every model judges every implementation, blinded. Cost and tokens are captured.',
-      'Scores are aggregated into one ranked review per round, plus a self-bias delta.',
+      'The models also review each other blinded, as a secondary read; cost and tokens are captured.',
+      'Everything — diffs, transcripts, scores, costs — is committed as one reviewable record per run.',
     ],
   },
   {
     id: 'principles',
     title: 'principles',
     defs: [
-      ['objective gate', 'Hidden tests run before any judge sees the code. No vibe-check inflating a non-functional output.'],
-      ['peer scoring', 'Models judge each other under blinded labels. Self-bias is measured, then excluded from the headline median.'],
-      ['cost & wall-clock', 'Tracked through the harness. Cheapest-and-correct wins ties; slow-and-correct loses them.'],
-      ['reproducible', 'Every transcript, diff, rubric and score is committed. Re-run a round, audit a judgment, fork the lineup.'],
+      ['objective gate', 'Hidden tests run before any review. They decide pass/fail; no opinion inflates a non-functional output.'],
+      ['transparency over ranking', 'Every diff, transcript, score and cost is committed. The artifacts are the point — you read them and judge, not a number taken on faith.'],
+      ['peer review is a second read', 'Models do score each other, blinded, with self-bias measured. It is a soft signal, not a verdict — useful colour, not the headline.'],
+      ['cost & wall-clock', 'Tracked as first-class columns. What a result cost is part of the result.'],
+      ['reproducible', 'Re-run a benchmark, audit a score, fork the lineup. Nothing is hidden behind a service.'],
     ],
   },
   {
