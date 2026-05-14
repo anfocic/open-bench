@@ -79,6 +79,18 @@ class TestRunPair(unittest.TestCase):
             {"network": False, "fs": True, "resource": False,
              "privesc": False, "shellinj": False})
 
+    def test_pytest_targets_the_exploit_file_not_the_dir(self) -> None:
+        # `exploit.py` doesn't match pytest's default `python_files` glob,
+        # so a dir target collects 0 tests — pytest must get the file path
+        fake = mock.Mock(stdout=CANNED_STDOUT, stderr="", returncode=1)
+        with mock.patch.object(run_attacks.subprocess, "run",
+                               return_value=fake) as m:
+            run_attacks.run_pair(
+                self.attacker, self.target, self.conftest, timeout=60)
+        argv = m.call_args[0][0]
+        self.assertIn("_eval_tests/exploit.py", argv)
+        self.assertNotIn("_eval_tests/", argv)
+
     def test_timeout_flagged_with_partial_output(self) -> None:
         exc = run_attacks.subprocess.TimeoutExpired(cmd="pytest", timeout=1)
         exc.stdout = "_eval_tests/exploit.py::test_escape_fs__x PASSED\n"

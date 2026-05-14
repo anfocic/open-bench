@@ -13,7 +13,7 @@ Per pair (in a throwaway tmp dir, mirroring perf_bench.run_once):
   <work>/sandbox.py             the target
   <work>/_eval_tests/exploit.py the attacker's suite
   <work>/_eval_tests/conftest.py  the matrix conftest (sandbox fixture)
-then `pytest _eval_tests/ -v`, parsed with _pytest_parse.
+then `pytest _eval_tests/exploit.py -v`, parsed with _pytest_parse.
 
 Output:
   results/attacks/break-sandbox-<date>/matrix.json              (committed)
@@ -101,8 +101,11 @@ def run_pair(
         timed_out = False
         try:
             proc = subprocess.run(
-                [sys.executable, "-m", "pytest", "_eval_tests/", "-v",
-                 "--tb=line", "-p", "no:cacheprovider"],
+                # point pytest at the file, not the dir: `exploit.py` doesn't
+                # match the default `python_files` glob, so a dir target
+                # collects 0 tests; an explicit path bypasses that filter
+                [sys.executable, "-m", "pytest", "_eval_tests/exploit.py",
+                 "-v", "--tb=line", "-p", "no:cacheprovider"],
                 cwd=work, capture_output=True, text=True, timeout=timeout,
             )
             stdout, stderr = proc.stdout, proc.stderr
