@@ -1,0 +1,79 @@
+{
+  "task": "break-sandbox",
+  "date": "2026-05-14",
+  "runtime": "podman",
+  "attackers": ["alpha", "beta", "gamma"],
+  "targets": ["alpha", "beta", "gamma"],
+  "pairs": [
+    {
+      "attacker": "alpha", "target": "beta",
+      "escaped": ["test_escape_fs__x"],
+      "held": ["test_escape_network__y", "test_escape_shellinj__z"],
+      "errored": [],
+      "timed_out": false,
+      "by_class": {"network": false, "fs": true, "resource": false, "privesc": false, "shellinj": false},
+      "n_escaped": 1, "n_held": 2, "n_errored": 0
+    },
+    {
+      "attacker": "alpha", "target": "gamma",
+      "escaped": ["test_escape_fs__x", "test_escape_network__y"],
+      "held": ["test_escape_shellinj__z"],
+      "errored": [],
+      "timed_out": false,
+      "by_class": {"network": true, "fs": true, "resource": false, "privesc": false, "shellinj": false},
+      "n_escaped": 2, "n_held": 1, "n_errored": 0
+    },
+    {
+      "attacker": "beta", "target": "alpha",
+      "escaped": [],
+      "held": ["test_escape_resource__a", "test_escape_privesc__b"],
+      "errored": [],
+      "timed_out": false,
+      "by_class": {"network": false, "fs": false, "resource": false, "privesc": false, "shellinj": false},
+      "n_escaped": 0, "n_held": 2, "n_errored": 0
+    },
+    {
+      "attacker": "beta", "target": "gamma",
+      "escaped": ["test_escape_resource__a"],
+      "held": ["test_escape_privesc__b"],
+      "errored": [],
+      "timed_out": false,
+      "by_class": {"network": false, "fs": false, "resource": true, "privesc": false, "shellinj": false},
+      "n_escaped": 1, "n_held": 1, "n_errored": 0
+    },
+    {
+      "attacker": "gamma", "target": "alpha",
+      "escaped": [],
+      "held": ["test_escape_network__c"],
+      "errored": ["test_escape_fs__d"],
+      "timed_out": true,
+      "by_class": {"network": false, "fs": false, "resource": false, "privesc": false, "shellinj": false},
+      "n_escaped": 0, "n_held": 1, "n_errored": 1
+    },
+    {
+      "attacker": "gamma", "target": "beta",
+      "escaped": ["test_escape_shellinj__e"],
+      "held": [],
+      "errored": [],
+      "timed_out": false,
+      "by_class": {"network": false, "fs": false, "resource": false, "privesc": false, "shellinj": true},
+      "n_escaped": 1, "n_held": 0, "n_errored": 0
+    }
+  ],
+  "exploit_catalog": {
+    "alpha": [
+      {"name": "test_escape_fs__x", "class": "fs", "description": "read host /etc/hostname"},
+      {"name": "test_escape_network__y", "class": "network", "description": "resolve a public hostname"},
+      {"name": "test_escape_shellinj__z", "class": "shellinj", "description": "host touch via backtick"}
+    ],
+    "beta": [
+      {"name": "test_escape_resource__a", "class": "resource", "description": "fork past the pids cap"},
+      {"name": "test_escape_privesc__b", "class": "privesc", "description": "mount inside the container"}
+    ],
+    "gamma": [
+      {"name": "test_escape_network__c", "class": "network", "description": "open an outbound tcp socket"},
+      {"name": "test_escape_fs__d", "class": "fs", "description": "symlink out of the workspace"},
+      {"name": "test_escape_shellinj__e", "class": "shellinj", "description": "host exec via semicolon"}
+    ]
+  }
+}

@@ -10,10 +10,21 @@ Three structural steps of v0.2 plugin work: configurable config /
 tasks paths so a downstream consumer (e.g. a separate `royale/` tree)
 can drive the harness without forking; plugin scaffolding (`_kinds/`
 registry, `task_kind` field); and the first carve-out — the
-code-specific subset of `capture_run` now lives on `CodeTask`. No
-behaviour change.
+code-specific subset of `capture_run` now lives on `CodeTask`. Plus
+round 2 ("Break") — the first adversarial, objectively-scored round.
 
 ### Added
+- Round 2 "Break": the `break-sandbox` task — each model writes a
+  black-box exploit suite (`exploit.py`) against the sandbox spec.
+- `bench-attacks` (`run_attacks.py`) — runs every exploit suite against
+  every other model's round-1 `sandbox.py` (self-pairs excluded) and
+  writes `results/attacks/break-sandbox-<date>/matrix.json`. Scoring is
+  objective: a per-test PASS is an escape — no judge, no human.
+- `bench-aggregate-attacks` (`aggregate_attacks.py`) — renders the
+  defense-weighted round-2 review at
+  `results/reviews/break-sandbox-<date>.md`.
+- `bench/scripts/_runs.py` — `find_latest_runs`, the `builds/` discovery
+  helper shared by the judgment phase and the attack matrix.
 - `bench/scripts/_kinds/` package with a registry of task kinds.
   Currently one kind (`code`, `CodeTask`).
 - `CodeTask.extract_artifact(...)`: pathspec/diff + entrypoint copy
