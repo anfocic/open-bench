@@ -22,6 +22,7 @@ test('parseMeta: full valid input', () => {
   assert.deepEqual(result, {
     model: 'kimi',
     round: '2026-05-05',
+    task: 'sandbox',
     sample: 1,
     wallSec: 1800,
     costUsd: 0.042,

@@ -29,6 +29,21 @@ export const ScoreboardEntrySchema = z.object({
   qualityPeer: z.number().nullable(),
   tests: z.string(),
   verdict: z.string(),
+  // Objective (round 2 "Break") scoring — absent for peer-judged rounds.
+  attackerScore: z.number().nullable().optional(),
+  defenderScore: z.number().nullable().optional(),
+  rank: z.number().nullable().optional(),
+  eliminated: z.boolean().optional(),
+});
+
+// One row of the round-2 attack matrix: an attacker and, per target, the
+// count of distinct attack classes breached (null = self-pair / no data).
+export const AttackMatrixRowSchema = z.object({
+  attacker: z.string(),
+  cells: z.array(z.object({
+    target: z.string(),
+    value: z.number().nullable(),
+  })),
 });
 
 export const JudgeRankingEntrySchema = z.object({
@@ -114,6 +129,10 @@ export const RoundSchema = z.object({
   crossModelObservations: z.string().nullable(),
   recommendation: z.string().nullable(),
   specChanges: z.string().nullable(),
+  // 'peer-judged' (round 1, default) or 'objective' (round 2 "Break").
+  // Absent on older parsed data — consumers treat absent as 'peer-judged'.
+  scoringMode: z.enum(['peer-judged', 'objective']).optional(),
+  attackMatrix: z.array(AttackMatrixRowSchema).optional(),
 });
 
 // --- Inferred types (same names as before) ---
@@ -127,6 +146,7 @@ export type JudgeScore = z.infer<typeof JudgeScoreSchema>;
 export type PerImplDetail = z.infer<typeof PerImplDetailSchema>;
 export type CostEfficiencyEntry = z.infer<typeof CostEfficiencyEntrySchema>;
 export type JudgingCostEntry = z.infer<typeof JudgingCostSchema>;
+export type AttackMatrixRow = z.infer<typeof AttackMatrixRowSchema>;
 export type Round = z.infer<typeof RoundSchema>;
 
 // --- Non-collection schemas & types ---

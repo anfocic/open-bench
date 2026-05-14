@@ -66,6 +66,8 @@ export const roundsLoader: Loader = {
         crossModelObservations: rev?.review?.crossModelObservations ?? null,
         recommendation: rev?.review?.recommendation ?? null,
         specChanges: rev?.review?.specChanges ?? null,
+        scoringMode: rev?.review?.scoringMode ?? 'peer-judged',
+        attackMatrix: rev?.review?.attackMatrix ?? [],
       };
 
       const parsed = await context.parseData({

@@ -30,6 +30,15 @@ function composite(e: ScoreboardEntry): number {
 }
 
 function rankOfRound(round: Round): { impl: string; score: number; dnf: boolean }[] {
+  // Round 2 ("Break") is objectively scored: the review already carries
+  // the defense-weighted combined rank per model. Map rank -> a score
+  // where higher is better so ELO/standings stay rank-driven and correct.
+  if (round.scoringMode === 'objective') {
+    const n = round.scoreboard.length;
+    return [...round.scoreboard]
+      .map(e => ({ impl: e.impl, score: n - (e.rank ?? n), dnf: false }))
+      .sort((a, b) => b.score - a.score);
+  }
   return [...round.scoreboard]
     .map(e => ({ impl: e.impl, score: composite(e), dnf: !e.hardFail }))
     .sort((a, b) => {

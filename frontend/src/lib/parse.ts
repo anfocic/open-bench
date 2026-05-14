@@ -1,4 +1,4 @@
-import type { MetaJson, Run, ScoreboardEntry, SelfBiasEntry, JudgeRankingEntry, AgreementEntry, JudgeScore, PerImplDetail, CostEfficiencyEntry, JudgingCostEntry } from '../data/types';
+import type { MetaJson, Run, ScoreboardEntry, SelfBiasEntry, JudgeRankingEntry, AgreementEntry, JudgeScore, PerImplDetail, CostEfficiencyEntry, JudgingCostEntry, AttackMatrixRow } from '../data/types';
 
 // --- parseMeta ---
 
@@ -195,13 +195,80 @@ export interface ParsedReview {
   crossModelObservations: string | null;
   recommendation: string | null;
   specChanges: string | null;
+  scoringMode: 'peer-judged' | 'objective';
+  attackMatrix: AttackMatrixRow[];
 }
 
 function sectionPresent(content: string, heading: string): boolean {
   return content.split(/\n(?=## )/).some(s => s.startsWith(`## ${heading}`));
 }
 
+// --- Round 2 ("Break") objective review ---
+
+function parseAttackMatrix(section: string): AttackMatrixRow[] {
+  const lines = section.split('\n').filter(l => l.trim().startsWith('|'));
+  if (lines.length < 3) return [];
+  const targets = parseTableRow(lines[0]).slice(1);
+  return lines.slice(2).map(line => {
+    const cols = parseTableRow(line);
+    if (cols.length < 2) return null;
+    const cells = targets.map((target, i) => {
+      const raw = (cols[i + 1] ?? '').trim();
+      return { target, value: /^\d+$/.test(raw) ? Number(raw) : null };
+    });
+    return { attacker: cols[0], cells };
+  }).filter((r): r is AttackMatrixRow => r !== null);
+}
+
+function parseAttackScoreboard(section: string): ScoreboardEntry[] {
+  // "## Combined ranking & elimination" table:
+  // | Rank | Model | Defender score | Attacker score | Status |
+  return parseTableSection(section, 5, cols => {
+    const status = cols[4];
+    return {
+      impl: cols[1],
+      hardFail: true,
+      specAll: null, specExpert: null, specPeer: null,
+      qualityAll: null, qualityExpert: null, qualityPeer: null,
+      tests: '—',
+      verdict: status,
+      defenderScore: parseNum(cols[2]),
+      attackerScore: parseNum(cols[3]),
+      rank: parseNum(cols[0]),
+      eliminated: /eliminat/i.test(status),
+    };
+  });
+}
+
+export function parseAttackReview(markdown: string): ParsedReview {
+  const scoreboard = parseAttackScoreboard(
+    extractSection(markdown, 'Combined ranking & elimination'));
+  const attackMatrix = parseAttackMatrix(extractSection(markdown, 'Attack matrix'));
+  if (scoreboard.length === 0) {
+    throw new Error(
+      'parseAttackReview: "## Combined ranking & elimination" produced 0 rows. ' +
+      'aggregate_attacks format likely drifted — update parse.ts.'
+    );
+  }
+  return {
+    scoreboard,
+    judgeRanking: [], selfBias: [], agreement: [], perImplDetail: [],
+    costEfficiency: [], judgingCost: [],
+    crossModelObservations: extractSection(markdown, 'Data-quality notes') || null,
+    recommendation: null,
+    specChanges: null,
+    scoringMode: 'objective',
+    attackMatrix,
+  };
+}
+
 export function parseReview(markdown: string): ParsedReview {
+  // Round 2 ("Break") reviews carry an "## Attack matrix" section and no
+  // judge sections — dispatch to the objective parser.
+  if (sectionPresent(markdown, 'Attack matrix')) {
+    return parseAttackReview(markdown);
+  }
+
   const result: ParsedReview = {
     scoreboard: parseScoreboard(extractSection(markdown, 'Scoreboard')),
     judgeRanking: parseJudgeRanking(extractSection(markdown, 'Per-judge ranking')),
@@ -213,6 +280,8 @@ export function parseReview(markdown: string): ParsedReview {
     crossModelObservations: extractSection(markdown, 'Cross-model observations') || null,
     recommendation: extractSection(markdown, 'Recommendation') || null,
     specChanges: extractSection(markdown, 'Spec changes') || null,
+    scoringMode: 'peer-judged',
+    attackMatrix: [],
   };
 
   const required: [string, keyof ParsedReview][] = [
