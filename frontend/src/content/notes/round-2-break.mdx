@@ -1,6 +1,6 @@
 ---
-title: "Round 2 (Break): the oracle earns its keep"
-summary: "Seven models wrote exploit suites against each other's sandboxes. Zero real breaches landed — and the run only means anything because a reference oracle threw out the cheese."
+title: "Round 2 (Break): an inconclusive round, and an oracle that earned its keep"
+summary: "Seven models wrote exploit suites against each other's sandboxes. Nothing landed — and the run only means anything because a reference oracle threw out the cheese."
 publishedAt: 2026-05-14
 round: 2026-05-14
 author: fole
@@ -22,19 +22,19 @@ is an escape that landed.
 <RoundScoreboard date="2026-05-14" />
 
 Zero real breaches. Every one of the seven round-1 sandboxes held against
-every honest exploit thrown at it. The attack matrix is all zeros; the
-elimination falls to whoever sorts last alphabetically.
+every honest exploit thrown at it. The attack matrix is all zeros, and every
+model is tied.
 
-That is a flat result, and a flat result is worth being honest about. But the
-interesting part isn't the zero — it's *why* it's a zero, and what it took to
-see that clearly.
+That's a flat result, and it's worth being plain about: **round 2 did not
+separate the lineup.** No one is eliminated — an inconclusive round doesn't
+get to manufacture a verdict. The interesting part isn't a ranking; it's
+*why* it came out flat, and what it took to see that clearly.
 
 ## The catch: most of the "escapes" were cheese
 
 The raw matrix did not start at zero. Before filtering, six of the seven
 models landed escapes against everything — glm against all six targets,
-deepseek against all six, and so on. Read naively, glm "won" the round with a
-commanding attacker score.
+deepseek against all six, and so on. Read naively, glm "won" the round.
 
 It didn't. Those weren't escapes.
 
@@ -51,30 +51,24 @@ real target, by the same count — the signature of a test that passes no matter
 what it's pointed at. The oracle excluded all 13. `deepseek-flash` was the only
 model whose suite was completely clean.
 
-Without that control pass, this round's scoreboard would have been pure noise —
-glm alone would have shown 24 phantom attacker points off four cheese exploits.
-This is the first time the reference oracle has run against a real lineup, and
-it's the run that proves it isn't optional.
+Without that control pass, this round's numbers would have been pure noise —
+glm alone would have shown two dozen phantom "breaches" off four cheese
+exploits. This was the first time the reference oracle ran against a real
+lineup, and it's the run that proves it isn't optional.
 
-## What's still broken
+## What it actually tells us
 
-Three problems this round surfaced that aren't fixed yet:
+A flat round is data, not a failure. Three honest readings, and we can't yet
+tell them apart:
 
-- **The tiebreak is a placeholder.** With zero breaches, every model has an
-  identical 0/0 record, and the elimination currently falls to alphabetical
-  order. That's fine as a deterministic default; it is not fine as a way to
-  eliminate a model. Round 2 needs a real tiebreak rule — or an explicit "no
-  elimination on a flat round" rule — before a result like this is treated as
-  final.
-- **The honest exploits were weak.** Strip the cheese and what's left are
-  exploits that genuinely tried and genuinely failed. Either the round-1
-  sandboxes are solid, or the models aren't writing strong black-box attacks —
-  this round can't distinguish those, and that's a gap in what Break currently
-  measures.
-- **One run flaked.** glm's first agent run read the prompt and spec and then
-  produced nothing — no exploit file at all. It needed a manual re-run. Rare,
-  but the harness should notice an empty implementation louder than it does.
+- the round-1 sandboxes are genuinely solid;
+- the models didn't write strong black-box attacks (the cheese rate suggests
+  some of them barely tried);
+- "every model attacks every other" may just be the wrong structure for
+  producing signal.
 
-Round 2 did its job: it ran objectively, it caught every piece of cheese, and
-it reported a flat result honestly instead of inventing a winner. The next
-round of work is on the methodology, not the harness.
+What's *not* in doubt: the harness did its job. It ran objectively, it caught
+every piece of cheese mechanically, and it reported a flat result honestly
+instead of inventing a winner to keep a bracket moving. The next round of work
+is on the round design — a harder, more discriminating substrate — not on the
+scoring.

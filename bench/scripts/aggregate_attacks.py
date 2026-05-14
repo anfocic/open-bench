@@ -248,19 +248,27 @@ def render_review(matrix: dict[str, Any]) -> str:
                    + (", ".join(atks) if atks else "—") + " |")
     out.append("")
 
-    # --- Combined ranking & elimination -----------------------------------
-    out.append("## Combined ranking & elimination\n")
+    # --- Round ranking -----------------------------------------------------
+    out.append("## Round ranking\n")
     out.append("Defense-weighted: ranked by breaches taken (asc), then "
-               "breaches landed (desc). Lowest-ranked model is eliminated.\n")
-    out.append("| Rank | Model | Defender score | Attacker score | Status |")
-    out.append("|---|---|---|---|---|")
+               "breaches landed (desc). Models with identical records share "
+               "a rank. This is a per-round ranking only — not a tournament "
+               "standing, and it carries no elimination.\n")
+    out.append("| Rank | Model | Defender score | Attacker score |")
+    out.append("|---|---|---|---|")
+    prev_key: tuple[int, int] | None = None
+    rank = 0
     for i, m in enumerate(ranked, 1):
         s = scores[m]
-        status = "ELIMINATED" if i == len(ranked) and len(ranked) > 1 \
-            else "advances"
-        out.append(f"| {i} | {m} | {s['defender_score']} | "
-                   f"{s['attacker_score']} | {status} |")
+        key = (s["defender_score"], -s["attacker_score"])
+        if key != prev_key:
+            rank, prev_key = i, key
+        out.append(f"| {rank} | {m} | {s['defender_score']} | "
+                   f"{s['attacker_score']} |")
     out.append("")
+    if total_breaches == 0:
+        out.append("No exploit landed against any sandbox — every model is "
+                   "tied. This round did not separate the lineup.\n")
 
     # --- Data-quality notes -----------------------------------------------
     out.append("## Data-quality notes\n")
