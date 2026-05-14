@@ -46,6 +46,15 @@ export const AttackMatrixRowSchema = z.object({
   })),
 });
 
+// One row of the round-2 reference-oracle control pass: an attacker, how
+// many of its exploits ran against the known-correct reference sandbox, and
+// the test names that "escaped" it — provably bogus, excluded from scoring.
+export const ReferenceOracleRowSchema = z.object({
+  attacker: z.string(),
+  exploitsRun: z.number().nullable(),
+  excluded: z.array(z.string()),
+});
+
 export const JudgeRankingEntrySchema = z.object({
   judge: z.string(),
   first: z.string(),
@@ -133,6 +142,8 @@ export const RoundSchema = z.object({
   // Absent on older parsed data — consumers treat absent as 'peer-judged'.
   scoringMode: z.enum(['peer-judged', 'objective']).optional(),
   attackMatrix: z.array(AttackMatrixRowSchema).optional(),
+  // Round-2 reference-oracle control pass. Absent on pre-oracle rounds.
+  referenceOracle: z.array(ReferenceOracleRowSchema).optional(),
 });
 
 // --- Inferred types (same names as before) ---
@@ -147,6 +158,7 @@ export type PerImplDetail = z.infer<typeof PerImplDetailSchema>;
 export type CostEfficiencyEntry = z.infer<typeof CostEfficiencyEntrySchema>;
 export type JudgingCostEntry = z.infer<typeof JudgingCostSchema>;
 export type AttackMatrixRow = z.infer<typeof AttackMatrixRowSchema>;
+export type ReferenceOracleRow = z.infer<typeof ReferenceOracleRowSchema>;
 export type Round = z.infer<typeof RoundSchema>;
 
 // --- Non-collection schemas & types ---

@@ -1,4 +1,4 @@
-import type { MetaJson, Run, ScoreboardEntry, SelfBiasEntry, JudgeRankingEntry, AgreementEntry, JudgeScore, PerImplDetail, CostEfficiencyEntry, JudgingCostEntry, AttackMatrixRow } from '../data/types';
+import type { MetaJson, Run, ScoreboardEntry, SelfBiasEntry, JudgeRankingEntry, AgreementEntry, JudgeScore, PerImplDetail, CostEfficiencyEntry, JudgingCostEntry, AttackMatrixRow, ReferenceOracleRow } from '../data/types';
 
 // --- parseMeta ---
 
@@ -197,6 +197,7 @@ export interface ParsedReview {
   specChanges: string | null;
   scoringMode: 'peer-judged' | 'objective';
   attackMatrix: AttackMatrixRow[];
+  referenceOracle: ReferenceOracleRow[];
 }
 
 function sectionPresent(content: string, heading: string): boolean {
@@ -240,10 +241,27 @@ function parseAttackScoreboard(section: string): ScoreboardEntry[] {
   });
 }
 
+function parseReferenceOracle(section: string): ReferenceOracleRow[] {
+  // "## Reference oracle" table:
+  // | Attacker | Exploits run vs reference | Escaped reference (excluded) |
+  // The third column is a comma-separated list of backticked test names,
+  // or "—" when the attacker's suite was clean.
+  return parseTableSection(section, 3, cols => ({
+    attacker: cols[0],
+    exploitsRun: parseNum(cols[1]),
+    excluded: cols[2]
+      .split(',')
+      .map(s => s.trim().replace(/`/g, '').trim())
+      .filter(s => s && s !== '—' && s !== '–'),
+  }));
+}
+
 export function parseAttackReview(markdown: string): ParsedReview {
   const scoreboard = parseAttackScoreboard(
     extractSection(markdown, 'Combined ranking & elimination'));
   const attackMatrix = parseAttackMatrix(extractSection(markdown, 'Attack matrix'));
+  const referenceOracle = parseReferenceOracle(
+    extractSection(markdown, 'Reference oracle'));
   if (scoreboard.length === 0) {
     throw new Error(
       'parseAttackReview: "## Combined ranking & elimination" produced 0 rows. ' +
@@ -259,6 +277,7 @@ export function parseAttackReview(markdown: string): ParsedReview {
     specChanges: null,
     scoringMode: 'objective',
     attackMatrix,
+    referenceOracle,
   };
 }
 
@@ -282,6 +301,7 @@ export function parseReview(markdown: string): ParsedReview {
     specChanges: extractSection(markdown, 'Spec changes') || null,
     scoringMode: 'peer-judged',
     attackMatrix: [],
+    referenceOracle: [],
   };
 
   const required: [string, keyof ParsedReview][] = [

@@ -68,6 +68,7 @@ export const roundsLoader: Loader = {
         specChanges: rev?.review?.specChanges ?? null,
         scoringMode: rev?.review?.scoringMode ?? 'peer-judged',
         attackMatrix: rev?.review?.attackMatrix ?? [],
+        referenceOracle: rev?.review?.referenceOracle ?? [],
       };
 
       const parsed = await context.parseData({
