@@ -21,8 +21,8 @@ const sorted = [...entries].sort(
   <section>
     <SectionHeader
       id="scoreboard"
-      title="scoreboard"
-      subtitle="round 2 (Break) — objective. defense-weighted: ranked by breaches taken (lower better), then breaches landed. lowest-ranked is eliminated."
+      title="round ranking"
+      subtitle="round 2 (Break) — objective. defense-weighted: ranked by breaches taken (lower better), then breaches landed. models with identical records share a rank. a per-round ranking only — no elimination."
     />
     <DataTable>
       <table class="scoreboard-table">
@@ -31,24 +31,18 @@ const sorted = [...entries].sort(
             <th>impl</th>
             <th>defender score</th>
             <th>attacker score</th>
-            <th>status</th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((e) => {
             const isChamp = e.impl === champion;
             return (
-              <tr class:list={{ champion: isChamp, dnf: e.eliminated }}>
+              <tr class:list={{ champion: isChamp }}>
                 <td class="model">
                   <ModelLabel impl={e.impl} slug={slugs[e.impl]} rank={e.rank ?? null} />
                 </td>
                 <td class="num"><strong>{e.defenderScore ?? '—'}</strong></td>
                 <td class="num">{e.attackerScore ?? '—'}</td>
-                <td class="num">
-                  <span class:list={['pill', e.eliminated ? 'pill-red' : 'pill-green']}>
-                    {e.verdict || (e.eliminated ? 'ELIMINATED' : 'advances')}
-                  </span>
-                </td>
               </tr>
             );
           })}

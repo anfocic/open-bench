@@ -222,23 +222,20 @@ function parseAttackMatrix(section: string): AttackMatrixRow[] {
 }
 
 function parseAttackScoreboard(section: string): ScoreboardEntry[] {
-  // "## Combined ranking & elimination" table:
-  // | Rank | Model | Defender score | Attacker score | Status |
-  return parseTableSection(section, 5, cols => {
-    const status = cols[4];
-    return {
-      impl: cols[1],
-      hardFail: true,
-      specAll: null, specExpert: null, specPeer: null,
-      qualityAll: null, qualityExpert: null, qualityPeer: null,
-      tests: '—',
-      verdict: status,
-      defenderScore: parseNum(cols[2]),
-      attackerScore: parseNum(cols[3]),
-      rank: parseNum(cols[0]),
-      eliminated: /eliminat/i.test(status),
-    };
-  });
+  // "## Round ranking" table:
+  // | Rank | Model | Defender score | Attacker score |
+  // A per-round ranking only — no elimination, no tournament standing.
+  return parseTableSection(section, 4, cols => ({
+    impl: cols[1],
+    hardFail: true,
+    specAll: null, specExpert: null, specPeer: null,
+    qualityAll: null, qualityExpert: null, qualityPeer: null,
+    tests: '—',
+    verdict: '',
+    defenderScore: parseNum(cols[2]),
+    attackerScore: parseNum(cols[3]),
+    rank: parseNum(cols[0]),
+  }));
 }
 
 function parseReferenceOracle(section: string): ReferenceOracleRow[] {
@@ -258,13 +255,13 @@ function parseReferenceOracle(section: string): ReferenceOracleRow[] {
 
 export function parseAttackReview(markdown: string): ParsedReview {
   const scoreboard = parseAttackScoreboard(
-    extractSection(markdown, 'Combined ranking & elimination'));
+    extractSection(markdown, 'Round ranking'));
   const attackMatrix = parseAttackMatrix(extractSection(markdown, 'Attack matrix'));
   const referenceOracle = parseReferenceOracle(
     extractSection(markdown, 'Reference oracle'));
   if (scoreboard.length === 0) {
     throw new Error(
-      'parseAttackReview: "## Combined ranking & elimination" produced 0 rows. ' +
+      'parseAttackReview: "## Round ranking" produced 0 rows. ' +
       'aggregate_attacks format likely drifted — update parse.ts.'
     );
   }

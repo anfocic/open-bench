@@ -25,11 +25,12 @@ test('parseReview: dispatches a Break review to the objective parser', () => {
   assert.ok(r.attackMatrix.length > 0, 'attack matrix empty');
 });
 
-test('parseAttackReview: scoreboard carries rank, scores, elimination', () => {
+test('parseAttackReview: round ranking carries rank and scores, no elimination', () => {
   const md = readFileSync(GOLDEN, 'utf-8');
   const r = parseAttackReview(md);
 
-  // Combined ranking from the fixture: alpha (1), beta (2), gamma (3, out).
+  // "## Round ranking" from the fixture: alpha (1), beta (2), gamma (3).
+  // It's a per-round ranking only — no elimination is parsed or emitted.
   const byRank = [...r.scoreboard].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
   assert.deepEqual(byRank.map(e => e.impl), ['alpha', 'beta', 'gamma']);
 
@@ -37,11 +38,11 @@ test('parseAttackReview: scoreboard carries rank, scores, elimination', () => {
   assert.equal(alpha.rank, 1);
   assert.equal(alpha.defenderScore, 0);
   assert.equal(alpha.attackerScore, 3);
-  assert.equal(alpha.eliminated, false);
 
   const gamma = r.scoreboard.find(e => e.impl === 'gamma')!;
   assert.equal(gamma.rank, 3);
-  assert.equal(gamma.eliminated, true);
+  // elimination is no longer a per-round concept — never parsed
+  assert.equal(r.scoreboard.every(e => e.eliminated === undefined), true);
 });
 
 test('parseAttackReview: attack matrix rows and cells', () => {

@@ -52,7 +52,7 @@ const champ = isObjective
   ? findAttackChampion(round.scoreboard)
   : findChampion(round.scoreboard);
 const champEntry = round.scoreboard.find(e => e.impl === champ.impl);
-const eliminated = round.scoreboard.find(e => e.eliminated)?.impl ?? null;
+const objBreaches = round.scoreboard.reduce((n, e) => n + (e.attackerScore ?? 0), 0);
 const modelCount = uniqueModelCount(round.samples);
 const roundCost = totalCost(round.samples);
 const allPassed = round.samples.length > 0 && round.samples.every(s => s.testExitCode === 0);
@@ -106,9 +106,7 @@ const seo = templateSeo(
 
   <Masthead title={`round ${fmtDate(round.date)}`} subtitle={
     isObjective
-      ? (champ.impl !== '—'
-        ? `<strong style="color:var(--accent)">${champ.impl}</strong> survives round 2 with the fewest breaches taken${eliminated ? `; <strong>${eliminated}</strong> is eliminated` : ''}. ${modelCount} models, ${fmtCost(roundCost)} spent on outputs. Objective scoring &mdash; a per-test escape counts, no judges.`
-        : undefined)
+      ? `${modelCount} models, each attacking every other's round-1 sandbox. ${objBreaches === 0 ? 'Every attack was contained &mdash; no sandbox was breached.' : `${objBreaches} class breach(es) landed.`} ${fmtCost(roundCost)} spent on outputs. Objective scoring &mdash; a per-test escape counts, no judges.`
       : (champ.score > 0
         ? `<strong style="color:var(--accent)">${champ.impl}</strong> takes the round with <strong> ${fmtNum(champ.score, 1)}/30</strong> &mdash; spec ${fmtNum(champEntry?.specPeer ?? 0, 1)}, quality ${fmtNum(champEntry?.qualityPeer ?? 0, 1)}. ${modelCount} models, ${fmtCost(roundCost)} spent on outputs. Hidden tests: <span class="${allPassed ? 'win' : 'fail'}">${allPassed ? 'all passed' : 'some failures'}</span>.`
         : undefined)
@@ -140,7 +138,7 @@ const seo = templateSeo(
 
       <div class="tab-panels">
         <div class="tab-panel" role="tabpanel" id="panel-scoreboard" data-panel="scoreboard" aria-labelledby="tab-scoreboard">
-          <AttackScoreboard entries={round.scoreboard} champion={champ.impl} slugs={slugs} />
+          <AttackScoreboard entries={round.scoreboard} champion={objBreaches > 0 ? champ.impl : undefined} slugs={slugs} />
         </div>
         <div class="tab-panel" role="tabpanel" id="panel-matrix" data-panel="matrix" hidden aria-labelledby="tab-matrix">
           <AttackMatrix matrix={round.attackMatrix ?? []} />
