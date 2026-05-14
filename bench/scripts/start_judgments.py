@@ -36,6 +36,7 @@ from typing import Any
 from . import _config
 from . import _kinds
 from . import _logging
+from . import _runs
 from . import _task
 
 log = _logging.get_logger(__name__)
@@ -44,63 +45,13 @@ REPO_ROOT = _config.repo_root()
 
 
 def find_runs(task: str, entrypoint: str) -> list[dict[str, Any]]:
-    """Find latest implementation run per model for `task`.
+    """Find the latest implementation run per model for `task`.
 
-    Identity (task, model, date_stamp, slug) is read from each run's
-    meta.json — written by start_run.py and extended by capture_run.py.
-    Run dirs without a parseable meta are skipped with a warning.
+    Thin wrapper over `_runs.find_latest_runs`, pinned to this module's
+    `REPO_ROOT` so existing callers (and tests that patch
+    `start_judgments.REPO_ROOT`) keep working unchanged.
     """
-    by_model: dict[str, dict[str, Any]] = {}
-    builds_root = REPO_ROOT / "builds"
-    if not builds_root.is_dir():
-        return []
-
-    for model_entry in sorted(builds_root.iterdir()):
-        if not model_entry.is_dir() or model_entry.name.startswith("."):
-            continue
-        run_model = model_entry.name
-        rounds_dir = model_entry / "rounds"
-        if not rounds_dir.is_dir():
-            continue
-
-        for run_entry in sorted(rounds_dir.iterdir()):
-            if not run_entry.is_dir():
-                continue
-            meta_path = run_entry / "meta.json"
-            if not meta_path.exists():
-                continue
-            try:
-                meta = json.loads(meta_path.read_text())
-            except json.JSONDecodeError:
-                log.warning("%s not valid JSON — skipping",
-                            meta_path.relative_to(REPO_ROOT))
-                continue
-            if meta.get("task") != task:
-                continue
-
-            impl = run_entry / entrypoint
-            if not impl.exists():
-                log.warning("%s has no %s — skipping",
-                            run_entry.relative_to(REPO_ROOT), entrypoint)
-                continue
-
-            date_stamp = meta.get("date_stamp")
-            if not date_stamp:
-                log.warning("%s missing 'date_stamp' — skipping",
-                            meta_path.relative_to(REPO_ROOT))
-                continue
-
-            existing = by_model.get(run_model)
-            if existing is None or date_stamp > existing["date_stamp"]:
-                by_model[run_model] = {
-                    "model": run_model,
-                    "date_stamp": date_stamp,
-                    "run_dir": run_entry,
-                    "impl_path": impl,
-                    "meta": meta,
-                }
-
-    return list(by_model.values())
+    return _runs.find_latest_runs(task, entrypoint, repo_root=REPO_ROOT)
 
 
 def randomize_labels(n: int, rng: random.Random) -> list[str]:
