@@ -157,6 +157,9 @@ def main() -> int:
     ap.add_argument("--models",
                     help="comma-separated subset of models to include "
                          "(both as attacker and target)")
+    ap.add_argument("--no-reference", action="store_true",
+                    help="skip the reference-oracle control pass "
+                         "(bogus exploits then can't be excluded from scoring)")
     ap.add_argument("--quiet", "-q", action="store_true",
                     help="warnings + errors only")
     ap.add_argument("--verbose", "-v", action="store_true",
@@ -241,6 +244,34 @@ def main() -> int:
                      pair["n_escaped"], pair["n_held"], pair["n_errored"],
                      " TIMEOUT" if pair["timed_out"] else "")
 
+    # --- reference-oracle control pass -----------------------------------
+    # Every exploit suite also runs against a known-correct reference
+    # sandbox. An exploit that "escapes" the reference can't be a real
+    # escape — aggregate_attacks excludes it from scoring.
+    reference: dict[str, Any] = {}
+    ref_path = task_dir / "reference" / "sandbox.py"
+    if args.no_reference:
+        log.info("--no-reference: skipping the reference-oracle control pass")
+    elif not ref_path.exists():
+        log.warning("no reference sandbox at %s — exploits won't be checked "
+                    "against the oracle; bogus exploits can't be excluded "
+                    "from scoring", ref_path)
+    else:
+        log.info("--- reference-oracle control pass (%d attackers) ---",
+                 len(attackers))
+        ref_target = {"model": "reference", "impl_path": ref_path}
+        for a in attackers:
+            try:
+                pair, raw = run_pair(a, ref_target, conftest_src, pair_timeout)
+            except OSError as e:
+                log.error("reference pair %s failed: %s", a["model"], e)
+                continue
+            reference[a["model"]] = pair
+            (out_dir / f"pair-{a['model']}-vs-reference.txt").write_text(raw)
+            log.info("%s vs reference: escaped=%d held=%d errored=%d",
+                     a["model"], pair["n_escaped"], pair["n_held"],
+                     pair["n_errored"])
+
     matrix = {
         "task": "break-sandbox",
         "date": date_stamp,
@@ -250,6 +281,8 @@ def main() -> int:
         "pairs": pairs,
         "exploit_catalog": catalog,
     }
+    if reference:
+        matrix["reference"] = reference
     (out_dir / "matrix.json").write_text(json.dumps(matrix, indent=2) + "\n")
     log.info("==> wrote %s", (out_dir / "matrix.json").relative_to(repo_root))
     return 0

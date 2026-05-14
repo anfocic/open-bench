@@ -104,13 +104,19 @@ class TestRunPair(unittest.TestCase):
 
 
 class TestMatrixMain(unittest.TestCase):
-    def test_excludes_self_pairs_and_invalid_attackers(self) -> None:
+    def _run_main(self, *, with_reference: bool, extra_argv: list[str] | None
+                  = None) -> tuple[int, list[tuple[str, str]], dict]:
+        """Drive run_attacks.main with everything below run_pair stubbed.
+        Returns (exit code, run_pair calls, parsed matrix.json)."""
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
 
         task_dir = tmp / "bench" / "tasks" / "break-sandbox"
         task_dir.mkdir(parents=True)
         (task_dir / "conftest_runner.py").write_text("# conftest\n")
+        if with_reference:
+            (task_dir / "reference").mkdir()
+            (task_dir / "reference" / "sandbox.py").write_text("# ref\n")
 
         def fake_find(task, entrypoint, repo_root=None):
             if task == "break-sandbox":
@@ -138,7 +144,8 @@ class TestMatrixMain(unittest.TestCase):
                 "n_escaped": 0, "n_held": 0, "n_errored": 0,
             }, "raw")
 
-        argv = ["run_attacks", "--date", "2026-05-14", "-q"]
+        argv = (["run_attacks", "--date", "2026-05-14", "-q"]
+                + (extra_argv or []))
         with mock.patch.object(run_attacks, "_has", return_value=True), \
              mock.patch.object(run_attacks._config, "repo_root",
                                return_value=tmp), \
@@ -153,17 +160,40 @@ class TestMatrixMain(unittest.TestCase):
              mock.patch.object(run_attacks.sys, "argv", argv):
             rc = run_attacks.main()
 
+        matrix = json.loads(
+            (tmp / "results/attacks/break-sandbox-2026-05-14/matrix.json")
+            .read_text())
+        return rc, calls, matrix
+
+    def test_excludes_self_pairs_and_invalid_attackers(self) -> None:
+        # no reference/ dir -> reference pass skipped, no "reference" key
+        rc, calls, matrix = self._run_main(with_reference=False)
         self.assertEqual(rc, 0)
         # gamma failed the gate -> excluded as attacker; self-pairs skipped
         self.assertEqual(sorted(calls),
                          [("alpha", "beta"), ("beta", "alpha")])
-
-        matrix = json.loads(
-            (tmp / "results/attacks/break-sandbox-2026-05-14/matrix.json")
-            .read_text())
         self.assertEqual(matrix["attackers"], ["alpha", "beta"])
         self.assertEqual(matrix["targets"], ["alpha", "beta"])
         self.assertEqual(len(matrix["pairs"]), 2)
+        self.assertNotIn("reference", matrix)
+
+    def test_reference_pass_populates_matrix(self) -> None:
+        rc, calls, matrix = self._run_main(with_reference=True)
+        self.assertEqual(rc, 0)
+        # every valid attacker is also run against the reference oracle
+        self.assertIn(("alpha", "reference"), calls)
+        self.assertIn(("beta", "reference"), calls)
+        self.assertEqual(sorted(matrix["reference"]), ["alpha", "beta"])
+        self.assertEqual(matrix["reference"]["alpha"]["target"], "reference")
+        # reference pairs stay out of the scored matrix
+        self.assertEqual(len(matrix["pairs"]), 2)
+
+    def test_no_reference_flag_skips_reference(self) -> None:
+        rc, calls, matrix = self._run_main(
+            with_reference=True, extra_argv=["--no-reference"])
+        self.assertEqual(rc, 0)
+        self.assertNotIn("reference", matrix)
+        self.assertFalse(any(t == "reference" for _, t in calls))
 
 
 if __name__ == "__main__":
