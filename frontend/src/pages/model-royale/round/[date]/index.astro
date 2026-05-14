@@ -7,6 +7,7 @@ import Masthead from '../../../../components/Masthead.astro';
 import Scoreboard from '../../../../components/Scoreboard.astro';
 import AttackScoreboard from '../../../../components/AttackScoreboard.astro';
 import AttackMatrix from '../../../../components/AttackMatrix.astro';
+import ReferenceOracle from '../../../../components/ReferenceOracle.astro';
 import RoundBars from '../../../../components/charts/RoundBars.astro';
 import RoundScatter from '../../../../components/charts/RoundScatter.astro';
 import RunsTable from '../../../../components/RunsTable.astro';
@@ -131,6 +132,9 @@ const seo = templateSeo(
       <div class="tabs" role="tablist" aria-label="Round sections">
         <button class="tab" role="tab" id="tab-scoreboard" data-tab="scoreboard" aria-selected="true" aria-controls="panel-scoreboard">scoreboard</button>
         <button class="tab" role="tab" id="tab-matrix" data-tab="matrix" aria-selected="false" aria-controls="panel-matrix">matrix</button>
+        {(round.referenceOracle ?? []).length > 0 && (
+          <button class="tab" role="tab" id="tab-oracle" data-tab="oracle" aria-selected="false" aria-controls="panel-oracle">oracle</button>
+        )}
         <button class="tab" role="tab" id="tab-runs" data-tab="runs" aria-selected="false" aria-controls="panel-runs">runs</button>
       </div>
 
@@ -141,6 +145,11 @@ const seo = templateSeo(
         <div class="tab-panel" role="tabpanel" id="panel-matrix" data-panel="matrix" hidden aria-labelledby="tab-matrix">
           <AttackMatrix matrix={round.attackMatrix ?? []} />
         </div>
+        {(round.referenceOracle ?? []).length > 0 && (
+          <div class="tab-panel" role="tabpanel" id="panel-oracle" data-panel="oracle" hidden aria-labelledby="tab-oracle">
+            <ReferenceOracle entries={round.referenceOracle ?? []} notes={round.crossModelObservations} slugs={slugs} />
+          </div>
+        )}
         <div class="tab-panel" role="tabpanel" id="panel-runs" data-panel="runs" hidden aria-labelledby="tab-runs">
           <RunsTable runs={round.samples} slugs={slugs} />
         </div>

@@ -1,0 +1,80 @@
+---
+title: "Round 2 (Break): the oracle earns its keep"
+summary: "Seven models wrote exploit suites against each other's sandboxes. Zero real breaches landed — and the run only means anything because a reference oracle threw out the cheese."
+publishedAt: 2026-05-14
+round: 2026-05-14
+author: fole
+draft: false
+ogImageOverride: null
+---
+
+import RoundScoreboard from '../../components/notes/RoundScoreboard.astro';
+import Stat from '../../components/notes/Stat.astro';
+
+Round 2 is the adversarial round. Each of the seven models writes a black-box
+exploit suite against the round-1 sandbox spec — tests that *try to escape* a
+container sandbox. Every suite then runs against every other model's round-1
+`sandbox.py`: 42 ordered pairs, objective scoring, no judges. A per-test pass
+is an escape that landed.
+
+## The result: nothing landed
+
+<RoundScoreboard date="2026-05-14" />
+
+Zero real breaches. Every one of the seven round-1 sandboxes held against
+every honest exploit thrown at it. The attack matrix is all zeros; the
+elimination falls to whoever sorts last alphabetically.
+
+That is a flat result, and a flat result is worth being honest about. But the
+interesting part isn't the zero — it's *why* it's a zero, and what it took to
+see that clearly.
+
+## The catch: most of the "escapes" were cheese
+
+The raw matrix did not start at zero. Before filtering, six of the seven
+models landed escapes against everything — glm against all six targets,
+deepseek against all six, and so on. Read naively, glm "won" the round with a
+commanding attacker score.
+
+It didn't. Those weren't escapes.
+
+<Stat label="bogus exploits caught">13</Stat>
+
+Every exploit suite is also run against a **reference sandbox** — a
+known-correct implementation transcribed straight from the round-1 spec. An
+exploit that "escapes" the reference cannot be demonstrating a real
+vulnerability: the reference *has* no vulnerability. It's a test that passes
+unconditionally — cheese, or a real attempt that asserts on the wrong thing.
+
+13 exploits across 6 models escaped the reference. Each one also escaped every
+real target, by the same count — the signature of a test that passes no matter
+what it's pointed at. The oracle excluded all 13. `deepseek-flash` was the only
+model whose suite was completely clean.
+
+Without that control pass, this round's scoreboard would have been pure noise —
+glm alone would have shown 24 phantom attacker points off four cheese exploits.
+This is the first time the reference oracle has run against a real lineup, and
+it's the run that proves it isn't optional.
+
+## What's still broken
+
+Three problems this round surfaced that aren't fixed yet:
+
+- **The tiebreak is a placeholder.** With zero breaches, every model has an
+  identical 0/0 record, and the elimination currently falls to alphabetical
+  order. That's fine as a deterministic default; it is not fine as a way to
+  eliminate a model. Round 2 needs a real tiebreak rule — or an explicit "no
+  elimination on a flat round" rule — before a result like this is treated as
+  final.
+- **The honest exploits were weak.** Strip the cheese and what's left are
+  exploits that genuinely tried and genuinely failed. Either the round-1
+  sandboxes are solid, or the models aren't writing strong black-box attacks —
+  this round can't distinguish those, and that's a gap in what Break currently
+  measures.
+- **One run flaked.** glm's first agent run read the prompt and spec and then
+  produced nothing — no exploit file at all. It needed a manual re-run. Rare,
+  but the harness should notice an empty implementation louder than it does.
+
+Round 2 did its job: it ran objectively, it caught every piece of cheese, and
+it reported a flat result honestly instead of inventing a winner. The next
+round of work is on the methodology, not the harness.

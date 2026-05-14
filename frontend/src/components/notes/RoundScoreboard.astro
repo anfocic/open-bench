@@ -1,7 +1,8 @@
 ---
 import { getEntry } from 'astro:content';
 import Scoreboard from '../Scoreboard.astro';
-import { findChampion } from '../../lib/scoreboard';
+import AttackScoreboard from '../AttackScoreboard.astro';
+import { findChampion, findAttackChampion } from '../../lib/scoreboard';
 
 export interface Props {
   date: string;
@@ -9,11 +10,18 @@ export interface Props {
 
 const { date } = Astro.props;
 const entry = await getEntry('rounds', date);
-const champ = entry ? findChampion(entry.data.scoreboard) : null;
+const isObjective = entry?.data.scoringMode === 'objective';
+const champ = entry
+  ? (isObjective
+    ? findAttackChampion(entry.data.scoreboard)
+    : findChampion(entry.data.scoreboard))
+  : null;
 ---
 
 {entry ? (
-  <Scoreboard entries={entry.data.scoreboard} champion={champ?.impl} />
+  isObjective
+    ? <AttackScoreboard entries={entry.data.scoreboard} champion={champ?.impl} />
+    : <Scoreboard entries={entry.data.scoreboard} champion={champ?.impl} />
 ) : (
   <p class="muted"><em>(no round found for {date})</em></p>
 )}

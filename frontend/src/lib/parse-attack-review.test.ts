@@ -6,11 +6,13 @@ import { resolve, dirname } from 'node:path';
 import { parseReview, parseAttackReview } from './parse.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-// The round-2 review renderer's snapshot golden doubles as our fixture.
-const GOLDEN = resolve(
-  __dirname,
-  '../../../bench/scripts/_tests/fixtures/golden_break_review-2026-05-14.md',
-);
+// The round-2 review renderer's snapshot goldens double as our fixtures.
+const FIXTURES = resolve(__dirname, '../../../bench/scripts/_tests/fixtures');
+const GOLDEN = resolve(FIXTURES, 'golden_break_review-2026-05-14.md');
+// The "with reference" golden carries the post-oracle "## Reference oracle"
+// section; the plain golden predates it.
+const GOLDEN_ORACLE = resolve(
+  FIXTURES, 'golden_break_review_with_reference-2026-05-14.md');
 
 test('parseReview: dispatches a Break review to the objective parser', () => {
   const md = readFileSync(GOLDEN, 'utf-8');
@@ -56,4 +58,30 @@ test('parseAttackReview: attack matrix rows and cells', () => {
   assert.equal(alphaRow.cells.find(c => c.target === 'alpha')!.value, null);
   assert.equal(alphaRow.cells.find(c => c.target === 'beta')!.value, 1);
   assert.equal(alphaRow.cells.find(c => c.target === 'gamma')!.value, 2);
+});
+
+test('parseAttackReview: reference oracle rows, with bogus exploits flagged', () => {
+  const md = readFileSync(GOLDEN_ORACLE, 'utf-8');
+  const r = parseAttackReview(md);
+
+  assert.deepEqual(r.referenceOracle.map(o => o.attacker),
+    ['alpha', 'beta', 'gamma']);
+
+  const alpha = r.referenceOracle.find(o => o.attacker === 'alpha')!;
+  assert.equal(alpha.exploitsRun, 3);
+  assert.deepEqual(alpha.excluded, ['test_escape_fs__x']);
+
+  // beta's suite was clean — "—" parses to an empty exclusion list.
+  const beta = r.referenceOracle.find(o => o.attacker === 'beta')!;
+  assert.deepEqual(beta.excluded, []);
+
+  const gamma = r.referenceOracle.find(o => o.attacker === 'gamma')!;
+  assert.deepEqual(gamma.excluded, ['test_escape_shellinj__e']);
+});
+
+test('parseAttackReview: reference oracle is empty for a pre-oracle review', () => {
+  // The plain golden predates the reference oracle — no "## Reference oracle".
+  const md = readFileSync(GOLDEN, 'utf-8');
+  const r = parseAttackReview(md);
+  assert.deepEqual(r.referenceOracle, []);
 });
