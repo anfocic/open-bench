@@ -1,0 +1,42 @@
+---
+import type { AttackMatrixRow } from '../data/types';
+import SectionHeader from './SectionHeader.astro';
+import DataTable from './DataTable.astro';
+
+export interface Props {
+  matrix: AttackMatrixRow[];
+}
+
+const { matrix } = Astro.props;
+const targets = matrix[0]?.cells.map(c => c.target) ?? [];
+---
+
+{matrix.length > 0 && (
+  <section>
+    <SectionHeader
+      id="matrix"
+      title="attack matrix"
+      subtitle="cell = distinct attack classes breached (0&ndash;5). rows attack, columns defend. row sum = attacker score, column sum = defender score."
+    />
+    <DataTable>
+      <table class="scoreboard-table">
+        <thead>
+          <tr>
+            <th>atk \ def</th>
+            {targets.map(t => <th>{t}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {matrix.map(row => (
+            <tr>
+              <td class="model">{row.attacker}</td>
+              {row.cells.map(c => (
+                <td class="num">{c.value == null ? '—' : c.value}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </DataTable>
+  </section>
+)}
