@@ -23,6 +23,12 @@ round 2 ("Break") — the first adversarial, objectively-scored round.
 - `bench-aggregate-attacks` (`aggregate_attacks.py`) — renders the
   defense-weighted round-2 review at
   `results/reviews/break-sandbox-<date>.md`.
+- Round 2 reference-sandbox oracle: `bench/tasks/break-sandbox/reference/
+  sandbox.py`, a known-correct sandbox. `bench-attacks` runs every exploit
+  suite against it as a control (`matrix["reference"]`), and
+  `bench-aggregate-attacks` excludes any exploit that "escapes" the
+  reference — provably bogus, cheese or mis-asserted — from scoring,
+  flagging it in the review. `bench-attacks --no-reference` skips the pass.
 - `bench/scripts/_runs.py` — `find_latest_runs`, the `builds/` discovery
   helper shared by the judgment phase and the attack matrix.
 - `bench/scripts/_kinds/` package with a registry of task kinds.

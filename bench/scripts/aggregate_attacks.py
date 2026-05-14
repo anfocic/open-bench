@@ -25,9 +25,73 @@ from typing import Any
 
 from . import _config
 from . import _logging
-from .run_attacks import ATTACK_CLASSES
+from .run_attacks import ATTACK_CLASSES, class_of
 
 log = _logging.get_logger(__name__)
+
+
+def _bogus_by_attacker(matrix: dict[str, Any]) -> dict[str, set[str]]:
+    """Per attacker: the exploit names that escaped the reference oracle.
+
+    The reference sandbox has no vulnerabilities, so any per-test escape
+    against it is bogus (cheese or mis-asserted), not a real escape. Empty
+    when the matrix has no reference section (pre-oracle run)."""
+    ref = matrix.get("reference", {})
+    return {atk: set(pair.get("escaped", [])) for atk, pair in ref.items()}
+
+
+def _filter_reference_bogus(matrix: dict[str, Any]) -> dict[str, Any]:
+    """A copy of `matrix` with reference-escaping (bogus) exploits removed
+    from every pair's `escaped`, and `by_class` / `n_escaped` recomputed.
+
+    No-op — returns the input object unchanged — when nothing was flagged
+    bogus, so a matrix with no reference section renders byte-identically
+    to the pre-oracle behaviour."""
+    bogus = _bogus_by_attacker(matrix)
+    if not any(bogus.values()):
+        return matrix
+    out = dict(matrix)
+    new_pairs = []
+    for p in matrix.get("pairs", []):
+        b = bogus.get(p["attacker"], set())
+        kept = [n for n in p.get("escaped", []) if n not in b]
+        if len(kept) == len(p.get("escaped", [])):
+            new_pairs.append(p)
+            continue
+        q = dict(p)
+        q["escaped"] = kept
+        q["by_class"] = {c: any(class_of(n) == c for n in kept)
+                         for c in ATTACK_CLASSES}
+        q["n_escaped"] = len(kept)
+        new_pairs.append(q)
+    out["pairs"] = new_pairs
+    return out
+
+
+def _reference_section(matrix: dict[str, Any],
+                       bogus: dict[str, set[str]]) -> list[str]:
+    """The `## Reference oracle` block — emitted only when the matrix has a
+    reference section. `matrix` here is the raw (unfiltered) matrix."""
+    ref = matrix.get("reference", {})
+    out = ["## Reference oracle\n"]
+    out.append(
+        "Every exploit suite was also run against a known-correct reference "
+        "sandbox (`bench/tasks/break-sandbox/reference/sandbox.py`). An "
+        "exploit that \"escapes\" the reference cannot be demonstrating a "
+        "real vulnerability — it is cheese or mis-asserted, and is excluded "
+        "from the scoring below.\n")
+    out.append("| Attacker | Exploits run vs reference | "
+               "Escaped reference (excluded) |")
+    out.append("|---|---|---|")
+    for atk in sorted(ref):
+        p = ref[atk]
+        n_run = (p.get("n_escaped", 0) + p.get("n_held", 0)
+                 + p.get("n_errored", 0))
+        excl = sorted(bogus.get(atk, set()))
+        cell = ", ".join(f"`{n}`" for n in excl) if excl else "—"
+        out.append(f"| {atk} | {n_run} | {cell} |")
+    out.append("")
+    return out
 
 
 def _model_scores(matrix: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -72,6 +136,10 @@ def _ranked(scores: dict[str, dict[str, Any]]) -> list[str]:
 
 
 def render_review(matrix: dict[str, Any]) -> str:
+    raw_matrix = matrix
+    bogus = _bogus_by_attacker(raw_matrix)
+    matrix = _filter_reference_bogus(matrix)
+
     date = matrix.get("date", "unknown")
     runtime = matrix.get("runtime", "unknown")
     attackers = list(matrix.get("attackers", []))
@@ -94,6 +162,9 @@ def render_review(matrix: dict[str, Any]) -> str:
         f"`{runtime}`. Objective scoring: a per-test PASS is an escape. "
         f"Score unit is a distinct (model, attack-class) breach; "
         f"{total_breaches} landed in total.\n")
+
+    if raw_matrix.get("reference"):
+        out.extend(_reference_section(raw_matrix, bogus))
 
     # --- Attack matrix -----------------------------------------------------
     out.append("## Attack matrix\n")
@@ -207,6 +278,21 @@ def render_review(matrix: dict[str, Any]) -> str:
     if empty_cat:
         notes.append("Attackers with no readable EXPLOITS catalog: "
                      + ", ".join(empty_cat) + ".")
+    flagged = {a: sorted(names) for a, names in bogus.items() if names}
+    if flagged:
+        parts = []
+        for a in sorted(flagged):
+            marked = []
+            for n in flagged[a]:
+                a_pairs = [p for p in raw_matrix.get("pairs", [])
+                           if p["attacker"] == a]
+                # also escaping every real target = pure-cheese signature
+                universal = (a_pairs and
+                             all(n in p.get("escaped", []) for p in a_pairs))
+                marked.append(f"`{n}`" + (" (universal)" if universal else ""))
+            parts.append(f"{a}: {', '.join(marked)}")
+        notes.append("Exploits excluded as bogus (escaped the reference "
+                     "oracle): " + "; ".join(parts) + ".")
     if not notes:
         notes.append("None.")
     for n in notes:

@@ -77,6 +77,12 @@ Write exploits that genuinely attempt the escape and assert on real evidence
 (a host sentinel file appearing, a network response arriving, a resource cap
 not biting). An exploit that passes without proving an escape is dead weight.
 
+Worse than dead weight: the harness also runs your suite against a
+known-correct **reference sandbox**. An exploit that "escapes" the reference
+cannot be demonstrating a real vulnerability — it is cheese or mis-asserted —
+so it is **excluded from your score entirely** and flagged in the review. A
+test that passes unconditionally scores you nothing and marks your suite.
+
 ## Example
 
 ```python
